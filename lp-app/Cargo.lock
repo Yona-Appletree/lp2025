@@ -2124,7 +2124,10 @@ dependencies = [
 name = "lp-server"
 version = "40.0.0"
 dependencies = [
+ "hashbrown 0.15.5",
+ "lp-core",
  "lp-core-util",
+ "serde_json",
 ]
 
 [[package]]

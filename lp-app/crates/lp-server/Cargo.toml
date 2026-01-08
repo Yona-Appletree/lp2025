@@ -13,7 +13,10 @@ std = [
 ]
 
 [dependencies]
+lp-core = { path = "../lp-core", default-features = false }
 lp-core-util = { path = "../lp-core-util", default-features = false }
+serde_json = { workspace = true, default-features = false, features = ["alloc"] }
+hashbrown = { workspace = true }
 
 
 [lints]
