@@ -2,7 +2,11 @@
 
 use crate::error::FsError;
 use crate::fs::LpFs;
-use alloc::{format, string::{String, ToString}, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use std::fs;
 use std::path::PathBuf;
 
@@ -35,14 +39,14 @@ impl LpFsStd {
     /// - Removes trailing "/" (except for root "/")
     fn normalize_path(path: &str) -> String {
         let mut normalized = path.trim();
-        
+
         // Remove leading "./" or "."
         if normalized.starts_with("./") {
             normalized = &normalized[2..];
         } else if normalized == "." {
             normalized = "";
         }
-        
+
         // Ensure it starts with "/"
         let normalized = if normalized.is_empty() {
             "/".to_string()
@@ -51,10 +55,10 @@ impl LpFsStd {
         } else {
             format!("/{}", normalized)
         };
-        
+
         // Collapse multiple slashes
         let normalized = normalized.replace("//", "/");
-        
+
         // Remove trailing "/" unless it's the root
         if normalized.len() > 1 && normalized.ends_with('/') {
             normalized[..normalized.len() - 1].to_string()
@@ -158,8 +162,9 @@ impl LpFs for LpFsStd {
                 )));
             }
         }
-        fs::write(&full_path, data)
-            .map_err(|e| FsError::Filesystem(format!("Failed to write file {:?}: {}", full_path, e)))
+        fs::write(&full_path, data).map_err(|e| {
+            FsError::Filesystem(format!("Failed to write file {:?}: {}", full_path, e))
+        })
     }
 
     fn file_exists(&self, path: &str) -> Result<bool, FsError> {
@@ -191,8 +196,9 @@ impl LpFs for LpFsStd {
 
         let mut results = Vec::new();
         for entry in entries {
-            let entry = entry
-                .map_err(|e| FsError::Filesystem(format!("Failed to read directory entry: {}", e)))?;
+            let entry = entry.map_err(|e| {
+                FsError::Filesystem(format!("Failed to read directory entry: {}", e))
+            })?;
 
             let entry_path = entry.path();
 
