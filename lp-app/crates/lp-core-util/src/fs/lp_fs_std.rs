@@ -1,19 +1,19 @@
 //! Host filesystem implementation using std::fs
 
 use lp_core::error::Error;
-use lp_core::fs::LpFs;
 use std::fs;
 use std::path::PathBuf;
+use crate::fs::LpFs;
 
-/// Host filesystem implementation using std::fs
+/// LP filesystem implementation using std::fs
 ///
 /// All paths are resolved relative to `root_path` and validated to ensure
 /// they stay within the root directory for security.
-pub struct HostFilesystem {
+pub struct LpFsStd {
     root_path: PathBuf,
 }
 
-impl HostFilesystem {
+impl LpFsStd {
     /// Create a new host filesystem with the given root path
     ///
     /// The root path is the project directory. All file operations are
@@ -99,7 +99,7 @@ impl HostFilesystem {
     }
 }
 
-impl LpFs for HostFilesystem {
+impl LpFs for LpFsStd {
     fn read_file(&self, path: &str) -> Result<Vec<u8>, Error> {
         let full_path = self.resolve_and_validate(path)?;
         fs::read(&full_path)
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn test_path_validation_within_root() {
         let temp_dir = TempDir::new().unwrap();
-        let fs = HostFilesystem::new(temp_dir.path().to_path_buf());
+        let fs = LpFsStd::new(temp_dir.path().to_path_buf());
 
         // Valid paths should work
         assert!(fs.get_path("/project.json").is_ok());
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn test_path_validation_prevents_escape() {
         let temp_dir = TempDir::new().unwrap();
-        let fs = HostFilesystem::new(temp_dir.path().to_path_buf());
+        let fs = LpFsStd::new(temp_dir.path().to_path_buf());
 
         // Paths with .. should be rejected
         assert!(fs.get_path("/../outside.txt").is_err());
@@ -221,7 +221,7 @@ mod tests {
         fs::write(root.join("src/file2.txt"), b"content2").unwrap();
         fs::create_dir_all(root.join("src/subdir")).unwrap();
 
-        let fs = HostFilesystem::new(root.to_path_buf());
+        let fs = LpFsStd::new(root.to_path_buf());
         let entries = fs.list_dir("/src").unwrap();
 
         // Should contain the files and subdirectory
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn test_list_dir_security() {
         let temp_dir = TempDir::new().unwrap();
-        let fs = HostFilesystem::new(temp_dir.path().to_path_buf());
+        let fs = LpFsStd::new(temp_dir.path().to_path_buf());
 
         // Should not be able to list outside root
         assert!(fs.list_dir("/../").is_err());

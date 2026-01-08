@@ -7,6 +7,12 @@ license.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = ["std"]
+std = [
+    "lp-core-util/std"
+]
+
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -14,3 +20,4 @@ hashbrown = { workspace = true }
 lp-glsl-compiler = { path = "../../../lp-glsl/crates/lp-glsl-compiler", default-features = false, features = ["std"] }
 log = { version = "0.4", default-features = false }
 
+lp-core-util = { path = "../lp-core-util", default-features = false }

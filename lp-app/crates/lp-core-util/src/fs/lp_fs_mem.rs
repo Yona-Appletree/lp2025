@@ -1,8 +1,8 @@
 //! In-memory filesystem implementation for testing
 
-use crate::app::file_change::{ChangeType, FileChange};
-use crate::error::Error;
-use crate::fs::LpFs;
+use lp_core::app::file_change::{ChangeType, FileChange};
+use lp_core::error::Error;
+use lp_core_util::fs::LpFs;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;

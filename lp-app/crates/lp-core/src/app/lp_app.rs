@@ -274,7 +274,7 @@ fn get_node_path_from_file_path(file_path: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::app::{ChangeType, FileChange};
-    use crate::fs::memory::LpFsMemory;
+    use lp_core_util::fs::memory::LpFsMemory;
     use crate::traits::OutputProvider;
     use alloc::string::ToString;
 

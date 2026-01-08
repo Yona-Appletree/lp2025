@@ -1,0 +1,20 @@
+[package]
+name = "lp-server"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["std"]
+std = [
+    "lp-core-util/std"
+]
+
+[dependencies]
+lp-core-util = { path = "../lp-core-util", default-features = false }
+
+
+[lints]
+workspace = true

@@ -2047,6 +2047,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
+name = "lp-api"
+version = "40.0.0"
+
+[[package]]
 name = "lp-builtins"
 version = "40.0.0"
 
@@ -2056,6 +2060,7 @@ version = "40.0.0"
 dependencies = [
  "hashbrown 0.15.5",
  "log",
+ "lp-core-util",
  "lp-glsl-compiler",
  "serde",
  "serde_json",
@@ -2074,6 +2079,10 @@ dependencies = [
  "serde_json",
  "tempfile",
 ]
+
+[[package]]
+name = "lp-core-util"
+version = "40.0.0"
 
 [[package]]
 name = "lp-glsl-compiler"
@@ -2101,6 +2110,10 @@ dependencies = [
  "cranelift-codegen",
  "target-lexicon",
 ]
+
+[[package]]
+name = "lp-server"
+version = "40.0.0"
 
 [[package]]
 name = "mach2"

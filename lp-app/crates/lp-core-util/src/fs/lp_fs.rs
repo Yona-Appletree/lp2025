@@ -7,7 +7,7 @@
 //! Filesystem instances have a root path (especially for real filesystem implementations) to
 //! provide security by preventing access outside the project directory.
 
-use crate::error::Error;
+use lp_core::error::Error;
 
 /// Platform-agnostic filesystem trait
 ///

@@ -18,7 +18,7 @@ use std::fs as std_fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use lp_core::fs::LpFsMemory;
+use lp_core_util::::LpFsMemory;
 use transport::HostTransport;
 use watcher::FileWatcher;
 

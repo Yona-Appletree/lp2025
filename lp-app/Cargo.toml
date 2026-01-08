@@ -2,7 +2,7 @@
 resolver = '2'
 members = [
     "crates/lp-core",
-    "apps/lp-core-cli",
+    "apps/lp-core-cli", "crates/lp-core-util", "crates/lp-server", "crates/lp-api",
 ]
 
 [workspace.package]
