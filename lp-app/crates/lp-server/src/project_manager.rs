@@ -4,7 +4,12 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use crate::project::Project;
-use alloc::{format, string::{String, ToString}, vec::Vec};
+use crate::template;
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use hashbrown::HashMap;
 use lp_core::app::Platform;
 use lp_core::project::config::ProjectConfig;
@@ -34,11 +39,7 @@ impl ProjectManager {
     ///
     /// Creates the project directory structure using the provided filesystem.
     /// The caller must provide a Platform with the appropriate filesystem (at server root) and OutputProvider.
-    pub fn create_project(
-        &mut self,
-        name: String,
-        platform: Platform,
-    ) -> Result<(), ServerError> {
+    pub fn create_project(&mut self, name: String, platform: Platform) -> Result<(), ServerError> {
         // Check if project already exists
         if self.projects.contains_key(&name) {
             return Err(ServerError::ProjectExists(name));
@@ -46,7 +47,6 @@ impl ProjectManager {
 
         let project_path = format!("{}/{}", self.projects_base_dir, name);
         let project_json_path = format!("{}/project.json", project_path);
-        let src_path = format!("{}/src", project_path);
 
         // Check if project already exists on filesystem
         if platform.fs.file_exists(&project_json_path).unwrap_or(false) {
@@ -61,16 +61,19 @@ impl ProjectManager {
         let json = serde_json::to_string_pretty(&config).map_err(|e| {
             ServerError::Serialization(format!("Failed to serialize project config: {}", e))
         })?;
-        platform.fs.write_file(&project_json_path, json.as_bytes()).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to write project.json: {}", e))
+        platform
+            .fs
+            .write_file(&project_json_path, json.as_bytes())
+            .map_err(|e| ServerError::Filesystem(format!("Failed to write project.json: {}", e)))?;
+
+        // Chroot the filesystem to the project directory to create the template
+        let project_fs = platform.fs.chroot(&project_path).map_err(|e| {
+            ServerError::Filesystem(format!("Failed to chroot to project directory: {}", e))
         })?;
 
-        // Create src directory (by creating a placeholder file)
-        // Note: LpFs doesn't have explicit directory creation, so we create a placeholder
-        // The actual directory structure will be created when nodes are added
-        let src_placeholder = format!("{}/.gitkeep", src_path);
-        platform.fs.write_file(&src_placeholder, b"").map_err(|e| {
-            ServerError::Filesystem(format!("Failed to create src directory: {}", e))
+        // Create the default project template
+        template::create_default_project_template(project_fs.as_ref()).map_err(|e| {
+            ServerError::Filesystem(format!("Failed to create project template: {}", e))
         })?;
 
         // Load the newly created project
@@ -82,11 +85,7 @@ impl ProjectManager {
     /// Creates a Project instance and loads it into memory.
     /// The caller must provide a Platform with a filesystem at the server root and an OutputProvider.
     /// This method will chroot the filesystem to the project directory.
-    pub fn load_project(
-        &mut self,
-        name: String,
-        platform: Platform,
-    ) -> Result<(), ServerError> {
+    pub fn load_project(&mut self, name: String, platform: Platform) -> Result<(), ServerError> {
         // Check if already loaded
         if self.projects.contains_key(&name) {
             return Ok(()); // Already loaded
@@ -148,10 +147,7 @@ impl ProjectManager {
     ///
     /// Returns project names that exist on disk but may not be loaded.
     /// Requires a filesystem to query.
-    pub fn list_available_projects(
-        &self,
-        fs: &dyn LpFs,
-    ) -> Result<Vec<String>, ServerError> {
+    pub fn list_available_projects(&self, fs: &dyn LpFs) -> Result<Vec<String>, ServerError> {
         // List entries in the base directory
         let entries = fs.list_dir(&self.projects_base_dir).map_err(|e| {
             ServerError::Filesystem(format!("Failed to read projects directory: {}", e))
