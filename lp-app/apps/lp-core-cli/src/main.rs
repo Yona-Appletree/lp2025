@@ -539,7 +539,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         .unwrap();
         fs.write_file_mut(
             "/test-projects/test/src/fixture.fixture/node.json",
-            br#"{"$type":"circle-list","output_id":"/src/output.output","texture_id":"/src/texture.texture","channel_order":"rgb","mapping":[]}"#,
+            br#"{"$type":"circle-list","output_id":"/src/output.output","texture_id":"/src/texture.texture","channel_order":"rgb","mapping":[{"channel":0,"center":[0.03125,0.0625],"radius":0.05},{"channel":1,"center":[0.09375,0.0625],"radius":0.05},{"channel":2,"center":[0.15625,0.0625],"radius":0.05},{"channel":3,"center":[0.21875,0.0625],"radius":0.05},{"channel":4,"center":[0.28125,0.0625],"radius":0.05},{"channel":5,"center":[0.34375,0.0625],"radius":0.05},{"channel":6,"center":[0.40625,0.0625],"radius":0.05},{"channel":7,"center":[0.46875,0.0625],"radius":0.05},{"channel":8,"center":[0.53125,0.0625],"radius":0.05},{"channel":9,"center":[0.59375,0.0625],"radius":0.05},{"channel":10,"center":[0.65625,0.0625],"radius":0.05},{"channel":11,"center":[0.71875,0.0625],"radius":0.05}]}"#,
         )
         .unwrap();
         Box::new(fs)
