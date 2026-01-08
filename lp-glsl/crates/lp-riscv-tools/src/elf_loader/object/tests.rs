@@ -101,7 +101,7 @@ mod tests {
         // Try both debug and release profiles
         for profile in ["debug", "release"].iter() {
             let exe_path = current_dir
-                .join("lightplayer")
+                .join("../../../../../../lp-app")
                 .join("target")
                 .join(target)
                 .join(profile)

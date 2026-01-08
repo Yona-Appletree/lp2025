@@ -1,6 +1,7 @@
-# Lightplayer
+# Light Player GLSL
 
-Lightplayer is a GLSL compiler and runtime for embedded systems, built on top of Cranelift. It provides a complete GLSL compilation pipeline that targets RISC-V 32-bit embedded platforms.
+Light Player GLSL (`lp-glsl`) is a GLSL compiler and runtime for embedded systems, built using a fork
+of Cranelift. It provides a complete GLSL compilation pipeline that targets RISC-V 32-bit embedded platforms.
 
 ## Project Structure
 

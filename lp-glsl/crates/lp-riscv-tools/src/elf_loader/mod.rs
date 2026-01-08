@@ -184,7 +184,7 @@ mod tests {
             // Path to the executable
             // Try both workspace root and lightplayer/ subdirectory
             let exe_path = current_dir
-                .join("lightplayer")
+                .join("../../../../../lp-app")
                 .join("target")
                 .join(target)
                 .join(profile)

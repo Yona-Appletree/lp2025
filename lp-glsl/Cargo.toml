@@ -2,7 +2,7 @@
 resolver = '2'
 members = [
     "crates/lp-builtins",
-    "crates/lp-core",
+    "../lp-app/crates/lp-core",
     "crates/lp-filetests-gen",
     "crates/lp-glsl-compiler",
     "crates/lp-glsl-filetests",
@@ -11,7 +11,7 @@ members = [
     "crates/lp-riscv-tools",
     "apps/embive-program",
     "apps/esp32-glsl-jit",
-    "apps/fw-host",
+    "../lp-app/apps/fw-host",
     "apps/lp-builtin-gen",
     "apps/lp-builtins-app",
     "apps/lp-test",
