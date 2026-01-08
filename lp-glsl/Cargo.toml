@@ -11,7 +11,7 @@ members = [
     "crates/lp-riscv-tools",
     "apps/embive-program",
     "apps/esp32-glsl-jit",
-    "../lp-app/apps/fw-host",
+    "../lp-app/apps/lp-core-cli",
     "apps/lp-builtin-gen",
     "apps/lp-builtins-app",
     "apps/lp-test",
