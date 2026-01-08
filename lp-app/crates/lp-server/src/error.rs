@@ -36,7 +36,5 @@ impl fmt::Display for ServerError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ServerError {
-    // Default implementation is sufficient
-}
+// Note: std::error::Error implementation can be added by users if needed
+// We don't implement it here to keep the crate no_std compatible
