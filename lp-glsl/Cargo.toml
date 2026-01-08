@@ -2,7 +2,7 @@
 resolver = '2'
 members = [
     "crates/lp-builtins",
-    "../lp-app/crates/lp-core",
+    "../lp-app/crates/lp-engine",
     "crates/lp-filetests-gen",
     "crates/lp-glsl-compiler",
     "crates/lp-glsl-filetests",
