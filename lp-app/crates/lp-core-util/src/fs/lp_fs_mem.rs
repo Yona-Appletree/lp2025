@@ -104,6 +104,134 @@ impl LpFs for LpFsMemory {
 
         Ok(entries)
     }
+
+    fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError> {
+        // Normalize the subdirectory path
+        let normalized_subdir = if subdir.starts_with('/') {
+            subdir.to_string()
+        } else {
+            format!("/{}", subdir)
+        };
+
+        // Ensure it ends with / for prefix matching
+        let prefix = if normalized_subdir.ends_with('/') {
+            normalized_subdir.clone()
+        } else {
+            format!("{}/", normalized_subdir)
+        };
+
+        // Create a new LpFsMemory with only files under the subdirectory
+        let mut new_files = HashMap::new();
+        for (path, data) in &self.files {
+            if path.starts_with(&prefix) || path == &normalized_subdir {
+                // Remove the prefix from the path to make it relative to the new root
+                let relative_path = if path.starts_with(&prefix) {
+                    format!("/{}", &path[prefix.len()..])
+                } else {
+                    "/".to_string() // Root file
+                };
+                new_files.insert(relative_path, data.clone());
+            }
+        }
+
+        // Create a new LpFsMemory with the filtered files
+        // We need to wrap it in a way that implements LpFs
+        // Since we can't create a new struct here, we'll create a wrapper
+        struct ChrootedLpFsMemory {
+            files: HashMap<String, Vec<u8>>,
+        }
+
+        impl LpFs for ChrootedLpFsMemory {
+            fn read_file(&self, path: &str) -> Result<alloc::vec::Vec<u8>, FsError> {
+                self.validate_path(path)?;
+                self.files
+                    .get(path)
+                    .cloned()
+                    .ok_or_else(|| FsError::NotFound(path.to_string()))
+            }
+
+            fn write_file(&self, _path: &str, _data: &[u8]) -> Result<(), FsError> {
+                Err(FsError::Filesystem(
+                    "Use write_file_mut() for mutable filesystem".to_string(),
+                ))
+            }
+
+            fn file_exists(&self, path: &str) -> Result<bool, FsError> {
+                self.validate_path(path)?;
+                Ok(self.files.contains_key(path))
+            }
+
+            fn list_dir(&self, path: &str) -> Result<alloc::vec::Vec<alloc::string::String>, FsError> {
+                self.validate_path(path)?;
+                let mut entries = Vec::new();
+                let prefix = if path.ends_with('/') {
+                    path.to_string()
+                } else {
+                    format!("{}/", path)
+                };
+
+                for file_path in self.files.keys() {
+                    if file_path.starts_with(&prefix) {
+                        let remainder = &file_path[prefix.len()..];
+                        if let Some(slash_pos) = remainder.find('/') {
+                            let dir_name = &remainder[..slash_pos];
+                            let full_dir_path = format!("{}{}", prefix, dir_name);
+                            if !entries.contains(&full_dir_path) {
+                                entries.push(full_dir_path);
+                            }
+                        } else {
+                            entries.push(file_path.clone());
+                        }
+                    }
+                }
+
+                Ok(entries)
+            }
+
+            fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError> {
+                // Recursive chroot - normalize path
+                let normalized_subdir = if subdir.starts_with('/') {
+                    subdir.to_string()
+                } else {
+                    format!("/{}", subdir)
+                };
+
+                let prefix = if normalized_subdir.ends_with('/') {
+                    normalized_subdir.clone()
+                } else {
+                    format!("{}/", normalized_subdir)
+                };
+
+                let mut new_files = HashMap::new();
+                for (path, data) in &self.files {
+                    if path.starts_with(&prefix) || path == &normalized_subdir {
+                        let relative_path = if path.starts_with(&prefix) {
+                            format!("/{}", &path[prefix.len()..])
+                        } else {
+                            "/".to_string()
+                        };
+                        new_files.insert(relative_path, data.clone());
+                    }
+                }
+
+                Ok(alloc::boxed::Box::new(ChrootedLpFsMemory { files: new_files }))
+            }
+        }
+
+        impl ChrootedLpFsMemory {
+            fn validate_path(&self, path: &str) -> Result<(), FsError> {
+                if !path.starts_with('/') {
+                    return Err(FsError::InvalidPath(format!(
+                        "Path must be relative to project root (start with /): {}",
+                        path
+                    )));
+                }
+                Ok(())
+            }
+        }
+
+        Ok(alloc::boxed::Box::new(ChrootedLpFsMemory { files: new_files }))
+    }
 }
 
 #[cfg(test)]

@@ -41,4 +41,14 @@ pub trait LpFs {
     /// Returns paths relative to project root. The returned paths include the directory
     /// path prefix (e.g., listing `/src` might return `["/src/my-shader.shader", "/src/my-texture.texture"]`).
     fn list_dir(&self, path: &str) -> Result<alloc::vec::Vec<alloc::string::String>, FsError>;
+
+    /// Create a new filesystem view rooted at a subdirectory
+    ///
+    /// Returns a new `LpFs` instance where all paths are relative to the specified subdirectory.
+    /// The subdirectory path is relative to the current root.
+    ///
+    /// For example, if the current root is `/projects` and you chroot to `my-project`,
+    /// then paths like `/project.json` in the new view will resolve to `/projects/my-project/project.json`
+    /// in the original filesystem.
+    fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError>;
 }

@@ -33,7 +33,7 @@ impl ProjectManager {
     /// Create a new project
     ///
     /// Creates the project directory structure using the provided filesystem.
-    /// The caller must provide a Platform with the appropriate filesystem and OutputProvider.
+    /// The caller must provide a Platform with the appropriate filesystem (at server root) and OutputProvider.
     pub fn create_project(
         &mut self,
         name: String,
@@ -80,7 +80,8 @@ impl ProjectManager {
     /// Load a project from the filesystem
     ///
     /// Creates a Project instance and loads it into memory.
-    /// The caller must provide a Platform with the appropriate filesystem and OutputProvider.
+    /// The caller must provide a Platform with a filesystem at the server root and an OutputProvider.
+    /// This method will chroot the filesystem to the project directory.
     pub fn load_project(
         &mut self,
         name: String,
@@ -101,11 +102,18 @@ impl ProjectManager {
             return Err(ServerError::ProjectNotFound(name.clone()));
         }
 
+        // Chroot the filesystem to the project directory
+        // This creates a new filesystem view where paths are relative to the project root
+        let project_fs = platform.fs.chroot(&project_path).map_err(|e| {
+            ServerError::Filesystem(format!("Failed to chroot to project directory: {}", e))
+        })?;
+
+        // Create a new Platform with the chrooted filesystem
+        let project_platform = Platform::new(project_fs, platform.output);
+
         // Create and load project
-        // The project's filesystem root is the project directory
-        // We need to create a new Platform with a filesystem rooted at the project directory
-        // For now, we'll use the provided platform as-is, assuming it's already rooted correctly
-        let project = Project::new(name.clone(), "/project.json".to_string(), platform)?;
+        // Now paths like "/project.json" will resolve relative to the project directory
+        let project = Project::new(name.clone(), "/project.json".to_string(), project_platform)?;
         self.projects.insert(name, project);
 
         Ok(())

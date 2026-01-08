@@ -180,6 +180,40 @@ impl LpFs for LpFsStd {
 
         Ok(results)
     }
+
+    fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError> {
+        // Normalize the subdirectory path (remove leading slash for joining)
+        let normalized_subdir = if subdir.starts_with('/') {
+            &subdir[1..]
+        } else {
+            subdir
+        };
+
+        // Join with root path
+        let new_root = self.root_path.join(normalized_subdir);
+
+        // Validate that the new root doesn't escape the current root
+        // by checking if it's within the current root
+        let canonical_new_root = new_root.canonicalize().or_else(|_| {
+            // If canonicalize fails (path doesn't exist), use the resolved path
+            // but we still need to check it's within root
+            Ok(new_root.clone())
+        })?;
+
+        let canonical_current_root = self
+            .root_path
+            .canonicalize()
+            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {}", e)))?;
+
+        if !canonical_new_root.starts_with(&canonical_current_root) {
+            return Err(FsError::InvalidPath(format!(
+                "Chroot path {:?} would escape root directory {:?}",
+                subdir, self.root_path
+            )));
+        }
+
+        Ok(alloc::boxed::Box::new(LpFsStd::new(new_root)))
+    }
 }
 
 #[cfg(test)]
