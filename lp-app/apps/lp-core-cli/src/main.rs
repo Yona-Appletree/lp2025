@@ -439,7 +439,6 @@ fn main() -> eframe::Result<()> {
             )
         };
 
-
     // Initialize output provider
     let output_provider = Arc::new(HostOutputProvider::new());
     let platform_output_provider: Box<dyn lp_core::traits::OutputProvider> =
@@ -494,7 +493,11 @@ fn main() -> eframe::Result<()> {
     let mut project_manager = ProjectManager::new(projects_base_dir.clone());
 
     // Wrap in catch_unwind to handle panics from cranelift
-    log::info!("Loading project '{}' from base directory '{}'", project_name, projects_base_dir);
+    log::info!(
+        "Loading project '{}' from base directory '{}'",
+        project_name,
+        projects_base_dir
+    );
     let load_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         project_manager.load_project(project_name.clone(), platform)
     }));

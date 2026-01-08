@@ -107,7 +107,10 @@ impl LpFs for LpFsMemory {
 
     fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError> {
         // Normalize the subdirectory path
-        let normalized_subdir = if subdir.starts_with('/') {
+        // Remove leading "./" if present, then ensure it starts with "/"
+        let normalized_subdir = if subdir.starts_with("./") {
+            format!("/{}", &subdir[2..])
+        } else if subdir.starts_with('/') {
             subdir.to_string()
         } else {
             format!("/{}", subdir)
