@@ -2,7 +2,11 @@
 
 use crate::error::FsError;
 use crate::fs::LpFs;
-use alloc::{format, string::{String, ToString}, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use hashbrown::HashMap;
 
 /// In-memory filesystem implementation for testing
@@ -27,14 +31,14 @@ impl LpFsMemory {
     /// - Removes trailing "/" (except for root "/")
     fn normalize_path(path: &str) -> String {
         let mut normalized = path.trim();
-        
+
         // Remove leading "./" or "."
         if normalized.starts_with("./") {
             normalized = &normalized[2..];
         } else if normalized == "." {
             normalized = "";
         }
-        
+
         // Ensure it starts with "/"
         let normalized = if normalized.is_empty() {
             "/".to_string()
@@ -43,10 +47,10 @@ impl LpFsMemory {
         } else {
             format!("/{}", normalized)
         };
-        
+
         // Collapse multiple slashes
         let normalized = normalized.replace("//", "/");
-        
+
         // Remove trailing "/" unless it's the root
         if normalized.len() > 1 && normalized.ends_with('/') {
             normalized[..normalized.len() - 1].to_string()
@@ -201,7 +205,10 @@ impl LpFs for LpFsMemory {
                 Ok(self.files.contains_key(&normalized))
             }
 
-            fn list_dir(&self, path: &str) -> Result<alloc::vec::Vec<alloc::string::String>, FsError> {
+            fn list_dir(
+                &self,
+                path: &str,
+            ) -> Result<alloc::vec::Vec<alloc::string::String>, FsError> {
                 self.validate_path(path)?;
                 let normalized = LpFsMemory::normalize_path(path);
                 let mut entries = Vec::new();
@@ -251,7 +258,9 @@ impl LpFs for LpFsMemory {
                     }
                 }
 
-                Ok(alloc::boxed::Box::new(ChrootedLpFsMemory { files: new_files }))
+                Ok(alloc::boxed::Box::new(ChrootedLpFsMemory {
+                    files: new_files,
+                }))
             }
         }
 
@@ -267,7 +276,9 @@ impl LpFs for LpFsMemory {
             }
         }
 
-        Ok(alloc::boxed::Box::new(ChrootedLpFsMemory { files: new_files }))
+        Ok(alloc::boxed::Box::new(ChrootedLpFsMemory {
+            files: new_files,
+        }))
     }
 }
 
@@ -316,7 +327,7 @@ mod tests {
         fs.write_file_mut("relative", b"data").unwrap();
         assert!(fs.file_exists("/relative").unwrap());
         assert!(fs.write_file_mut("/valid", b"data").is_ok());
-        
+
         // Test that normalization works correctly
         fs.write_file_mut("./normalized", b"data2").unwrap();
         assert!(fs.file_exists("/normalized").unwrap());
@@ -325,9 +336,12 @@ mod tests {
     #[test]
     fn test_chroot_basic() {
         let mut fs = LpFsMemory::new();
-        fs.write_file_mut("/projects/test/project.json", b"{}").unwrap();
-        fs.write_file_mut("/projects/test/src/file.txt", b"content").unwrap();
-        fs.write_file_mut("/projects/other/file.txt", b"other").unwrap();
+        fs.write_file_mut("/projects/test/project.json", b"{}")
+            .unwrap();
+        fs.write_file_mut("/projects/test/src/file.txt", b"content")
+            .unwrap();
+        fs.write_file_mut("/projects/other/file.txt", b"other")
+            .unwrap();
 
         let chrooted = fs.chroot("/projects/test").unwrap();
         assert!(chrooted.file_exists("/project.json").unwrap());
@@ -338,8 +352,10 @@ mod tests {
     #[test]
     fn test_chroot_with_relative_path() {
         let mut fs = LpFsMemory::new();
-        fs.write_file_mut("/test-projects/test/project.json", b"{}").unwrap();
-        fs.write_file_mut("/test-projects/test/src/file.txt", b"content").unwrap();
+        fs.write_file_mut("/test-projects/test/project.json", b"{}")
+            .unwrap();
+        fs.write_file_mut("/test-projects/test/src/file.txt", b"content")
+            .unwrap();
 
         // Test with "./test-projects/test"
         let chrooted = fs.chroot("./test-projects/test").unwrap();
@@ -375,7 +391,8 @@ mod tests {
     #[test]
     fn test_chroot_read_file() {
         let mut fs = LpFsMemory::new();
-        fs.write_file_mut("/projects/test/project.json", b"{\"name\":\"test\"}").unwrap();
+        fs.write_file_mut("/projects/test/project.json", b"{\"name\":\"test\"}")
+            .unwrap();
 
         let chrooted = fs.chroot("/projects/test").unwrap();
         let content = chrooted.read_file("/project.json").unwrap();
@@ -385,9 +402,12 @@ mod tests {
     #[test]
     fn test_chroot_list_dir() {
         let mut fs = LpFsMemory::new();
-        fs.write_file_mut("/projects/test/src/file1.txt", b"1").unwrap();
-        fs.write_file_mut("/projects/test/src/file2.txt", b"2").unwrap();
-        fs.write_file_mut("/projects/test/other.txt", b"other").unwrap();
+        fs.write_file_mut("/projects/test/src/file1.txt", b"1")
+            .unwrap();
+        fs.write_file_mut("/projects/test/src/file2.txt", b"2")
+            .unwrap();
+        fs.write_file_mut("/projects/test/other.txt", b"other")
+            .unwrap();
 
         let chrooted = fs.chroot("/projects/test").unwrap();
         let entries = chrooted.list_dir("/src").unwrap();

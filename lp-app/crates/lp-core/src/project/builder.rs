@@ -101,7 +101,9 @@ impl ProjectBuilder {
 
     /// Get the node maps (for use in tests with InitContext)
     /// Returns owned copies so they can be used after build() consumes self
-    pub fn node_maps(&self) -> (
+    pub fn node_maps(
+        &self,
+    ) -> (
         BTreeMap<String, TextureNode>,
         BTreeMap<String, ShaderNode>,
         BTreeMap<String, OutputNode>,

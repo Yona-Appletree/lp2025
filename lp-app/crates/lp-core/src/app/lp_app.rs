@@ -252,9 +252,9 @@ fn get_node_path_from_file_path(file_path: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::app::{ChangeType, FileChange};
-    use lp_core_util::fs::LpFsMemory;
     use crate::traits::OutputProvider;
     use alloc::string::ToString;
+    use lp_core_util::fs::LpFsMemory;
 
     struct MockOutputProvider;
 

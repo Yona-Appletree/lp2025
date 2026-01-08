@@ -1,10 +1,10 @@
 //! Project loader for filesystem-based projects
 
 use crate::error::Error;
-use lp_core_util::fs::LpFs;
 use crate::nodes::{FixtureNode, OutputNode, ShaderNode, TextureNode};
 use crate::project::config::ProjectConfig;
 use alloc::{collections::BTreeMap, format, string::String, string::ToString, vec::Vec};
+use lp_core_util::fs::LpFs;
 
 /// Load a project from the filesystem
 ///
@@ -282,8 +282,8 @@ pub fn load_all_nodes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lp_core_util::fs::LpFsMemory;
     use alloc::string::ToString;
+    use lp_core_util::fs::LpFsMemory;
 
     #[test]
     fn test_load_from_filesystem() {

@@ -55,11 +55,9 @@ impl Project {
 
     /// Reload the project from the filesystem
     pub fn reload(&mut self) -> Result<(), ServerError> {
-        self.app
-            .load_project(&self.path)
-            .map_err(|e| match e {
-                CoreError::Filesystem(msg) => ServerError::Filesystem(msg),
-                e => ServerError::Core(format!("{}", e)),
-            })
+        self.app.load_project(&self.path).map_err(|e| match e {
+            CoreError::Filesystem(msg) => ServerError::Filesystem(msg),
+            e => ServerError::Core(format!("{}", e)),
+        })
     }
 }

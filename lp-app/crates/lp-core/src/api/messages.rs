@@ -10,13 +10,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "$type")]
 pub enum MsgIn {
-    ListNodes { },
+    ListNodes {},
 
     /// Start receiving updates for the specified node.
-    WatchNode { id: String },
+    WatchNode {
+        id: String,
+    },
 
     /// Stop receiving updates for the specified node.
-    UnwatchNode { id: String },
+    UnwatchNode {
+        id: String,
+    },
 }
 
 /// Outgoing messages from LpApp
@@ -25,7 +29,5 @@ pub enum MsgIn {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "$type")]
 pub enum MsgOut {
-    NodeList {
-        nodes: Vec<String>,
-    }
+    NodeList { nodes: Vec<String> },
 }

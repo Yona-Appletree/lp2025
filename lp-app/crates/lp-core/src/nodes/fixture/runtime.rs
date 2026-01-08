@@ -324,7 +324,7 @@ impl NodeLifecycle for FixtureNodeRuntime {
 mod tests {
     use super::*;
     use crate::nodes::output::OutputNode;
-    use crate::nodes::texture::{formats, TextureNode};
+    use crate::nodes::texture::{TextureNode, formats};
     use alloc::{string::ToString, vec};
     use hashbrown::HashMap;
 

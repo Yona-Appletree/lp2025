@@ -116,13 +116,7 @@ mod tests {
         let shaders = alloc::collections::BTreeMap::new();
         let outputs = alloc::collections::BTreeMap::new();
         let fixtures = alloc::collections::BTreeMap::new();
-        let ctx = InitContext::new(
-            &project_config,
-            &textures,
-            &shaders,
-            &outputs,
-            &fixtures,
-        );
+        let ctx = InitContext::new(&project_config, &textures, &shaders, &outputs, &fixtures);
 
         assert!(runtime.init(&config, &ctx).is_ok());
         assert_eq!(runtime.texture().width(), 64);
@@ -146,13 +140,7 @@ mod tests {
         let shaders = alloc::collections::BTreeMap::new();
         let outputs = alloc::collections::BTreeMap::new();
         let fixtures = alloc::collections::BTreeMap::new();
-        let ctx = InitContext::new(
-            &project_config,
-            &textures,
-            &shaders,
-            &outputs,
-            &fixtures,
-        );
+        let ctx = InitContext::new(&project_config, &textures, &shaders, &outputs, &fixtures);
 
         assert!(runtime.init(&config, &ctx).is_err());
         assert!(matches!(runtime.status(), NodeStatus::Error { .. }));
@@ -173,13 +161,7 @@ mod tests {
         let shaders = alloc::collections::BTreeMap::new();
         let outputs = alloc::collections::BTreeMap::new();
         let fixtures = alloc::collections::BTreeMap::new();
-        let ctx = InitContext::new(
-            &project_config,
-            &textures,
-            &shaders,
-            &outputs,
-            &fixtures,
-        );
+        let ctx = InitContext::new(&project_config, &textures, &shaders, &outputs, &fixtures);
 
         runtime.init(&config, &ctx).unwrap();
 

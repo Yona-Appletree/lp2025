@@ -58,7 +58,11 @@ impl ProjectRuntime {
         fixtures: &BTreeMap<String, FixtureNode>,
         output_provider: &dyn OutputProvider,
     ) -> Result<(), Error> {
-        log::info!("Initializing runtime for project: {} ({})", config.name, config.uid);
+        log::info!(
+            "Initializing runtime for project: {} ({})",
+            config.name,
+            config.uid
+        );
         let init_ctx = InitContext::new(config, textures, shaders, outputs, fixtures);
 
         // Initialize textures
@@ -424,16 +428,18 @@ mod tests {
         let config = builder.build().unwrap();
 
         let output_provider = MockOutputProvider;
-        assert!(runtime
-            .init(
-                &config,
-                &textures,
-                &shaders,
-                &outputs,
-                &fixtures,
-                &output_provider
-            )
-            .is_ok());
+        assert!(
+            runtime
+                .init(
+                    &config,
+                    &textures,
+                    &shaders,
+                    &outputs,
+                    &fixtures,
+                    &output_provider
+                )
+                .is_ok()
+        );
 
         // Check that nodes were initialized
         assert_eq!(runtime.textures.len(), 1);
@@ -561,7 +567,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
         // Verify texture was updated with non-zero pixels
         let texture_after = runtime.get_texture(texture_id).unwrap();
-        
+
         // Check that at least some pixels are non-zero (shader executed)
         let mut found_non_zero = false;
         for y in 0..8 {
@@ -577,7 +583,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
                 break;
             }
         }
-        
+
         assert!(
             found_non_zero,
             "Shader should have written non-zero pixels to texture after update"
@@ -700,16 +706,18 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         // Init runtime
         let mut runtime = ProjectRuntime::new("test".to_string());
         let output_provider = MockOutputProvider;
-        assert!(runtime
-            .init(
-                &config,
-                &textures,
-                &shaders,
-                &outputs,
-                &fixtures,
-                &output_provider
-            )
-            .is_ok());
+        assert!(
+            runtime
+                .init(
+                    &config,
+                    &textures,
+                    &shaders,
+                    &outputs,
+                    &fixtures,
+                    &output_provider
+                )
+                .is_ok()
+        );
 
         // Update multiple times
         assert!(runtime.update(16, &output_provider).is_ok());
