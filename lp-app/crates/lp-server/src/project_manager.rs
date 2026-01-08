@@ -4,7 +4,7 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use crate::project::Project;
-use alloc::{string::{String, ToString}, vec::Vec};
+use alloc::{format, string::{String, ToString}, vec::Vec};
 use hashbrown::HashMap;
 use lp_core::app::Platform;
 use lp_core::project::config::ProjectConfig;

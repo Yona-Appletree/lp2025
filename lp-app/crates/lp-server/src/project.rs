@@ -3,10 +3,9 @@
 extern crate alloc;
 
 use crate::error::ServerError;
-use alloc::string::String;
+use alloc::{format, string::String};
 use lp_core::app::{LpApp, Platform};
 use lp_core::error::Error as CoreError;
-use lp_core::traits::LpFs;
 
 /// A project instance wrapping an LpApp
 pub struct Project {
