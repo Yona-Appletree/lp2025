@@ -3,10 +3,7 @@
 use crate::app::{FileChange, Platform};
 use crate::error::Error;
 use crate::project::{config::ProjectConfig, loader, runtime::ProjectRuntime};
-use alloc::{
-    format,
-    string::{String, ToString},
-};
+use alloc::string::{String, ToString};
 
 /// LightPlayer Application
 ///
@@ -31,25 +28,14 @@ impl LpApp {
         }
     }
 
-    /// Create a default project with basic setup
-    ///
-    /// Creates a project with only top-level metadata (uid and name).
-    /// Nodes will be loaded from the filesystem separately via ProjectLoader.
-    pub fn create_default_project() -> ProjectConfig {
-        ProjectConfig {
-            uid: "default".to_string(),
-            name: "Default Project".to_string(),
-        }
-    }
-
     /// Load a project from the filesystem
     ///
     /// Uses ProjectLoader to read `/project.json` and load the project configuration.
     /// Creates a ProjectRuntime and initializes it. If a project is already loaded,
     /// it is destroyed before loading the new one.
     ///
-    /// If the project file doesn't exist, creates a default project, saves it,
-    /// and loads it.
+    /// Returns an error if the project file doesn't exist. Project creation should
+    /// be handled by the caller (e.g., `lp-server`).
     ///
     pub fn load_project(&mut self, _path: &str) -> Result<(), Error> {
         log::info!("Loading project from /project.json");
@@ -59,23 +45,15 @@ impl LpApp {
             let _ = runtime.destroy();
         }
 
+        // Check if project exists
+        if !self.platform.fs.file_exists("/project.json")? {
+            return Err(Error::Filesystem(
+                "Project not found: /project.json does not exist".to_string(),
+            ));
+        }
+
         // Load project config using ProjectLoader
-        let config = if self.platform.fs.file_exists("/project.json")? {
-            loader::load_from_filesystem(self.platform.fs.as_ref())?
-        } else {
-            // Create default project
-            log::warn!("project.json not found, creating default project");
-            let default_config = Self::create_default_project();
-
-            // Save default project to filesystem
-            let json = serde_json::to_string_pretty(&default_config)
-                .map_err(|e| Error::Serialization(format!("Failed to serialize project: {}", e)))?;
-            self.platform
-                .fs
-                .write_file("/project.json", json.as_bytes())?;
-
-            default_config
-        };
+        let config = loader::load_from_filesystem(self.platform.fs.as_ref())?;
 
         log::info!("Project config loaded: {} ({})", config.name, config.uid);
 
@@ -274,7 +252,7 @@ fn get_node_path_from_file_path(file_path: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::app::{ChangeType, FileChange};
-    use lp_core_util::fs::memory::LpFsMemory;
+    use lp_core_util::fs::LpFsMemory;
     use crate::traits::OutputProvider;
     use alloc::string::ToString;
 
@@ -324,12 +302,16 @@ mod tests {
 
     #[test]
     fn test_handle_file_changes_project_json() {
-        let fs = alloc::boxed::Box::new(LpFsMemory::new());
+        let mut fs = LpFsMemory::new();
+        // Create project.json first
+        fs.write_file_mut("/project.json", br#"{"uid":"test","name":"Test"}"#)
+            .unwrap();
+        let fs_box = alloc::boxed::Box::new(fs);
         let output = alloc::boxed::Box::new(MockOutputProvider);
-        let platform = Platform::new(fs, output);
+        let platform = Platform::new(fs_box, output);
         let mut app = LpApp::new(platform);
 
-        // Create a project
+        // Load the project
         app.load_project("/project.json").unwrap();
 
         // Change project.json
@@ -346,16 +328,16 @@ mod tests {
     fn test_handle_file_changes_node_file() {
         let mut fs = LpFsMemory::new();
         // Create a project with a shader
-        fs.write_file("/project.json", br#"{"uid":"test","name":"Test"}"#)
+        fs.write_file_mut("/project.json", br#"{"uid":"test","name":"Test"}"#)
             .unwrap();
-        fs.write_file(
+        fs.write_file_mut(
             "/src/shader.shader/node.json",
             br#"{"$type":"Single","texture_id":"/src/texture.texture"}"#,
         )
         .unwrap();
-        fs.write_file("/src/shader.shader/main.glsl", b"void main() {}")
+        fs.write_file_mut("/src/shader.shader/main.glsl", b"void main() {}")
             .unwrap();
-        fs.write_file(
+        fs.write_file_mut(
             "/src/texture.texture/node.json",
             br#"{"$type":"Memory","size":[64,64],"format":"RGB8"}"#,
         )

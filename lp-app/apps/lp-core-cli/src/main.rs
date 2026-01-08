@@ -12,13 +12,13 @@ use led_output::render_leds;
 use lp_core::app::{LpApp, MsgIn, MsgOut, Platform};
 use lp_core::error::Error;
 use lp_core::traits::{LpFs, Transport};
+use lp_core_util::fs::LpFsMemory;
 use output_provider::HostOutputProvider;
 use std::env;
 use std::fs as std_fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use lp_core_util::fs::LpFsMemory;
 use transport::HostTransport;
 use watcher::FileWatcher;
 
@@ -336,7 +336,10 @@ fn create_project(project_dir: &Path) -> Result<(), Error> {
     })?;
 
     // Create project.json with default config
-    let default_config = LpApp::create_default_project();
+    let default_config = lp_core::project::config::ProjectConfig {
+        uid: "default".to_string(),
+        name: "Default Project".to_string(),
+    };
     let json = serde_json::to_string_pretty(&default_config)
         .map_err(|e| Error::Serialization(format!("Failed to serialize project config: {}", e)))?;
     std_fs::write(&project_json_path, json.as_bytes())

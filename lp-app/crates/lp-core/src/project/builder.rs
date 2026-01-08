@@ -99,6 +99,22 @@ impl ProjectBuilder {
         (self, id)
     }
 
+    /// Get the node maps (for use in tests with InitContext)
+    /// Returns owned copies so they can be used after build() consumes self
+    pub fn node_maps(&self) -> (
+        BTreeMap<String, TextureNode>,
+        BTreeMap<String, ShaderNode>,
+        BTreeMap<String, OutputNode>,
+        BTreeMap<String, FixtureNode>,
+    ) {
+        (
+            self.textures.clone(),
+            self.shaders.clone(),
+            self.outputs.clone(),
+            self.fixtures.clone(),
+        )
+    }
+
     /// Build the ProjectConfig, validating that all referenced IDs exist
     pub fn build(self) -> Result<ProjectConfig, Error> {
         // Validate that all referenced IDs exist
@@ -161,7 +177,7 @@ impl Default for ProjectBuilder {
 mod tests {
     use super::*;
     use crate::nodes::texture::formats;
-    use alloc::{string::ToString, vec};
+    use alloc::{string::ToString, vec, vec::Vec};
 
     #[test]
     fn test_project_builder_new() {

@@ -420,10 +420,20 @@ mod tests {
                 radius: 0.1,
             }],
         });
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let config = builder.build().unwrap();
 
         let output_provider = MockOutputProvider;
-        assert!(runtime.init(&config, &output_provider).is_ok());
+        assert!(runtime
+            .init(
+                &config,
+                &textures,
+                &shaders,
+                &outputs,
+                &fixtures,
+                &output_provider
+            )
+            .is_ok());
 
         // Check that nodes were initialized
         assert_eq!(runtime.textures.len(), 1);

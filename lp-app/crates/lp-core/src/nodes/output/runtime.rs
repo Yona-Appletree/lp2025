@@ -170,14 +170,18 @@ mod tests {
         let project_config = crate::project::config::ProjectConfig {
             uid: "test".to_string(),
             name: "Test".to_string(),
-            nodes: crate::project::config::Nodes {
-                outputs: hashbrown::HashMap::new(),
-                textures: hashbrown::HashMap::new(),
-                shaders: hashbrown::HashMap::new(),
-                fixtures: hashbrown::HashMap::new(),
-            },
         };
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let textures = alloc::collections::BTreeMap::new();
+        let shaders = alloc::collections::BTreeMap::new();
+        let outputs = alloc::collections::BTreeMap::new();
+        let fixtures = alloc::collections::BTreeMap::new();
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_ok());
         assert_eq!(runtime.pixel_count(), 128);
@@ -197,14 +201,18 @@ mod tests {
         let project_config = crate::project::config::ProjectConfig {
             uid: "test".to_string(),
             name: "Test".to_string(),
-            nodes: crate::project::config::Nodes {
-                outputs: hashbrown::HashMap::new(),
-                textures: hashbrown::HashMap::new(),
-                shaders: hashbrown::HashMap::new(),
-                fixtures: hashbrown::HashMap::new(),
-            },
         };
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let textures = alloc::collections::BTreeMap::new();
+        let shaders = alloc::collections::BTreeMap::new();
+        let outputs = alloc::collections::BTreeMap::new();
+        let fixtures = alloc::collections::BTreeMap::new();
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_err());
         assert!(matches!(runtime.status(), NodeStatus::Error { .. }));
@@ -221,14 +229,18 @@ mod tests {
         let project_config = crate::project::config::ProjectConfig {
             uid: "test".to_string(),
             name: "Test".to_string(),
-            nodes: crate::project::config::Nodes {
-                outputs: hashbrown::HashMap::new(),
-                textures: hashbrown::HashMap::new(),
-                shaders: hashbrown::HashMap::new(),
-                fixtures: hashbrown::HashMap::new(),
-            },
         };
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let textures = alloc::collections::BTreeMap::new();
+        let shaders = alloc::collections::BTreeMap::new();
+        let outputs = alloc::collections::BTreeMap::new();
+        let fixtures = alloc::collections::BTreeMap::new();
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
 
         runtime.init(&config, &ctx).unwrap();
 

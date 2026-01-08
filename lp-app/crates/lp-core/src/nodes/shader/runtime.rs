@@ -251,8 +251,15 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
             glsl: glsl.to_string(),
             texture_id,
         };
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_ok());
         assert!(runtime.executable.is_some());
@@ -263,14 +270,25 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     fn test_shader_node_runtime_init_invalid_glsl() {
         let mut runtime = ShaderNodeRuntime::new();
         let glsl = "invalid glsl code";
+        let builder = crate::project::builder::ProjectBuilder::new_test();
+        let (builder, texture_id) = builder.add_texture(TextureNode::Memory {
+            size: [64, 64],
+            format: crate::nodes::texture::formats::RGB8.to_string(),
+        });
         let config = ShaderNode::Single {
             glsl: glsl.to_string(),
-            texture_id: TextureId(1),
+            texture_id,
         };
-        let project_config = crate::project::builder::ProjectBuilder::new_test()
-            .build()
-            .unwrap();
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let builder = crate::project::builder::ProjectBuilder::new_test();
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
+        let project_config = builder.build().unwrap();
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_err());
         assert!(matches!(runtime.status(), NodeStatus::Error { .. }));
@@ -307,8 +325,15 @@ vec3 main(vec2 fragCoord, vec2 outputSize, float time) {
             glsl: glsl.to_string(),
             texture_id,
         };
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_err());
         assert!(matches!(runtime.status(), NodeStatus::Error { .. }));
@@ -331,8 +356,15 @@ vec4 main(vec2 fragCoord, float time) {
             glsl: glsl.to_string(),
             texture_id,
         };
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_err());
         assert!(matches!(runtime.status(), NodeStatus::Error { .. }));
@@ -348,8 +380,15 @@ vec4 main(vec2 fragCoord, float time) {
         };
         let (builder, texture_id) =
             crate::project::builder::ProjectBuilder::new_test().add_texture(texture_config.clone());
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let init_ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let init_ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
         texture_runtime.init(&texture_config, &init_ctx).unwrap();
 
         // Create shader runtime

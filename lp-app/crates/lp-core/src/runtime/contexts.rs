@@ -167,7 +167,7 @@ impl TextureRenderContext {
 mod tests {
     use super::*;
     use crate::project::config::ProjectConfig;
-    use alloc::collections::BTreeMap;
+    use alloc::{collections::BTreeMap, string::ToString};
 
     #[test]
     fn test_init_context_creation() {

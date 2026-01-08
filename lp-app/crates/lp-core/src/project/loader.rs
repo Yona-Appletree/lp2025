@@ -282,13 +282,13 @@ pub fn load_all_nodes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lp_core_util::fs::memory::LpFsMemory;
+    use lp_core_util::fs::LpFsMemory;
     use alloc::string::ToString;
 
     #[test]
     fn test_load_from_filesystem() {
         let mut fs = LpFsMemory::new();
-        fs.write_file(
+        fs.write_file_mut(
             "/project.json",
             br#"{"uid":"test-uid","name":"Test Project"}"#,
         )
@@ -310,13 +310,13 @@ mod tests {
     fn test_discover_nodes() {
         let mut fs = LpFsMemory::new();
         // Create node directories by creating files in them
-        fs.write_file("/src/shader1.shader/node.json", b"{}")
+        fs.write_file_mut("/src/shader1.shader/node.json", b"{}")
             .unwrap();
-        fs.write_file("/src/texture1.texture/node.json", b"{}")
+        fs.write_file_mut("/src/texture1.texture/node.json", b"{}")
             .unwrap();
-        fs.write_file("/src/output1.output/node.json", b"{}")
+        fs.write_file_mut("/src/output1.output/node.json", b"{}")
             .unwrap();
-        fs.write_file("/src/fixture1.fixture/node.json", b"{}")
+        fs.write_file_mut("/src/fixture1.fixture/node.json", b"{}")
             .unwrap();
 
         let nodes = discover_nodes(&fs).unwrap();
@@ -331,9 +331,9 @@ mod tests {
     fn test_discover_nodes_nested() {
         let mut fs = LpFsMemory::new();
         // Create nested node directories
-        fs.write_file("/src/nested/effects/rainbow.shader/node.json", b"{}")
+        fs.write_file_mut("/src/nested/effects/rainbow.shader/node.json", b"{}")
             .unwrap();
-        fs.write_file("/src/nested/textures/bg.texture/node.json", b"{}")
+        fs.write_file_mut("/src/nested/textures/bg.texture/node.json", b"{}")
             .unwrap();
 
         let nodes = discover_nodes(&fs).unwrap();
@@ -375,12 +375,12 @@ mod tests {
     #[test]
     fn test_load_node_shader() {
         let mut fs = LpFsMemory::new();
-        fs.write_file(
+        fs.write_file_mut(
             "/src/my-shader.shader/node.json",
             br#"{"$type":"Single","texture_id":"/src/my-texture.texture"}"#,
         )
         .unwrap();
-        fs.write_file(
+        fs.write_file_mut(
             "/src/my-shader.shader/main.glsl",
             b"vec4 main(vec2 fragCoord, vec2 outputSize, float time) { return vec4(1.0); }",
         )
@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn test_load_node_texture() {
         let mut fs = LpFsMemory::new();
-        fs.write_file(
+        fs.write_file_mut(
             "/src/my-texture.texture/node.json",
             br#"{"$type":"Memory","size":[64,64],"format":"RGB8"}"#,
         )
@@ -427,23 +427,23 @@ mod tests {
     fn test_load_all_nodes() {
         let mut fs = LpFsMemory::new();
         // Create a shader
-        fs.write_file(
+        fs.write_file_mut(
             "/src/shader.shader/node.json",
             br#"{"$type":"Single","texture_id":"/src/texture.texture"}"#,
         )
         .unwrap();
-        fs.write_file("/src/shader.shader/main.glsl", b"void main() {}")
+        fs.write_file_mut("/src/shader.shader/main.glsl", b"void main() {}")
             .unwrap();
 
         // Create a texture
-        fs.write_file(
+        fs.write_file_mut(
             "/src/texture.texture/node.json",
             br#"{"$type":"Memory","size":[32,32],"format":"RGB8"}"#,
         )
         .unwrap();
 
         // Create an output
-        fs.write_file(
+        fs.write_file_mut(
             "/src/output.output/node.json",
             br#"{"$type":"gpio_strip","chip":"ws2812","gpio_pin":4,"count":128}"#,
         )

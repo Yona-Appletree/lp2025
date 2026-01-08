@@ -323,7 +323,8 @@ impl NodeLifecycle for FixtureNodeRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nodes::texture::formats;
+    use crate::nodes::output::OutputNode;
+    use crate::nodes::texture::{formats, TextureNode};
     use alloc::{string::ToString, vec};
     use hashbrown::HashMap;
 
@@ -341,9 +342,19 @@ mod tests {
     #[test]
     fn test_fixture_node_runtime_init() {
         let mut runtime = FixtureNodeRuntime::new();
+        let builder = crate::project::builder::ProjectBuilder::new_test();
+        let (builder, output_id) = builder.add_output(OutputNode::GpioStrip {
+            chip: "ws2812".to_string(),
+            gpio_pin: 4,
+            count: 128,
+        });
+        let (builder, texture_id) = builder.add_texture(TextureNode::Memory {
+            size: [64, 64],
+            format: formats::RGB8.to_string(),
+        });
         let config = FixtureNode::CircleList {
-            output_id: OutputId(1),
-            texture_id: TextureId(1),
+            output_id,
+            texture_id,
             channel_order: "rgb".to_string(),
             mapping: vec![Mapping {
                 channel: 0,
@@ -351,13 +362,18 @@ mod tests {
                 radius: 0.1,
             }],
         };
-        let project_config = crate::project::builder::ProjectBuilder::new_test()
-            .build()
-            .unwrap();
-        let ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
+        let project_config = builder.build().unwrap();
+        let ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
 
         assert!(runtime.init(&config, &ctx).is_ok());
-        assert_eq!(runtime.output_id, OutputId(1));
+        assert_eq!(runtime.output_id, output_id);
         assert_eq!(runtime.channel_order, "rgb");
         assert_eq!(runtime.mapping.len(), 1);
         assert!(!runtime.kernel.samples.is_empty());
@@ -374,8 +390,15 @@ mod tests {
         };
         let (builder, texture_id) =
             crate::project::builder::ProjectBuilder::new_test().add_texture(texture_config.clone());
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let init_ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let init_ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            textures,
+            shaders,
+            outputs,
+            fixtures,
+        );
         texture_runtime.init(&texture_config, &init_ctx).unwrap();
 
         // Fill texture with a test pattern (red in center)
@@ -399,8 +422,15 @@ mod tests {
         };
         let (builder, output_id) =
             crate::project::builder::ProjectBuilder::new_test().add_output(output_config.clone());
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let init_ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let init_ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
         output_runtime.init(&output_config, &init_ctx).unwrap();
 
         // Create fixture runtime
@@ -418,8 +448,15 @@ mod tests {
         let (builder, _texture_id) =
             crate::project::builder::ProjectBuilder::new_test().add_texture(texture_config);
         let (builder, _output_id) = builder.add_output(output_config);
+        let (textures, shaders, outputs, fixtures) = builder.node_maps();
         let project_config = builder.build().unwrap();
-        let init_ctx = crate::runtime::contexts::InitContext::new(&project_config);
+        let init_ctx = crate::runtime::contexts::InitContext::new(
+            &project_config,
+            &textures,
+            &shaders,
+            &outputs,
+            &fixtures,
+        );
         fixture_runtime.init(&fixture_config, &init_ctx).unwrap();
 
         // Create render context
