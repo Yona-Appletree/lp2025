@@ -10,8 +10,8 @@ path = "src/main.rs"
 
 [dependencies]
 log = "0.4"
-lp-core = { path = "../../crates/lp-core" }
-lp-core-util = { path = "../../crates/lp-core-util", default-features = false, features = ["std"] }
+lp-engine = { path = "../../crates/lp-engine" }
+lp-shared = { path = "../../crates/lp-shared", default-features = false, features = ["std"] }
 lp-server = { path = "../../crates/lp-server", default-features = false, features = ["std"] }
 eframe = "0.28"
 egui = "0.28"

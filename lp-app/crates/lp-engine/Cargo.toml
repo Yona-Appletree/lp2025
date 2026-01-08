@@ -1,5 +1,5 @@
 [package]
-name = "lp-core"
+name = "lp-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ workspace = true
 [features]
 default = ["std"]
 std = [
-    "lp-core-util/std"
+    "lp-shared/std"
 ]
 
 [dependencies]
@@ -20,4 +20,4 @@ hashbrown = { workspace = true }
 lp-glsl-compiler = { path = "../../../lp-glsl/crates/lp-glsl-compiler", default-features = false, features = ["std"] }
 log = { version = "0.4", default-features = false }
 
-lp-core-util = { path = "../lp-core-util", default-features = false }
+lp-shared = { path = "../lp-shared", default-features = false }

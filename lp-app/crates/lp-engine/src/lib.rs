@@ -11,4 +11,4 @@ pub mod runtime;
 pub mod traits;
 pub mod util;
 
-pub use lp_core_util::fs::LpFs;
+pub use lp_shared::fs::LpFs;

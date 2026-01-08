@@ -254,7 +254,7 @@ mod tests {
     use crate::app::{ChangeType, FileChange};
     use crate::traits::OutputProvider;
     use alloc::string::ToString;
-    use lp_core_util::fs::LpFsMemory;
+    use lp_shared::fs::LpFsMemory;
 
     struct MockOutputProvider;
 

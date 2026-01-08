@@ -11,9 +11,9 @@ use alloc::{
     vec::Vec,
 };
 use hashbrown::HashMap;
-use lp_core::app::Platform;
-use lp_core::project::config::ProjectConfig;
-use lp_core::traits::LpFs;
+use lp_engine::app::Platform;
+use lp_engine::project::config::ProjectConfig;
+use lp_engine::traits::LpFs;
 
 /// Manages multiple project instances
 pub struct ProjectManager {

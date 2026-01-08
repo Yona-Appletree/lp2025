@@ -4,7 +4,7 @@ use crate::error::Error;
 use crate::nodes::{FixtureNode, OutputNode, ShaderNode, TextureNode};
 use crate::project::config::ProjectConfig;
 use alloc::{collections::BTreeMap, format, string::String, string::ToString, vec::Vec};
-use lp_core_util::fs::LpFs;
+use lp_shared::fs::LpFs;
 
 /// Load a project from the filesystem
 ///
@@ -283,7 +283,7 @@ pub fn load_all_nodes(
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use lp_core_util::fs::LpFsMemory;
+    use lp_shared::fs::LpFsMemory;
 
     #[test]
     fn test_load_from_filesystem() {

@@ -6,7 +6,7 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use alloc::format;
-use lp_core::traits::LpFs;
+use lp_engine::traits::LpFs;
 
 /// Create a default project template
 ///

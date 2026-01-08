@@ -2059,18 +2059,6 @@ name = "lp-builtins"
 version = "40.0.0"
 
 [[package]]
-name = "lp-core"
-version = "40.0.0"
-dependencies = [
- "hashbrown 0.15.5",
- "log",
- "lp-core-util",
- "lp-glsl-compiler",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "lp-core-cli"
 version = "0.1.0"
 dependencies = [
@@ -2078,21 +2066,24 @@ dependencies = [
  "egui",
  "hashbrown 0.15.5",
  "log",
- "lp-core",
- "lp-core-util",
+ "lp-engine",
  "lp-server",
+ "lp-shared",
  "notify",
  "serde_json",
  "tempfile",
 ]
 
 [[package]]
-name = "lp-core-util"
+name = "lp-engine"
 version = "40.0.0"
 dependencies = [
  "hashbrown 0.15.5",
  "log",
- "tempfile",
+ "lp-glsl-compiler",
+ "lp-shared",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2127,9 +2118,18 @@ name = "lp-server"
 version = "40.0.0"
 dependencies = [
  "hashbrown 0.15.5",
- "lp-core",
- "lp-core-util",
+ "lp-engine",
+ "lp-shared",
  "serde_json",
+]
+
+[[package]]
+name = "lp-shared"
+version = "40.0.0"
+dependencies = [
+ "hashbrown 0.15.5",
+ "log",
+ "tempfile",
 ]
 
 [[package]]

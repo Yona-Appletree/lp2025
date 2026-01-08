@@ -14,7 +14,7 @@ pub enum ServerError {
     ProjectExists(String),
     /// Filesystem error
     Filesystem(String),
-    /// Core error (from lp-core)
+    /// Core error (from lp-engine)
     Core(String),
     /// Serialization error
     Serialization(String),

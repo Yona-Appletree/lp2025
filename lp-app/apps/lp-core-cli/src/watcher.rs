@@ -1,7 +1,7 @@
 //! Filesystem watcher for detecting file changes
 
-use lp_core::app::{ChangeType, FileChange};
-use lp_core::error::Error;
+use lp_engine::app::{ChangeType, FileChange};
+use lp_engine::error::Error;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;

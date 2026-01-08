@@ -1,11 +1,11 @@
 //! Debug UI for visualizing textures, mappings, and LEDs
 
 use egui::{Color32, ColorImage, Image, Painter, TextureHandle, Ui};
-use lp_core::nodes::fixture::{FixtureNode, Mapping};
-use lp_core::nodes::shader::{ShaderNode, ShaderNodeRuntime};
-use lp_core::nodes::texture::{TextureNode, formats};
-use lp_core::project::config::ProjectConfig;
-use lp_core::project::runtime::ProjectRuntime;
+use lp_engine::nodes::fixture::{FixtureNode, Mapping};
+use lp_engine::nodes::shader::{ShaderNode, ShaderNodeRuntime};
+use lp_engine::nodes::texture::{TextureNode, formats};
+use lp_engine::project::config::ProjectConfig;
+use lp_engine::project::runtime::ProjectRuntime;
 
 /// Generate placeholder texture data for visualization
 /// In the future, this will use actual shader-rendered data
@@ -247,7 +247,7 @@ pub fn render_textures_panel(
             ui.label("No textures loaded");
         } else {
             for texture_id in texture_ids {
-                let texture_id_typed = lp_core::nodes::id::TextureId(texture_id.clone());
+                let texture_id_typed = lp_engine::nodes::id::TextureId(texture_id.clone());
                 if let Some(texture_rt) = rt.get_texture(texture_id_typed) {
                     // Get config and texture data from runtime
                     let config = texture_rt.config();
@@ -365,7 +365,7 @@ pub fn render_fixtures_panel(
             ui.label("No fixtures loaded");
         } else {
             for fixture_id in fixture_ids {
-                let fixture_id_typed = lp_core::nodes::id::FixtureId(fixture_id.clone());
+                let fixture_id_typed = lp_engine::nodes::id::FixtureId(fixture_id.clone());
                 if let Some(fixture_rt) = rt.get_fixture(fixture_id_typed) {
                     // Get config and runtime
                     let config = fixture_rt.config();
@@ -414,10 +414,10 @@ pub fn render_shader_panel(
         // Show shader status/errors
         if let Some(runtime) = shader_runtime {
             match runtime.status() {
-                lp_core::project::runtime::NodeStatus::Ok => {
+                lp_engine::project::runtime::NodeStatus::Ok => {
                     ui.label(egui::RichText::new("Status: OK").color(egui::Color32::GREEN));
                 }
-                lp_core::project::runtime::NodeStatus::Error { status_message } => {
+                lp_engine::project::runtime::NodeStatus::Error { status_message } => {
                     ui.label(
                         egui::RichText::new(format!("Status: ERROR\n{}", status_message))
                             .color(egui::Color32::RED),
@@ -445,7 +445,7 @@ pub fn render_shaders_panel(
             ui.label("No shaders loaded");
         } else {
             for shader_id in shader_ids {
-                let shader_id_typed = lp_core::nodes::id::ShaderId(shader_id.clone());
+                let shader_id_typed = lp_engine::nodes::id::ShaderId(shader_id.clone());
                 if let Some(shader_rt) = rt.get_shader(shader_id_typed) {
                     // Get config and runtime
                     let config = shader_rt.config();

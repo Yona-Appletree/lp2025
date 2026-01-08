@@ -1,7 +1,7 @@
 //! Host transport implementation using stdio
 
-use lp_core::error::Error;
-use lp_core::traits::Transport;
+use lp_engine::error::Error;
+use lp_engine::traits::Transport;
 use std::io::{self, BufRead, BufReader, Write};
 use std::sync::mpsc;
 use std::thread;

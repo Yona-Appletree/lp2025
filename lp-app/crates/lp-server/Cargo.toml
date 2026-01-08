@@ -9,12 +9,12 @@ rust-version.workspace = true
 [features]
 default = ["std"]
 std = [
-    "lp-core-util/std"
+    "lp-shared/std"
 ]
 
 [dependencies]
-lp-core = { path = "../lp-core", default-features = false }
-lp-core-util = { path = "../lp-core-util", default-features = false }
+lp-engine = { path = "../lp-engine", default-features = false }
+lp-shared = { path = "../lp-shared", default-features = false }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 hashbrown = { workspace = true }
 

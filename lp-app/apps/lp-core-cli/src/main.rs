@@ -9,10 +9,10 @@ use debug_ui::{render_fixtures_panel, render_shaders_panel, render_textures_pane
 use eframe::egui;
 use fs::HostFilesystem;
 use led_output::render_leds;
-use lp_core::app::{LpApp, MsgIn, MsgOut, Platform};
-use lp_core::error::Error;
-use lp_core::traits::{LpFs, Transport};
-use lp_core_util::fs::LpFsMemory;
+use lp_engine::app::{LpApp, MsgIn, MsgOut, Platform};
+use lp_engine::error::Error;
+use lp_engine::traits::{LpFs, Transport};
+use lp_shared::fs::LpFsMemory;
 use lp_server::ProjectManager;
 use output_provider::HostOutputProvider;
 use std::env;
@@ -26,14 +26,14 @@ use watcher::FileWatcher;
 /// Simple logger for host firmware that prints to stderr
 ///
 /// Filters out logs from cranelift and other dependencies,
-/// only showing logs from lp_core and fw-host.
+/// only showing logs from lp_engine and fw-host.
 struct HostLogger;
 
 impl log::Log for HostLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
         // Only show logs from our modules, filter out cranelift and other dependencies
         if let Some(target) = metadata.target().split("::").next() {
-            matches!(target, "lp_core" | "fw_host")
+            matches!(target, "lp_engine" | "fw_host")
         } else {
             true // If no target, show it (shouldn't happen)
         }
@@ -61,12 +61,12 @@ struct HostOutputProviderWrapper {
     inner: Arc<HostOutputProvider>,
 }
 
-impl lp_core::traits::OutputProvider for HostOutputProviderWrapper {
+impl lp_engine::traits::OutputProvider for HostOutputProviderWrapper {
     fn create_output(
         &self,
-        config: &lp_core::nodes::output::config::OutputNode,
-        output_id: Option<lp_core::nodes::id::OutputId>,
-    ) -> Result<std::boxed::Box<dyn lp_core::traits::LedOutput>, lp_core::error::Error> {
+        config: &lp_engine::nodes::output::config::OutputNode,
+        output_id: Option<lp_engine::nodes::id::OutputId>,
+    ) -> Result<std::boxed::Box<dyn lp_engine::traits::LedOutput>, lp_engine::error::Error> {
         self.inner.create_output(config, output_id)
     }
 }
@@ -337,7 +337,7 @@ fn create_project(project_dir: &Path) -> Result<(), Error> {
     })?;
 
     // Create project.json with default config
-    let default_config = lp_core::project::config::ProjectConfig {
+    let default_config = lp_engine::project::config::ProjectConfig {
         uid: "default".to_string(),
         name: "Default Project".to_string(),
     };
@@ -397,7 +397,7 @@ fn main() -> eframe::Result<()> {
 
                 // Initialize output provider
                 let output_provider = Arc::new(HostOutputProvider::new());
-                let platform_output_provider: Box<dyn lp_core::traits::OutputProvider> =
+                let platform_output_provider: Box<dyn lp_engine::traits::OutputProvider> =
                     Box::new(HostOutputProviderWrapper {
                         inner: Arc::clone(&output_provider),
                     });
@@ -441,7 +441,7 @@ fn main() -> eframe::Result<()> {
 
     // Initialize output provider
     let output_provider = Arc::new(HostOutputProvider::new());
-    let platform_output_provider: Box<dyn lp_core::traits::OutputProvider> =
+    let platform_output_provider: Box<dyn lp_engine::traits::OutputProvider> =
         Box::new(HostOutputProviderWrapper {
             inner: Arc::clone(&output_provider),
         });
@@ -821,7 +821,7 @@ impl eframe::App for AppState {
                 for (output_id, output_arc) in &outputs {
                     {
                         let output = output_arc.lock().unwrap();
-                        let pixel_count = lp_core::traits::LedOutput::get_pixel_count(&*output);
+                        let pixel_count = lp_engine::traits::LedOutput::get_pixel_count(&*output);
                         ui.heading(format!(
                             "Output {} ({} LEDs)",
                             String::from(output_id.clone()),
@@ -832,7 +832,7 @@ impl eframe::App for AppState {
 
                     // Render LEDs for this output in a contained panel
                     let output = output_arc.lock().unwrap();
-                    let pixel_count = lp_core::traits::LedOutput::get_pixel_count(&*output);
+                    let pixel_count = lp_engine::traits::LedOutput::get_pixel_count(&*output);
 
                     // Calculate size needed for LED grid
                     let cols = (pixel_count as f32).sqrt().ceil() as usize;

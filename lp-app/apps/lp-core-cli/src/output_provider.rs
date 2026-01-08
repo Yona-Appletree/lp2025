@@ -1,10 +1,10 @@
 //! Host OutputProvider implementation
 
 use hashbrown::HashMap;
-use lp_core::error::Error;
-use lp_core::nodes::id::OutputId;
-use lp_core::nodes::output::config::OutputNode;
-use lp_core::traits::{LedOutput, OutputProvider};
+use lp_engine::error::Error;
+use lp_engine::nodes::id::OutputId;
+use lp_engine::nodes::output::config::OutputNode;
+use lp_engine::traits::{LedOutput, OutputProvider};
 use std::sync::{Arc, Mutex};
 
 use crate::led_output::HostLedOutput;

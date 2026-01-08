@@ -1,10 +1,10 @@
-//! Error types for lp-core
+//! Error types for lp-engine
 
 use alloc::{format, string::String};
 use core::fmt;
-use lp_core_util::error::FsError;
+use lp_shared::error::FsError;
 
-/// Error type for lp-core operations
+/// Error type for lp-engine operations
 #[derive(Debug, Clone)]
 pub enum Error {
     /// Serialization/deserialization error

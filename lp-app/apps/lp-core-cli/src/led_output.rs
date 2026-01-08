@@ -1,7 +1,7 @@
 //! Host LED output implementation with egui visualization
 
-use lp_core::error::Error;
-use lp_core::traits::LedOutput;
+use lp_engine::error::Error;
+use lp_engine::traits::LedOutput;
 use std::sync::{Arc, Mutex};
 
 /// Host LED output implementation that stores pixels and visualizes them in egui

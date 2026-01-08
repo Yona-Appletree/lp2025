@@ -1,5 +1,5 @@
 [package]
-name = "lp-core-util"
+name = "lp-shared"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
