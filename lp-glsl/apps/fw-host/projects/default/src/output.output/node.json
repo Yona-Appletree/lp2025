@@ -1,0 +1,1 @@
+{"$type":"gpio_strip","chip":"ws2812","gpio_pin":4,"count":128}
