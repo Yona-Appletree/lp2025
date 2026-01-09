@@ -31,10 +31,15 @@ pub struct ProjectRuntime {
     frame_time: FrameTime,
     current_frame: FrameId,
     next_handle: i32,
-    textures: HashMap<TextureId, TextureNodeRuntime>,
-    shaders: HashMap<ShaderId, ShaderNodeRuntime>,
-    fixtures: HashMap<FixtureId, FixtureNodeRuntime>,
-    outputs: HashMap<OutputId, OutputNodeRuntime>,
+    // ID -> Handle mappings for resolving references at init time
+    texture_id_to_handle: HashMap<TextureId, NodeHandle>,
+    shader_id_to_handle: HashMap<ShaderId, NodeHandle>,
+    fixture_id_to_handle: HashMap<FixtureId, NodeHandle>,
+    output_id_to_handle: HashMap<OutputId, NodeHandle>,
+    textures: HashMap<NodeHandle, TextureNodeRuntime>,
+    shaders: HashMap<NodeHandle, ShaderNodeRuntime>,
+    fixtures: HashMap<NodeHandle, FixtureNodeRuntime>,
+    outputs: HashMap<NodeHandle, OutputNodeRuntime>,
 }
 
 impl ProjectRuntime {
@@ -45,6 +50,10 @@ impl ProjectRuntime {
             frame_time: FrameTime::new(0, 0),
             current_frame: FrameId(0),
             next_handle: 0,
+            texture_id_to_handle: HashMap::new(),
+            shader_id_to_handle: HashMap::new(),
+            fixture_id_to_handle: HashMap::new(),
+            output_id_to_handle: HashMap::new(),
             textures: HashMap::new(),
             shaders: HashMap::new(),
             fixtures: HashMap::new(),
@@ -73,12 +82,14 @@ impl ProjectRuntime {
         let init_ctx = InitContext::new(config, textures, shaders, outputs, fixtures);
         let current_frame = self.current_frame;
 
-        // Initialize textures
+        // Initialize textures (first pass - assign handles and build ID mapping)
         log::debug!("Initializing {} texture(s)", textures.len());
         for (id_str, texture_config) in textures {
             let texture_id = TextureId(id_str.clone());
             let handle = self.assign_next_handle();
             let path = id_str.clone();
+            self.texture_id_to_handle.insert(texture_id.clone(), handle);
+            
             let mut texture_runtime = TextureNodeRuntime::new(handle, path);
             if let Err(e) = texture_runtime.init(texture_config, &init_ctx) {
                 log::warn!("Failed to initialize texture {}: {}", id_str, e);
@@ -86,39 +97,45 @@ impl ProjectRuntime {
             } else {
                 texture_runtime.set_creation_frame(current_frame);
             }
-            self.textures.insert(texture_id, texture_runtime);
+            self.textures.insert(handle, texture_runtime);
         }
 
-        // Initialize shaders
+        // Initialize shaders (resolve texture references to handles)
         log::debug!("Initializing {} shader(s)", shaders.len());
         for (id_str, shader_config) in shaders {
             let shader_id = ShaderId(id_str.clone());
             let handle = self.assign_next_handle();
             let path = id_str.clone();
+            self.shader_id_to_handle.insert(shader_id.clone(), handle);
+            
             let mut shader_runtime = ShaderNodeRuntime::new(handle, path);
-            if let Err(e) = shader_runtime.init(shader_config, &init_ctx) {
+            // Resolve texture_id to handle before init
+            if let Err(e) = shader_runtime.init_with_handle_resolution(shader_config, &init_ctx, &self.texture_id_to_handle) {
                 log::warn!("Failed to initialize shader {}: {}", id_str, e);
                 // Continue - node status is set internally
             } else {
                 shader_runtime.set_creation_frame(current_frame);
             }
-            self.shaders.insert(shader_id, shader_runtime);
+            self.shaders.insert(handle, shader_runtime);
         }
 
-        // Initialize fixtures
+        // Initialize fixtures (resolve texture and output references to handles)
         log::debug!("Initializing {} fixture(s)", fixtures.len());
         for (id_str, fixture_config) in fixtures {
             let fixture_id = FixtureId(id_str.clone());
             let handle = self.assign_next_handle();
             let path = id_str.clone();
+            self.fixture_id_to_handle.insert(fixture_id.clone(), handle);
+            
             let mut fixture_runtime = FixtureNodeRuntime::new(handle, path);
-            if let Err(e) = fixture_runtime.init(fixture_config, &init_ctx) {
+            // Resolve texture_id and output_id to handles before init
+            if let Err(e) = fixture_runtime.init_with_handle_resolution(fixture_config, &init_ctx, &self.texture_id_to_handle, &self.output_id_to_handle) {
                 log::warn!("Failed to initialize fixture {}: {}", id_str, e);
                 // Continue - node status is set internally
             } else {
                 fixture_runtime.set_creation_frame(current_frame);
             }
-            self.fixtures.insert(fixture_id, fixture_runtime);
+            self.fixtures.insert(handle, fixture_runtime);
         }
 
         // Initialize outputs and create LED handles
@@ -127,6 +144,8 @@ impl ProjectRuntime {
             let output_id = OutputId(id_str.clone());
             let handle = self.assign_next_handle();
             let path = id_str.clone();
+            self.output_id_to_handle.insert(output_id.clone(), handle);
+            
             let mut output_runtime = OutputNodeRuntime::new(handle, path);
             if let Err(e) = output_runtime.init(output_config, &init_ctx) {
                 log::warn!("Failed to initialize output {}: {}", id_str, e);
@@ -134,6 +153,7 @@ impl ProjectRuntime {
             } else {
                 output_runtime.set_creation_frame(current_frame);
                 // Create LED output handle via OutputProvider
+                // Note: OutputProvider still uses OutputId for now, will be updated later
                 match output_provider.create_output(output_config, Some(output_id.clone())) {
                     Ok(led_handle) => {
                         output_runtime.set_handle(led_handle);
@@ -144,7 +164,7 @@ impl ProjectRuntime {
                     }
                 }
             }
-            self.outputs.insert(output_id, output_runtime);
+            self.outputs.insert(handle, output_runtime);
         }
 
         log::info!(
@@ -241,77 +261,89 @@ impl ProjectRuntime {
             fixtures: BTreeMap::new(),
         };
 
-        // Collect status from texture runtimes
-        for (id, runtime) in &self.textures {
+        // Collect status from texture runtimes (use path from runtime)
+        for (handle, runtime) in &self.textures {
             runtime_nodes
                 .textures
-                .insert(String::from(id.clone()), runtime.status().clone());
+                .insert(runtime.path().to_string(), runtime.status().clone());
         }
 
         // Collect status from shader runtimes
-        for (id, runtime) in &self.shaders {
+        for (handle, runtime) in &self.shaders {
             runtime_nodes
                 .shaders
-                .insert(String::from(id.clone()), runtime.status().clone());
+                .insert(runtime.path().to_string(), runtime.status().clone());
         }
 
         // Collect status from fixture runtimes
-        for (id, runtime) in &self.fixtures {
+        for (handle, runtime) in &self.fixtures {
             runtime_nodes
                 .fixtures
-                .insert(String::from(id.clone()), runtime.status().clone());
+                .insert(runtime.path().to_string(), runtime.status().clone());
         }
 
         // Collect status from output runtimes
-        for (id, runtime) in &self.outputs {
+        for (handle, runtime) in &self.outputs {
             runtime_nodes
                 .outputs
-                .insert(String::from(id.clone()), runtime.status().clone());
+                .insert(runtime.path().to_string(), runtime.status().clone());
         }
 
         runtime_nodes
     }
 
-    /// Get the status for a node
+    /// Get the status for a node by path (looks up by iterating)
     pub fn get_status(&self, node_type: NodeType, node_id: &str) -> Option<&NodeStatus> {
         match node_type {
             NodeType::Output => self
                 .outputs
-                .get(&OutputId(node_id.to_string()))
+                .values()
+                .find(|r| r.path() == node_id)
                 .map(|r| r.status()),
             NodeType::Texture => self
                 .textures
-                .get(&TextureId(node_id.to_string()))
+                .values()
+                .find(|r| r.path() == node_id)
                 .map(|r| r.status()),
             NodeType::Shader => self
                 .shaders
-                .get(&ShaderId(node_id.to_string()))
+                .values()
+                .find(|r| r.path() == node_id)
                 .map(|r| r.status()),
             NodeType::Fixture => self
                 .fixtures
-                .get(&FixtureId(node_id.to_string()))
+                .values()
+                .find(|r| r.path() == node_id)
                 .map(|r| r.status()),
         }
     }
 
-    /// Get a texture runtime by ID
+    /// Get a texture runtime by ID (looks up via ID->handle mapping)
     pub fn get_texture(&self, id: TextureId) -> Option<&TextureNodeRuntime> {
-        self.textures.get(&id)
+        self.texture_id_to_handle
+            .get(&id)
+            .and_then(|handle| self.textures.get(handle))
     }
 
-    /// Get a shader runtime by ID
+    /// Get a shader runtime by ID (looks up via ID->handle mapping)
     pub fn get_shader(&self, id: ShaderId) -> Option<&ShaderNodeRuntime> {
-        self.shaders.get(&id)
+        self.shader_id_to_handle
+            .get(&id)
+            .and_then(|handle| self.shaders.get(handle))
     }
 
-    /// Get a fixture runtime by ID
+    /// Get a fixture runtime by ID (looks up via ID->handle mapping)
     pub fn get_fixture(&self, id: FixtureId) -> Option<&FixtureNodeRuntime> {
-        self.fixtures.get(&id)
+        self.fixture_id_to_handle
+            .get(&id)
+            .and_then(|handle| self.fixtures.get(handle))
     }
 
-    /// Get an output runtime by ID
+    /// Get an output runtime by ID (looks up via ID->handle mapping)
     pub fn get_output(&self, id: OutputId) -> Option<&OutputNodeRuntime> {
-        self.outputs.get(&id)
+        self.output_id_to_handle
+            .get(&id)
+            .and_then(|handle| self.outputs.get(handle))
     }
 
     /// Get the current frame time
@@ -319,24 +351,24 @@ impl ProjectRuntime {
         self.frame_time
     }
 
-    /// Get all texture IDs
+    /// Get all texture paths
     pub fn get_texture_ids(&self) -> alloc::vec::Vec<String> {
-        self.textures.keys().map(|id| id.0.clone()).collect()
+        self.textures.values().map(|r| r.path().to_string()).collect()
     }
 
-    /// Get all shader IDs
+    /// Get all shader paths
     pub fn get_shader_ids(&self) -> alloc::vec::Vec<String> {
-        self.shaders.keys().map(|id| id.0.clone()).collect()
+        self.shaders.values().map(|r| r.path().to_string()).collect()
     }
 
-    /// Get all fixture IDs
+    /// Get all fixture paths
     pub fn get_fixture_ids(&self) -> alloc::vec::Vec<String> {
-        self.fixtures.keys().map(|id| id.0.clone()).collect()
+        self.fixtures.values().map(|r| r.path().to_string()).collect()
     }
 
-    /// Get all output IDs
+    /// Get all output paths
     pub fn get_output_ids(&self) -> alloc::vec::Vec<String> {
-        self.outputs.keys().map(|id| id.0.clone()).collect()
+        self.outputs.values().map(|r| r.path().to_string()).collect()
     }
 
     /// Get the current frame ID
@@ -353,25 +385,127 @@ impl ProjectRuntime {
 
     /// Get all node handles from all node types
     pub fn get_all_node_handles(&self) -> alloc::vec::Vec<NodeHandle> {
-        // TODO: This will be implemented in Phase 3 when we convert HashMaps to use handles
-        // For now, return empty vec
-        alloc::vec::Vec::new()
+        let mut handles = alloc::vec::Vec::new();
+        handles.extend(self.textures.keys().copied());
+        handles.extend(self.shaders.keys().copied());
+        handles.extend(self.fixtures.keys().copied());
+        handles.extend(self.outputs.keys().copied());
+        handles
     }
 
     /// Get nodes that changed since the given frame
     ///
     /// Returns handles of nodes where min(last_config_frame, last_state_frame) > since_frame
     /// OR created_frame > since_frame
-    pub fn get_changed_nodes_since(&self, _since_frame: FrameId) -> alloc::vec::Vec<NodeHandle> {
-        // TODO: This will be implemented in Phase 2-3 when node runtimes have frame tracking
-        // For now, return empty vec
-        alloc::vec::Vec::new()
+    pub fn get_changed_nodes_since(&self, since_frame: FrameId) -> alloc::vec::Vec<NodeHandle> {
+        let mut changed = alloc::vec::Vec::new();
+        
+        // Check textures
+        for (handle, runtime) in &self.textures {
+            let base = &runtime.base;
+            let min_frame = if base.last_config_frame.0 < base.last_state_frame.0 {
+                base.last_config_frame
+            } else {
+                base.last_state_frame
+            };
+            if min_frame.0 > since_frame.0 || base.created_frame.0 > since_frame.0 {
+                changed.push(*handle);
+            }
+        }
+        
+        // Check shaders
+        for (handle, runtime) in &self.shaders {
+            let base = &runtime.base;
+            let min_frame = if base.last_config_frame.0 < base.last_state_frame.0 {
+                base.last_config_frame
+            } else {
+                base.last_state_frame
+            };
+            if min_frame.0 > since_frame.0 || base.created_frame.0 > since_frame.0 {
+                changed.push(*handle);
+            }
+        }
+        
+        // Check fixtures
+        for (handle, runtime) in &self.fixtures {
+            let base = &runtime.base;
+            let min_frame = if base.last_config_frame.0 < base.last_state_frame.0 {
+                base.last_config_frame
+            } else {
+                base.last_state_frame
+            };
+            if min_frame.0 > since_frame.0 || base.created_frame.0 > since_frame.0 {
+                changed.push(*handle);
+            }
+        }
+        
+        // Check outputs
+        for (handle, runtime) in &self.outputs {
+            let base = &runtime.base;
+            let min_frame = if base.last_config_frame.0 < base.last_state_frame.0 {
+                base.last_config_frame
+            } else {
+                base.last_state_frame
+            };
+            if min_frame.0 > since_frame.0 || base.created_frame.0 > since_frame.0 {
+                changed.push(*handle);
+            }
+        }
+        
+        changed
     }
 
     /// Get detailed information about a node by handle
-    pub fn get_node_detail(&self, _handle: NodeHandle) -> Option<NodeDetail> {
-        // TODO: This will be implemented in Phase 3 when HashMaps use handles
-        // For now, return None
+    pub fn get_node_detail(&self, handle: NodeHandle) -> Option<NodeDetail> {
+        // Try each node type
+        if let Some(texture) = self.textures.get(&handle) {
+            return Some(NodeDetail {
+                path: texture.path().to_string(),
+                state: lp_shared::project::nodes::state::NodeState::Texture(
+                    lp_shared::project::nodes::texture::state::TextureState {
+                        texture: texture.texture().clone(),
+                    }
+                ),
+            });
+        }
+        
+        if let Some(shader) = self.shaders.get(&handle) {
+            // Extract shader state (GLSL code, errors)
+            let glsl = match shader.config() {
+                lp_shared::project::nodes::shader::config::ShaderNode::Single { glsl, .. } => glsl.clone(),
+            };
+            return Some(NodeDetail {
+                path: shader.path().to_string(),
+                state: lp_shared::project::nodes::state::NodeState::Shader(
+                    lp_shared::project::nodes::shader::state::ShaderState {
+                        glsl,
+                        error: match shader.status() {
+                            crate::project::runtime::NodeStatus::Ok => None,
+                            crate::project::runtime::NodeStatus::Error { status_message } => Some(status_message.clone()),
+                        },
+                    }
+                ),
+            });
+        }
+        
+        if let Some(output) = self.outputs.get(&handle) {
+            // Extract output state (buffer values)
+            return Some(NodeDetail {
+                path: output.path().to_string(),
+                state: lp_shared::project::nodes::state::NodeState::Output(
+                    lp_shared::project::nodes::output::state::OutputState {
+                        values: output.buffer().to_vec(),
+                    }
+                ),
+            });
+        }
+        
+        if let Some(_fixture) = self.fixtures.get(&handle) {
+            // TODO: Fixture state not yet defined in NodeState
+            // For now, return None
+            return None;
+        }
+        
         None
     }
 

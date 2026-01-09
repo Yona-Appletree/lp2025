@@ -19,10 +19,10 @@ use lp_shared::project::nodes::shader::config::ShaderNode;
 
 /// Shader node runtime
 pub struct ShaderNodeRuntime {
-    base: NodeRuntimeBase,
+    pub base: NodeRuntimeBase,
     config: ShaderNode,
     executable: Option<alloc::boxed::Box<dyn GlslExecutable>>,
-    texture_id: TextureId,
+    texture_handle: NodeHandle,
     status: NodeStatus,
 }
 
@@ -36,7 +36,7 @@ impl ShaderNodeRuntime {
                 texture_id: TextureId(String::new()),
             }, // Temporary, will be replaced in init
             executable: None,
-            texture_id: TextureId(String::new()),
+            texture_handle: NodeHandle::NONE,
             status: NodeStatus::Ok,
         }
     }
@@ -73,14 +73,43 @@ impl ShaderNodeRuntime {
         &self.status
     }
 
-    /// Get the texture ID this shader writes to
-    pub fn texture_id(&self) -> TextureId {
-        self.texture_id.clone()
+    /// Get the texture handle this shader writes to
+    pub fn texture_handle(&self) -> NodeHandle {
+        self.texture_handle
     }
 
     /// Get the shader configuration
     pub fn config(&self) -> &ShaderNode {
         &self.config
+    }
+
+    /// Initialize with handle resolution (called by ProjectRuntime)
+    ///
+    /// Resolves texture_id to handle using the provided mapping.
+    pub fn init_with_handle_resolution(
+        &mut self,
+        config: &ShaderNode,
+        ctx: &crate::runtime::contexts::InitContext,
+        texture_id_to_handle: &hashbrown::HashMap<TextureId, NodeHandle>,
+    ) -> Result<(), Error> {
+        // Resolve texture_id to handle
+        match config {
+            ShaderNode::Single { texture_id, .. } => {
+                self.texture_handle = texture_id_to_handle
+                    .get(texture_id)
+                    .copied()
+                    .unwrap_or(NodeHandle::NONE);
+                if self.texture_handle == NodeHandle::NONE {
+                    return Err(Error::Validation(format!(
+                        "Texture {} not found",
+                        String::from(texture_id.clone())
+                    )));
+                }
+            }
+        }
+        
+        // Call regular init (which will compile shader)
+        self.init(config, ctx)
     }
 }
 
@@ -103,8 +132,8 @@ impl NodeLifecycle for ShaderNodeRuntime {
         self.config = config.clone();
 
         match config {
-            ShaderNode::Single { glsl, texture_id } => {
-                self.texture_id = texture_id.clone();
+            ShaderNode::Single { glsl, .. } => {
+                // texture_handle already set by init_with_handle_resolution
 
                 // Create compilation options
                 // Use Fixed32 format - Float format is not yet supported (causes TestCase relocation errors)
@@ -190,18 +219,18 @@ impl NodeLifecycle for ShaderNodeRuntime {
         let time_seconds = ctx.time.total_ms as f32 / 1000.0;
 
         // Get texture to write to
-        let texture = match ctx.get_texture_mut(self.texture_id.clone()) {
+        let texture = match ctx.get_texture_mut(self.texture_handle) {
             Some(tex) => tex,
             None => {
                 self.status = NodeStatus::Error {
                     status_message: format!(
-                        "Texture {} not found",
-                        String::from(self.texture_id.clone())
+                        "Texture handle {} not found",
+                        self.texture_handle.0
                     ),
                 };
                 return Err(Error::Node(format!(
-                    "Texture {} not found",
-                    String::from(self.texture_id.clone())
+                    "Texture handle {} not found",
+                    self.texture_handle.0
                 )));
             }
         };
@@ -332,7 +361,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         runtime.executable = None;
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
-        let mut textures: HashMap<TextureId, crate::nodes::texture::TextureNodeRuntime> =
+        let mut textures: HashMap<NodeHandle, crate::nodes::texture::TextureNodeRuntime> =
             HashMap::new();
         let mut ctx = ShaderRenderContext::new(frame_time, &mut textures);
 
@@ -441,17 +470,21 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         let pixel_before = texture_runtime.texture().get_pixel(0, 0).unwrap();
         assert_eq!(pixel_before, [0, 0, 0, 0]);
 
-        // Create render context and call update
+        // Create render context with handles
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
-        let mut textures: HashMap<TextureId, crate::nodes::texture::TextureNodeRuntime> =
+        let texture_handle = texture_runtime.handle();
+        let mut textures: HashMap<NodeHandle, crate::nodes::texture::TextureNodeRuntime> =
             HashMap::new();
-        textures.insert(texture_id, texture_runtime);
+        textures.insert(texture_handle, texture_runtime);
         let mut ctx = ShaderRenderContext::new(frame_time, &mut textures);
+        
+        // Set texture handle in shader runtime (normally done by init_with_handle_resolution)
+        shader_runtime.texture_handle = texture_handle;
 
         assert!(shader_runtime.render(&mut ctx).is_ok());
 
         // Verify pixels were written
-        let texture = ctx.textures.get(&texture_id).unwrap();
+        let texture = ctx.textures.get(&texture_handle).unwrap();
 
         // Check that at least some pixels are non-zero (shader executed)
         let mut found_non_zero = false;

@@ -88,10 +88,10 @@ impl SamplingKernel {
 
 /// Fixture node runtime
 pub struct FixtureNodeRuntime {
-    base: NodeRuntimeBase,
+    pub base: NodeRuntimeBase,
     config: FixtureNode,
-    output_id: OutputId,
-    texture_id: TextureId,
+    output_handle: NodeHandle,
+    texture_handle: NodeHandle,
     kernel: SamplingKernel,
     channel_order: String,
     mapping: Vec<Mapping>,
@@ -109,8 +109,8 @@ impl FixtureNodeRuntime {
                 channel_order: String::new(),
                 mapping: Vec::new(),
             }, // Temporary, will be replaced in init
-            output_id: OutputId(String::new()),
-            texture_id: TextureId(String::new()),
+            output_handle: NodeHandle::NONE,
+            texture_handle: NodeHandle::NONE,
             kernel: SamplingKernel::new(0.1), // Default small radius
             channel_order: String::new(),
             mapping: Vec::new(),
@@ -149,6 +149,49 @@ impl FixtureNodeRuntime {
     pub fn config(&self) -> &FixtureNode {
         &self.config
     }
+
+    /// Initialize with handle resolution (called by ProjectRuntime)
+    ///
+    /// Resolves texture_id and output_id to handles using the provided mappings.
+    pub fn init_with_handle_resolution(
+        &mut self,
+        config: &FixtureNode,
+        ctx: &crate::runtime::contexts::InitContext,
+        texture_id_to_handle: &hashbrown::HashMap<TextureId, NodeHandle>,
+        output_id_to_handle: &hashbrown::HashMap<OutputId, NodeHandle>,
+    ) -> Result<(), Error> {
+        // Resolve IDs to handles
+        match config {
+            FixtureNode::CircleList { texture_id, output_id, .. } => {
+                self.texture_handle = texture_id_to_handle
+                    .get(texture_id)
+                    .copied()
+                    .unwrap_or(NodeHandle::NONE);
+                self.output_handle = output_id_to_handle
+                    .get(output_id)
+                    .copied()
+                    .unwrap_or(NodeHandle::NONE);
+                
+                if self.texture_handle == NodeHandle::NONE {
+                    let texture_path: String = texture_id.clone().into();
+                    return Err(Error::Validation(format!(
+                        "Texture {} not found",
+                        texture_path
+                    )));
+                }
+                if self.output_handle == NodeHandle::NONE {
+                    let output_path: String = output_id.clone().into();
+                    return Err(Error::Validation(format!(
+                        "Output {} not found",
+                        output_path
+                    )));
+                }
+            }
+        }
+        
+        // Call regular init (which will set up kernel, etc.)
+        self.init(config, ctx)
+    }
 }
 
 impl Default for FixtureNodeRuntime {
@@ -171,13 +214,11 @@ impl NodeLifecycle for FixtureNodeRuntime {
 
         match config {
             FixtureNode::CircleList {
-                output_id,
-                texture_id,
                 channel_order,
                 mapping,
+                ..
             } => {
-                self.output_id = output_id.clone();
-                self.texture_id = texture_id.clone();
+                // output_handle and texture_handle already set by init_with_handle_resolution
                 self.channel_order = channel_order.clone();
                 self.mapping = mapping.clone();
 
@@ -204,18 +245,18 @@ impl NodeLifecycle for FixtureNodeRuntime {
 
     fn render(&mut self, ctx: &mut Self::RenderContext<'_>) -> Result<(), Error> {
         // Get texture (read-only) and sample all pixels first
-        let texture = match ctx.get_texture(self.texture_id.clone()) {
+        let texture = match ctx.get_texture(self.texture_handle) {
             Some(tex) => tex,
             None => {
                 self.status = NodeStatus::Error {
                     status_message: format!(
-                        "Texture {} not found",
-                        String::from(self.texture_id.clone())
+                        "Texture handle {} not found",
+                        self.texture_handle.0
                     ),
                 };
                 return Err(Error::Node(format!(
-                    "Texture {} not found",
-                    String::from(self.texture_id.clone())
+                    "Texture handle {} not found",
+                    self.texture_handle.0
                 )));
             }
         };
@@ -276,7 +317,7 @@ impl NodeLifecycle for FixtureNodeRuntime {
         }
 
         // Now get output buffer and write all values (mutable borrow)
-        let (buffer, bytes_per_pixel) = match ctx.get_output_mut(self.output_id.clone()) {
+        let (buffer, bytes_per_pixel) = match ctx.get_output_mut(self.output_handle) {
             Some(out) => {
                 let bytes_per_pixel = out.bytes_per_pixel();
                 let buffer = out.buffer_mut();
@@ -285,13 +326,13 @@ impl NodeLifecycle for FixtureNodeRuntime {
             None => {
                 self.status = NodeStatus::Error {
                     status_message: format!(
-                        "Output {} not found",
-                        String::from(self.output_id.clone())
+                        "Output handle {} not found",
+                        self.output_handle.0
                     ),
                 };
                 return Err(Error::Node(format!(
-                    "Output {} not found",
-                    String::from(self.output_id.clone())
+                    "Output handle {} not found",
+                    self.output_handle.0
                 )));
             }
         };
@@ -400,8 +441,8 @@ mod tests {
         );
 
         assert!(runtime.init(&config, &ctx).is_ok());
-        assert_eq!(runtime.output_id, output_id);
-        assert_eq!(runtime.texture_id, texture_id);
+        // Note: output_handle and texture_handle are set by init_with_handle_resolution, not regular init
+        // For now, just verify other fields are set correctly
         assert_eq!(runtime.channel_order, "rgb");
         assert_eq!(runtime.mapping.len(), 1);
         assert!(!runtime.kernel.samples.is_empty());
@@ -487,21 +528,27 @@ mod tests {
         );
         fixture_runtime.init(&fixture_config, &init_ctx).unwrap();
 
-        // Create render context
+        // Create render context with handles
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
-        let mut textures: HashMap<TextureId, crate::nodes::texture::TextureNodeRuntime> =
+        let texture_handle = texture_runtime.handle();
+        let output_handle = output_runtime.node_handle();
+        let mut textures: HashMap<NodeHandle, crate::nodes::texture::TextureNodeRuntime> =
             HashMap::new();
-        textures.insert(texture_id.clone(), texture_runtime);
-        let mut outputs: HashMap<OutputId, crate::nodes::output::OutputNodeRuntime> =
+        textures.insert(texture_handle, texture_runtime);
+        let mut outputs: HashMap<NodeHandle, crate::nodes::output::OutputNodeRuntime> =
             HashMap::new();
-        outputs.insert(output_id.clone(), output_runtime);
+        outputs.insert(output_handle, output_runtime);
         let mut ctx = FixtureRenderContext::new(frame_time, &textures, &mut outputs);
+        
+        // Set handles in fixture runtime (normally done by init_with_handle_resolution)
+        fixture_runtime.texture_handle = texture_handle;
+        fixture_runtime.output_handle = output_handle;
 
         // Update fixture
         assert!(fixture_runtime.render(&mut ctx).is_ok());
 
         // Check that output buffer was written
-        let output = ctx.outputs.get_mut(&output_id).unwrap();
+        let output = ctx.outputs.get_mut(&output_handle).unwrap();
         let buffer = output.buffer_mut();
         // Channel 0 should have some red value (sampled from center)
         assert!(buffer[0] > 0 || buffer[1] > 0 || buffer[2] > 0);
@@ -510,12 +557,12 @@ mod tests {
     #[test]
     fn test_fixture_node_runtime_update_missing_texture() {
         let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
-        runtime.texture_id = TextureId("/src/nonexistent.texture".to_string()); // Non-existent texture
+        runtime.texture_handle = NodeHandle::new(999); // Non-existent texture handle
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
-        let textures: HashMap<TextureId, crate::nodes::texture::TextureNodeRuntime> =
+        let textures: HashMap<NodeHandle, crate::nodes::texture::TextureNodeRuntime> =
             HashMap::new();
-        let mut outputs: HashMap<OutputId, crate::nodes::output::OutputNodeRuntime> =
+        let mut outputs: HashMap<NodeHandle, crate::nodes::output::OutputNodeRuntime> =
             HashMap::new();
         let mut ctx = FixtureRenderContext::new(frame_time, &textures, &mut outputs);
 
@@ -526,12 +573,12 @@ mod tests {
     #[test]
     fn test_fixture_node_runtime_update_missing_output() {
         let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
-        runtime.output_id = OutputId("/src/nonexistent.output".to_string()); // Non-existent output
+        runtime.output_handle = NodeHandle::new(999); // Non-existent output handle
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
-        let textures: HashMap<TextureId, crate::nodes::texture::TextureNodeRuntime> =
+        let textures: HashMap<NodeHandle, crate::nodes::texture::TextureNodeRuntime> =
             HashMap::new();
-        let mut outputs: HashMap<OutputId, crate::nodes::output::OutputNodeRuntime> =
+        let mut outputs: HashMap<NodeHandle, crate::nodes::output::OutputNodeRuntime> =
             HashMap::new();
         let mut ctx = FixtureRenderContext::new(frame_time, &textures, &mut outputs);
 

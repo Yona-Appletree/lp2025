@@ -14,7 +14,7 @@ use lp_shared::project::nodes::texture::config::TextureNode;
 /// Texture node runtime
 #[derive(Debug)]
 pub struct TextureNodeRuntime {
-    base: NodeRuntimeBase,
+    pub base: NodeRuntimeBase,
     config: TextureNode,
     texture: Texture,
     status: NodeStatus,

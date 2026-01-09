@@ -2,6 +2,7 @@
 
 use crate::nodes::fixture::FixtureNode;
 use lp_shared::project::nodes::id::{FixtureId, OutputId, ShaderId, TextureId};
+use lp_shared::project::nodes::handle::NodeHandle;
 use crate::nodes::output::OutputNode;
 use crate::nodes::shader::ShaderNode;
 use crate::nodes::texture::TextureNode;
@@ -78,22 +79,20 @@ impl<'a> InitContext<'a> {
 /// Provides mutable access to textures for writing rendered pixels.
 pub struct ShaderRenderContext<'a> {
     pub time: FrameTime,
-    pub textures: &'a mut HashMap<TextureId, TextureNodeRuntime>,
+    pub textures: &'a mut HashMap<NodeHandle, TextureNodeRuntime>,
 }
 
 impl<'a> ShaderRenderContext<'a> {
     /// Create a new shader render context
-    pub fn new(time: FrameTime, textures: &'a mut HashMap<TextureId, TextureNodeRuntime>) -> Self {
+    pub fn new(time: FrameTime, textures: &'a mut HashMap<NodeHandle, TextureNodeRuntime>) -> Self {
         Self { time, textures }
     }
 
-    /// Get mutable access to a texture
+    /// Get mutable access to a texture by handle
     ///
     /// Returns None if the texture doesn't exist.
-    pub fn get_texture_mut(&mut self, texture_id: TextureId) -> Option<&mut Texture> {
-        self.textures
-            .get_mut(&texture_id)
-            .map(|rt| rt.texture_mut())
+    pub fn get_texture_mut(&mut self, handle: NodeHandle) -> Option<&mut Texture> {
+        self.textures.get_mut(&handle).map(|rt| rt.texture_mut())
     }
 }
 
@@ -102,16 +101,16 @@ impl<'a> ShaderRenderContext<'a> {
 /// Provides read-only access to textures and mutable access to outputs.
 pub struct FixtureRenderContext<'a> {
     pub time: FrameTime,
-    pub textures: &'a HashMap<TextureId, TextureNodeRuntime>,
-    pub outputs: &'a mut HashMap<OutputId, OutputNodeRuntime>,
+    pub textures: &'a HashMap<NodeHandle, TextureNodeRuntime>,
+    pub outputs: &'a mut HashMap<NodeHandle, OutputNodeRuntime>,
 }
 
 impl<'a> FixtureRenderContext<'a> {
     /// Create a new fixture render context
     pub fn new(
         time: FrameTime,
-        textures: &'a HashMap<TextureId, TextureNodeRuntime>,
-        outputs: &'a mut HashMap<OutputId, OutputNodeRuntime>,
+        textures: &'a HashMap<NodeHandle, TextureNodeRuntime>,
+        outputs: &'a mut HashMap<NodeHandle, OutputNodeRuntime>,
     ) -> Self {
         Self {
             time,
@@ -120,18 +119,18 @@ impl<'a> FixtureRenderContext<'a> {
         }
     }
 
-    /// Get read-only access to a texture
+    /// Get read-only access to a texture by handle
     ///
     /// Returns None if the texture doesn't exist.
-    pub fn get_texture(&self, texture_id: TextureId) -> Option<&Texture> {
-        self.textures.get(&texture_id).map(|rt| rt.texture())
+    pub fn get_texture(&self, handle: NodeHandle) -> Option<&Texture> {
+        self.textures.get(&handle).map(|rt| rt.texture())
     }
 
-    /// Get mutable access to an output node runtime
+    /// Get mutable access to an output node runtime by handle
     ///
     /// Returns None if the output doesn't exist.
-    pub fn get_output_mut(&mut self, output_id: OutputId) -> Option<&mut OutputNodeRuntime> {
-        self.outputs.get_mut(&output_id)
+    pub fn get_output_mut(&mut self, handle: NodeHandle) -> Option<&mut OutputNodeRuntime> {
+        self.outputs.get_mut(&handle)
     }
 }
 
@@ -188,8 +187,8 @@ mod tests {
     #[test]
     fn test_render_contexts_creation() {
         let frame_time = FrameTime::new(16, 1000);
-        let mut textures: HashMap<TextureId, TextureNodeRuntime> = HashMap::new();
-        let mut outputs: HashMap<OutputId, OutputNodeRuntime> = HashMap::new();
+        let mut textures: HashMap<NodeHandle, TextureNodeRuntime> = HashMap::new();
+        let mut outputs: HashMap<NodeHandle, OutputNodeRuntime> = HashMap::new();
 
         // Test ShaderRenderContext
         let _shader_ctx = ShaderRenderContext::new(frame_time, &mut textures);

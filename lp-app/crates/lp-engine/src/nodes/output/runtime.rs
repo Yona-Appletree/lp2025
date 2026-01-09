@@ -13,7 +13,7 @@ use lp_shared::project::nodes::handle::NodeHandle;
 
 /// Output node runtime
 pub struct OutputNodeRuntime {
-    base: NodeRuntimeBase,
+    pub base: NodeRuntimeBase,
     config: OutputNode,
     handle: Option<alloc::boxed::Box<dyn LedOutput>>,
     pixel_count: usize,
@@ -67,6 +67,11 @@ impl OutputNodeRuntime {
     /// Fixtures write to this buffer, which is then sent to hardware in update().
     pub fn buffer_mut(&mut self) -> &mut [u8] {
         &mut self.buffer
+    }
+
+    /// Get read-only access to the pixel buffer
+    pub fn buffer(&self) -> &[u8] {
+        &self.buffer
     }
 
     /// Get the current status
