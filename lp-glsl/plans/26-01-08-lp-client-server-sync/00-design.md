@@ -7,6 +7,7 @@ This plan implements client-server synchronization for LightPlayer, enabling `lp
 ## Architecture Decisions
 
 ### Handle-Based Runtime IDs
+
 - Node HashMaps use `NodeHandle` (i32) as keys instead of path-based IDs
 - `HashMap<NodeHandle, NodeRuntime>` serves as the registry (no separate registry needed)
 - Each node runtime stores its path for lookups
@@ -14,6 +15,7 @@ This plan implements client-server synchronization for LightPlayer, enabling `lp
 - Handles are runtime-specific (reset on reload)
 
 ### Frame-Based Versioning
+
 - Frame ID increments every `ProjectRuntime::update()` call
 - Per-node tracking:
   - `created_frame: FrameId` - when node was created
@@ -22,6 +24,7 @@ This plan implements client-server synchronization for LightPlayer, enabling `lp
 - Frame IDs reset to 0 on project reload
 
 ### Message Protocol
+
 - Request IDs (client-generated u64) for correlation
 - Message envelope enum wrapping requests/responses/logs
 - JSON serialization with compression (gzip/zlib)
@@ -70,7 +73,7 @@ impl ProjectRuntime {
     pub fn get_node_detail(&self, handle: NodeHandle) -> Option<NodeDetail>;
     pub fn get_engine_stats(&self) -> EngineStats;
     pub fn get_all_node_handles(&self) -> Vec<NodeHandle>;
-    
+
     // MODIFIED: init() assigns handles and tracks frames
     // MODIFIED: update() increments current_frame
 }
@@ -136,22 +139,22 @@ pub struct LpClient<T: ClientTransport> {
 
 impl<T: ClientTransport> LpClient<T> {
     pub fn new(transport: T) -> Self;
-    
+
     // Server-level operations
     pub fn list_projects(&mut self) -> Result<Vec<ProjectInfo>, Error>;
     pub fn create_project(&mut self, path: String) -> Result<(), Error>;
-    
+
     // Project loading/unloading
     pub fn load_project(&mut self, path: String) -> Result<ProjectHandle, Error>;
     pub fn unload_project(&mut self, handle: ProjectHandle) -> Result<(), Error>;
-    
+
     /// Update a project's state from the server, including any files changed
     /// Including any config changes
     pub fn update_project(&mut self, handle: ProjectHandle) -> Result<&RemoteProject, Error>;
-    
+
     /// Get the last known state of a project (without updating it)
     pub fn get_project(&self, handle: ProjectHandle) -> Option<&RemoteProject>;
-    
+
     // Internal: handle incoming messages
     fn process_messages(&mut self) -> Result<(), Error>;
 }
@@ -172,11 +175,11 @@ pub struct RemoteProject {
 pub struct RemoteNode {
     path: String,
     config: NodeConfig,
-    
+
     /// Last frame the config was updated, used to know to reload the config from disk
     /// if it's updated
     config_ver: FrameId,
-    
+
     /// Last frame the state was updated
     state_ver: FrameId,
     detail: Option<NodeDetail>,
@@ -198,16 +201,16 @@ impl ProjectManager {
                 let runtime = self.get_runtime(handle)?;
                 let current_frame = runtime.get_current_frame();
                 let changed_nodes = runtime.get_changed_nodes_since(since_frame);
-                
+
                 let mut node_detail = HashMap::new();
-                
+
                 // Add changed nodes
                 for handle in &changed_nodes {
                     if let Some(detail) = runtime.get_node_detail(*handle) {
                         node_detail.insert(*handle, detail);
                     }
                 }
-                
+
                 // Add nodes matching detail_specifier
                 match detail_specifier {
                     NodeSpecifier::All => {
@@ -230,10 +233,10 @@ impl ProjectManager {
                     }
                     NodeSpecifier::None => {}
                 }
-                
+
                 let node_handles = runtime.get_all_node_handles();
                 let engine_stats = runtime.get_engine_stats();
-                
+
                 Ok(ProjectResponse::GetChanges {
                     current_frame,
                     engine_stats,
@@ -249,6 +252,7 @@ impl ProjectManager {
 ## New Types and Functions Summary
 
 **New Types:**
+
 - `Message` enum - Message envelope for requests/responses/logs
 - `ClientTransport` trait - Transport abstraction for client-server communication
 - `LpClient<T>` - Main client struct
@@ -257,6 +261,7 @@ impl ProjectManager {
 - `NodeRuntimeBase` - Common fields for all node runtimes
 
 **New Functions:**
+
 - `ProjectRuntime::get_current_frame()` - Get current frame ID
 - `ProjectRuntime::get_changed_nodes_since()` - Get nodes changed since frame (uses min of config/state frame)
 - `ProjectRuntime::get_node_detail()` - Get full node detail by handle
@@ -267,6 +272,7 @@ impl ProjectManager {
 - `LpClient::process_messages()` - Handle incoming messages
 
 **Modified Functions:**
+
 - `ProjectRuntime::init()` - Assign handles, track creation frames
 - `ProjectRuntime::update()` - Increment frame ID, update state frames
 - Node runtime `init()` methods - Store handle and path, track frames
@@ -275,21 +281,25 @@ impl ProjectManager {
 ## Implementation Notes
 
 ### Handle Assignment
+
 - Handles assigned sequentially starting from 0
 - Assigned during `ProjectRuntime::init()` when nodes are created
 - Stored in node runtime base structure
 
 ### Frame Tracking
+
 - `current_frame` increments every `update()` call
 - `created_frame` set during node initialization
 - `last_config_frame` updated when config files change
 - `last_state_frame` updated when runtime state changes (texture pixels, shader errors, etc.)
 
 ### Change Detection
+
 - `get_changed_nodes_since()` uses `min(last_config_frame, last_state_frame)` to determine if node changed
 - If either config or state changed since `since_frame`, node is included
 
 ### Client Sync Flow
+
 1. Client calls `update_project(handle)`
 2. Client sends `GetChanges` request with `since_frame = last_frame_id`
 3. Server responds with changes
@@ -300,6 +310,7 @@ impl ProjectManager {
 5. Returns reference to updated `RemoteProject`
 
 ### Message Handling
+
 - Client generates request IDs sequentially
 - Wraps requests in `Message::Request { id, request }`
 - Server wraps responses in `Message::Response { id, response }`
