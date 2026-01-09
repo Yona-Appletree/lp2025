@@ -71,15 +71,20 @@ impl ProjectRuntime {
             config.uid
         );
         let init_ctx = InitContext::new(config, textures, shaders, outputs, fixtures);
+        let current_frame = self.current_frame;
 
         // Initialize textures
         log::debug!("Initializing {} texture(s)", textures.len());
         for (id_str, texture_config) in textures {
             let texture_id = TextureId(id_str.clone());
-            let mut texture_runtime = TextureNodeRuntime::new();
+            let handle = self.assign_next_handle();
+            let path = id_str.clone();
+            let mut texture_runtime = TextureNodeRuntime::new(handle, path);
             if let Err(e) = texture_runtime.init(texture_config, &init_ctx) {
                 log::warn!("Failed to initialize texture {}: {}", id_str, e);
                 // Continue - node status is set internally
+            } else {
+                texture_runtime.set_creation_frame(current_frame);
             }
             self.textures.insert(texture_id, texture_runtime);
         }
@@ -88,10 +93,14 @@ impl ProjectRuntime {
         log::debug!("Initializing {} shader(s)", shaders.len());
         for (id_str, shader_config) in shaders {
             let shader_id = ShaderId(id_str.clone());
-            let mut shader_runtime = ShaderNodeRuntime::new();
+            let handle = self.assign_next_handle();
+            let path = id_str.clone();
+            let mut shader_runtime = ShaderNodeRuntime::new(handle, path);
             if let Err(e) = shader_runtime.init(shader_config, &init_ctx) {
                 log::warn!("Failed to initialize shader {}: {}", id_str, e);
                 // Continue - node status is set internally
+            } else {
+                shader_runtime.set_creation_frame(current_frame);
             }
             self.shaders.insert(shader_id, shader_runtime);
         }
@@ -100,10 +109,14 @@ impl ProjectRuntime {
         log::debug!("Initializing {} fixture(s)", fixtures.len());
         for (id_str, fixture_config) in fixtures {
             let fixture_id = FixtureId(id_str.clone());
-            let mut fixture_runtime = FixtureNodeRuntime::new();
+            let handle = self.assign_next_handle();
+            let path = id_str.clone();
+            let mut fixture_runtime = FixtureNodeRuntime::new(handle, path);
             if let Err(e) = fixture_runtime.init(fixture_config, &init_ctx) {
                 log::warn!("Failed to initialize fixture {}: {}", id_str, e);
                 // Continue - node status is set internally
+            } else {
+                fixture_runtime.set_creation_frame(current_frame);
             }
             self.fixtures.insert(fixture_id, fixture_runtime);
         }
@@ -112,15 +125,18 @@ impl ProjectRuntime {
         log::debug!("Initializing {} output(s)", outputs.len());
         for (id_str, output_config) in outputs {
             let output_id = OutputId(id_str.clone());
-            let mut output_runtime = OutputNodeRuntime::new();
+            let handle = self.assign_next_handle();
+            let path = id_str.clone();
+            let mut output_runtime = OutputNodeRuntime::new(handle, path);
             if let Err(e) = output_runtime.init(output_config, &init_ctx) {
                 log::warn!("Failed to initialize output {}: {}", id_str, e);
                 // Continue - node status is set internally
             } else {
+                output_runtime.set_creation_frame(current_frame);
                 // Create LED output handle via OutputProvider
                 match output_provider.create_output(output_config, Some(output_id.clone())) {
-                    Ok(handle) => {
-                        output_runtime.set_handle(handle);
+                    Ok(led_handle) => {
+                        output_runtime.set_handle(led_handle);
                     }
                     Err(e) => {
                         log::warn!("Failed to create output handle for {}: {}", id_str, e);

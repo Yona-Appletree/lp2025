@@ -5,11 +5,15 @@ use lp_shared::project::nodes::output::config::OutputNode;
 use crate::project::runtime::NodeStatus;
 use crate::runtime::contexts::OutputRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
+use crate::runtime::NodeRuntimeBase;
 use crate::traits::LedOutput;
 use alloc::{format, string::String, vec, vec::Vec};
+use lp_shared::project::frame_id::FrameId;
+use lp_shared::project::nodes::handle::NodeHandle;
 
 /// Output node runtime
 pub struct OutputNodeRuntime {
+    base: NodeRuntimeBase,
     config: OutputNode,
     handle: Option<alloc::boxed::Box<dyn LedOutput>>,
     pixel_count: usize,
@@ -20,8 +24,9 @@ pub struct OutputNodeRuntime {
 
 impl OutputNodeRuntime {
     /// Create a new output node runtime (uninitialized)
-    pub fn new() -> Self {
+    pub fn new(handle: NodeHandle, path: String) -> Self {
         Self {
+            base: NodeRuntimeBase::new(handle, path, FrameId(0)), // Will be updated in init
             config: OutputNode::GpioStrip {
                 chip: String::new(),
                 gpio_pin: 0,
@@ -33,6 +38,28 @@ impl OutputNodeRuntime {
             buffer: Vec::new(),
             status: NodeStatus::Ok,
         }
+    }
+
+    /// Get the handle for this node
+    pub fn node_handle(&self) -> NodeHandle {
+        self.base.handle
+    }
+
+    /// Get the path for this node
+    pub fn path(&self) -> &str {
+        &self.base.path
+    }
+
+    /// Set the creation frame (called by ProjectRuntime after init)
+    pub fn set_creation_frame(&mut self, frame: FrameId) {
+        self.base.created_frame = frame;
+        self.base.last_config_frame = frame;
+        self.base.last_state_frame = frame;
+    }
+
+    /// Update the last state frame (called when output buffer is sent)
+    pub fn mark_state_changed(&mut self, frame: FrameId) {
+        self.base.update_state_frame(frame);
     }
 
     /// Get mutable access to the pixel buffer
@@ -72,7 +99,7 @@ impl OutputNodeRuntime {
 
 impl Default for OutputNodeRuntime {
     fn default() -> Self {
-        Self::new()
+        Self::new(NodeHandle::NONE, String::new())
     }
 }
 
@@ -161,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_output_node_runtime_init() {
-        let mut runtime = OutputNodeRuntime::new();
+        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 4,
@@ -192,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_output_node_runtime_init_unknown_chip() {
-        let mut runtime = OutputNodeRuntime::new();
+        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "unknown".to_string(),
             gpio_pin: 4,
@@ -220,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_buffer_mut() {
-        let mut runtime = OutputNodeRuntime::new();
+        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 4,

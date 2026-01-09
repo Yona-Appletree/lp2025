@@ -4,6 +4,7 @@ use crate::error::Error;
 use crate::project::runtime::NodeStatus;
 use crate::runtime::contexts::ShaderRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
+use crate::runtime::NodeRuntimeBase;
 use alloc::{
     format,
     string::{String, ToString},
@@ -11,11 +12,14 @@ use alloc::{
 };
 use lp_glsl_compiler::frontend::semantic::types::Type;
 use lp_glsl_compiler::{glsl_jit, DecimalFormat, GlslExecutable, GlslOptions, GlslValue, RunMode};
+use lp_shared::project::frame_id::FrameId;
+use lp_shared::project::nodes::handle::NodeHandle;
 use lp_shared::project::nodes::id::TextureId;
 use lp_shared::project::nodes::shader::config::ShaderNode;
 
 /// Shader node runtime
 pub struct ShaderNodeRuntime {
+    base: NodeRuntimeBase,
     config: ShaderNode,
     executable: Option<alloc::boxed::Box<dyn GlslExecutable>>,
     texture_id: TextureId,
@@ -24,8 +28,9 @@ pub struct ShaderNodeRuntime {
 
 impl ShaderNodeRuntime {
     /// Create a new shader node runtime (uninitialized)
-    pub fn new() -> Self {
+    pub fn new(handle: NodeHandle, path: String) -> Self {
         Self {
+            base: NodeRuntimeBase::new(handle, path, FrameId(0)), // Will be updated in init
             config: ShaderNode::Single {
                 glsl: String::new(),
                 texture_id: TextureId(String::new()),
@@ -34,6 +39,33 @@ impl ShaderNodeRuntime {
             texture_id: TextureId(String::new()),
             status: NodeStatus::Ok,
         }
+    }
+
+    /// Get the handle for this node
+    pub fn handle(&self) -> NodeHandle {
+        self.base.handle
+    }
+
+    /// Get the path for this node
+    pub fn path(&self) -> &str {
+        &self.base.path
+    }
+
+    /// Set the creation frame (called by ProjectRuntime after init)
+    pub fn set_creation_frame(&mut self, frame: FrameId) {
+        self.base.created_frame = frame;
+        self.base.last_config_frame = frame;
+        self.base.last_state_frame = frame;
+    }
+
+    /// Update the last config frame (called when config changes)
+    pub fn mark_config_changed(&mut self, frame: FrameId) {
+        self.base.update_config_frame(frame);
+    }
+
+    /// Update the last state frame (called when shader executes successfully)
+    pub fn mark_state_changed(&mut self, frame: FrameId) {
+        self.base.update_state_frame(frame);
     }
 
     /// Get the current status
@@ -54,7 +86,7 @@ impl ShaderNodeRuntime {
 
 impl Default for ShaderNodeRuntime {
     fn default() -> Self {
-        Self::new()
+        Self::new(NodeHandle::NONE, String::new())
     }
 }
 
@@ -235,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_shader_node_runtime_init_valid() {
-        let mut runtime = ShaderNodeRuntime::new();
+        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec4(0.5, 0.5, 0.5, 1.0);
@@ -269,7 +301,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_invalid_glsl() {
-        let mut runtime = ShaderNodeRuntime::new();
+        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = "invalid glsl code";
         let builder = crate::project::builder::ProjectBuilder::new_test();
         let (builder, texture_id) = builder.add_texture(TextureNode::Memory {
@@ -296,7 +328,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_update_skips_if_no_executable() {
-        let mut runtime = ShaderNodeRuntime::new();
+        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         runtime.executable = None;
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
@@ -310,7 +342,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_wrong_return_type() {
-        let mut runtime = ShaderNodeRuntime::new();
+        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec3 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec3(1.0, 1.0, 1.0);
@@ -341,7 +373,7 @@ vec3 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_wrong_parameter_count() {
-        let mut runtime = ShaderNodeRuntime::new();
+        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec4 main(vec2 fragCoord, float time) {
     return vec4(1.0, 1.0, 1.0, 1.0);
@@ -373,7 +405,7 @@ vec4 main(vec2 fragCoord, float time) {
     #[test]
     fn test_shader_node_runtime_update_executes_shader_and_writes_pixels() {
         // Create texture runtime
-        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new();
+        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let texture_config = crate::nodes::texture::TextureNode::Memory {
             size: [4, 4],
             format: crate::nodes::texture::formats::RGBA8.to_string(),

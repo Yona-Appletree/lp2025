@@ -5,7 +5,10 @@ use crate::nodes::fixture::config::{FixtureNode, Mapping};
 use crate::project::runtime::NodeStatus;
 use crate::runtime::contexts::FixtureRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
+use crate::runtime::NodeRuntimeBase;
 use alloc::{format, string::String, vec::Vec};
+use lp_shared::project::frame_id::FrameId;
+use lp_shared::project::nodes::handle::NodeHandle;
 use lp_shared::project::nodes::id::{OutputId, TextureId};
 
 /// Precomputed sample point for texture sampling
@@ -85,6 +88,7 @@ impl SamplingKernel {
 
 /// Fixture node runtime
 pub struct FixtureNodeRuntime {
+    base: NodeRuntimeBase,
     config: FixtureNode,
     output_id: OutputId,
     texture_id: TextureId,
@@ -96,8 +100,9 @@ pub struct FixtureNodeRuntime {
 
 impl FixtureNodeRuntime {
     /// Create a new fixture node runtime (uninitialized)
-    pub fn new() -> Self {
+    pub fn new(handle: NodeHandle, path: String) -> Self {
         Self {
+            base: NodeRuntimeBase::new(handle, path, FrameId(0)), // Will be updated in init
             config: FixtureNode::CircleList {
                 output_id: OutputId(String::new()),
                 texture_id: TextureId(String::new()),
@@ -113,6 +118,28 @@ impl FixtureNodeRuntime {
         }
     }
 
+    /// Get the handle for this node
+    pub fn handle(&self) -> NodeHandle {
+        self.base.handle
+    }
+
+    /// Get the path for this node
+    pub fn path(&self) -> &str {
+        &self.base.path
+    }
+
+    /// Set the creation frame (called by ProjectRuntime after init)
+    pub fn set_creation_frame(&mut self, frame: FrameId) {
+        self.base.created_frame = frame;
+        self.base.last_config_frame = frame;
+        self.base.last_state_frame = frame;
+    }
+
+    /// Update the last state frame (called when fixture samples and writes)
+    pub fn mark_state_changed(&mut self, frame: FrameId) {
+        self.base.update_state_frame(frame);
+    }
+
     /// Get the current status
     pub fn status(&self) -> &NodeStatus {
         &self.status
@@ -126,7 +153,7 @@ impl FixtureNodeRuntime {
 
 impl Default for FixtureNodeRuntime {
     fn default() -> Self {
-        Self::new()
+        Self::new(NodeHandle::NONE, String::new())
     }
 }
 
@@ -341,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_init() {
-        let mut runtime = FixtureNodeRuntime::new();
+        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         let builder = crate::project::builder::ProjectBuilder::new_test();
         let (builder, output_id) = builder.add_output(OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
@@ -384,7 +411,7 @@ mod tests {
     #[test]
     fn test_fixture_node_runtime_update_samples_texture() {
         // Create texture runtime with a test pattern
-        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new();
+        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let texture_config = crate::nodes::texture::TextureNode::Memory {
             size: [10, 10],
             format: formats::RGBA8.to_string(),
@@ -415,7 +442,7 @@ mod tests {
         }
 
         // Create output runtime
-        let mut output_runtime = crate::nodes::output::OutputNodeRuntime::new();
+        let mut output_runtime = crate::nodes::output::OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let output_config = crate::nodes::output::OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 18,
@@ -482,7 +509,7 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_update_missing_texture() {
-        let mut runtime = FixtureNodeRuntime::new();
+        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         runtime.texture_id = TextureId("/src/nonexistent.texture".to_string()); // Non-existent texture
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
@@ -498,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_update_missing_output() {
-        let mut runtime = FixtureNodeRuntime::new();
+        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         runtime.output_id = OutputId("/src/nonexistent.output".to_string()); // Non-existent output
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);

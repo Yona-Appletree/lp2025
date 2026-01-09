@@ -4,13 +4,17 @@ use crate::error::Error;
 use crate::project::runtime::NodeStatus;
 use crate::runtime::contexts::{InitContext, TextureRenderContext};
 use crate::runtime::lifecycle::NodeLifecycle;
+use crate::runtime::NodeRuntimeBase;
 use crate::util::Texture;
 use alloc::{format, string::ToString};
+use lp_shared::project::frame_id::FrameId;
+use lp_shared::project::nodes::handle::NodeHandle;
 use lp_shared::project::nodes::texture::config::TextureNode;
 
 /// Texture node runtime
 #[derive(Debug)]
 pub struct TextureNodeRuntime {
+    base: NodeRuntimeBase,
     config: TextureNode,
     texture: Texture,
     status: NodeStatus,
@@ -18,8 +22,9 @@ pub struct TextureNodeRuntime {
 
 impl TextureNodeRuntime {
     /// Create a new texture node runtime (uninitialized)
-    pub fn new() -> Self {
+    pub fn new(handle: NodeHandle, path: String) -> Self {
         Self {
+            base: NodeRuntimeBase::new(handle, path, FrameId(0)), // Will be updated in init
             config: TextureNode::Memory {
                 size: [1, 1],
                 format: "RGB8".to_string(),
@@ -27,6 +32,28 @@ impl TextureNodeRuntime {
             texture: Texture::new(1, 1, "RGB8".to_string()).unwrap(), // Temporary, will be replaced in init
             status: NodeStatus::Ok,
         }
+    }
+
+    /// Get the handle for this node
+    pub fn handle(&self) -> NodeHandle {
+        self.base.handle
+    }
+
+    /// Get the path for this node
+    pub fn path(&self) -> &str {
+        &self.base.path
+    }
+
+    /// Set the creation frame (called by ProjectRuntime after init)
+    pub fn set_creation_frame(&mut self, frame: FrameId) {
+        self.base.created_frame = frame;
+        self.base.last_config_frame = frame;
+        self.base.last_state_frame = frame;
+    }
+
+    /// Update the last state frame (called when texture pixels change)
+    pub fn mark_state_changed(&mut self, frame: FrameId) {
+        self.base.update_state_frame(frame);
     }
 
     /// Get read-only access to the texture
@@ -52,7 +79,7 @@ impl TextureNodeRuntime {
 
 impl Default for TextureNodeRuntime {
     fn default() -> Self {
-        Self::new()
+        Self::new(NodeHandle::NONE, String::new())
     }
 }
 
@@ -63,6 +90,7 @@ impl NodeLifecycle for TextureNodeRuntime {
     fn init(&mut self, config: &Self::Config, _ctx: &InitContext) -> Result<(), Error> {
         // Store config
         self.config = config.clone();
+        // Note: last_config_frame will be updated by ProjectRuntime after init() completes
 
         match config {
             TextureNode::Memory { size, format } => {
@@ -103,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_texture_node_runtime_init() {
-        let mut runtime = TextureNodeRuntime::new();
+        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [64, 64],
             format: formats::RGB8.to_string(),
@@ -127,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_texture_node_runtime_init_invalid_format() {
-        let mut runtime = TextureNodeRuntime::new();
+        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [64, 64],
             format: "INVALID".to_string(),
@@ -148,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_texture_accessors() {
-        let mut runtime = TextureNodeRuntime::new();
+        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [10, 10],
             format: formats::RGB8.to_string(),
