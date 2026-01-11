@@ -7,7 +7,7 @@ pub mod texture;
 
 pub use fixture::runtime::FixtureNodeRuntime;
 pub use fixture::{FixtureNode, Mapping};
-pub use lp_shared::project::nodes::id::{FixtureId, OutputId, ShaderId, TextureId};
+pub use lp_shared::nodes::id::{FixtureId, OutputId, ShaderId, TextureId};
 pub use output::{OutputNode, OutputNodeRuntime};
 pub use shader::{ShaderNode, ShaderNodeRuntime};
 pub use texture::{TextureNode, TextureNodeRuntime};

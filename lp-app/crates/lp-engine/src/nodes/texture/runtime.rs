@@ -2,14 +2,14 @@
 
 use crate::error::Error;
 use crate::project::runtime::NodeStatus;
+use crate::runtime::NodeRuntimeBase;
 use crate::runtime::contexts::{InitContext, TextureRenderContext};
 use crate::runtime::lifecycle::NodeLifecycle;
-use crate::runtime::NodeRuntimeBase;
 use crate::util::Texture;
 use alloc::{format, string::ToString};
+use lp_shared::nodes::handle::NodeHandle;
+use lp_shared::nodes::texture::config::TextureNode;
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
-use lp_shared::project::nodes::texture::config::TextureNode;
 
 /// Texture node runtime
 #[derive(Debug)]
@@ -131,7 +131,8 @@ mod tests {
 
     #[test]
     fn test_texture_node_runtime_init() {
-        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
+        let mut runtime =
+            TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [64, 64],
             format: formats::RGB8.to_string(),
@@ -155,7 +156,8 @@ mod tests {
 
     #[test]
     fn test_texture_node_runtime_init_invalid_format() {
-        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
+        let mut runtime =
+            TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [64, 64],
             format: "INVALID".to_string(),
@@ -176,7 +178,8 @@ mod tests {
 
     #[test]
     fn test_texture_accessors() {
-        let mut runtime = TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
+        let mut runtime =
+            TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
         let config = TextureNode::Memory {
             size: [10, 10],
             format: formats::RGB8.to_string(),

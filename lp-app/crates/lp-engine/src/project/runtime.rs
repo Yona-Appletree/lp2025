@@ -18,11 +18,11 @@ use crate::runtime::contexts::{
 use crate::runtime::frame_time::FrameTime;
 use crate::runtime::lifecycle::NodeLifecycle;
 use crate::traits::OutputProvider;
+use lp_shared::nodes::handle::NodeHandle;
+use lp_shared::nodes::id::{FixtureId, OutputId, ShaderId, TextureId};
+use lp_shared::project::api::{EngineStats, NodeDetail};
 use lp_shared::project::config::ProjectConfig;
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
-use lp_shared::project::nodes::id::{FixtureId, OutputId, ShaderId, TextureId};
-use lp_shared::project::api::{EngineStats, NodeDetail};
 
 /// Project runtime - manages lifecycle of all node runtimes
 pub struct ProjectRuntime {
@@ -89,7 +89,7 @@ impl ProjectRuntime {
             let handle = self.assign_next_handle();
             let path = id_str.clone();
             self.texture_id_to_handle.insert(texture_id.clone(), handle);
-            
+
             let mut texture_runtime = TextureNodeRuntime::new(handle, path);
             if let Err(e) = texture_runtime.init(texture_config, &init_ctx) {
                 log::warn!("Failed to initialize texture {}: {}", id_str, e);
@@ -107,10 +107,14 @@ impl ProjectRuntime {
             let handle = self.assign_next_handle();
             let path = id_str.clone();
             self.shader_id_to_handle.insert(shader_id.clone(), handle);
-            
+
             let mut shader_runtime = ShaderNodeRuntime::new(handle, path);
             // Resolve texture_id to handle before init
-            if let Err(e) = shader_runtime.init_with_handle_resolution(shader_config, &init_ctx, &self.texture_id_to_handle) {
+            if let Err(e) = shader_runtime.init_with_handle_resolution(
+                shader_config,
+                &init_ctx,
+                &self.texture_id_to_handle,
+            ) {
                 log::warn!("Failed to initialize shader {}: {}", id_str, e);
                 // Continue - node status is set internally
             } else {
@@ -126,10 +130,15 @@ impl ProjectRuntime {
             let handle = self.assign_next_handle();
             let path = id_str.clone();
             self.fixture_id_to_handle.insert(fixture_id.clone(), handle);
-            
+
             let mut fixture_runtime = FixtureNodeRuntime::new(handle, path);
             // Resolve texture_id and output_id to handles before init
-            if let Err(e) = fixture_runtime.init_with_handle_resolution(fixture_config, &init_ctx, &self.texture_id_to_handle, &self.output_id_to_handle) {
+            if let Err(e) = fixture_runtime.init_with_handle_resolution(
+                fixture_config,
+                &init_ctx,
+                &self.texture_id_to_handle,
+                &self.output_id_to_handle,
+            ) {
                 log::warn!("Failed to initialize fixture {}: {}", id_str, e);
                 // Continue - node status is set internally
             } else {
@@ -145,7 +154,7 @@ impl ProjectRuntime {
             let handle = self.assign_next_handle();
             let path = id_str.clone();
             self.output_id_to_handle.insert(output_id.clone(), handle);
-            
+
             let mut output_runtime = OutputNodeRuntime::new(handle, path);
             if let Err(e) = output_runtime.init(output_config, &init_ctx) {
                 log::warn!("Failed to initialize output {}: {}", id_str, e);
@@ -190,7 +199,7 @@ impl ProjectRuntime {
     ) -> Result<(), Error> {
         // Increment frame ID
         self.current_frame = FrameId(self.current_frame.0 + 1);
-        
+
         // Update frame time
         self.frame_time.total_ms += delta_ms;
         self.frame_time.delta_ms = delta_ms;
@@ -353,22 +362,34 @@ impl ProjectRuntime {
 
     /// Get all texture paths
     pub fn get_texture_ids(&self) -> alloc::vec::Vec<String> {
-        self.textures.values().map(|r| r.path().to_string()).collect()
+        self.textures
+            .values()
+            .map(|r| r.path().to_string())
+            .collect()
     }
 
     /// Get all shader paths
     pub fn get_shader_ids(&self) -> alloc::vec::Vec<String> {
-        self.shaders.values().map(|r| r.path().to_string()).collect()
+        self.shaders
+            .values()
+            .map(|r| r.path().to_string())
+            .collect()
     }
 
     /// Get all fixture paths
     pub fn get_fixture_ids(&self) -> alloc::vec::Vec<String> {
-        self.fixtures.values().map(|r| r.path().to_string()).collect()
+        self.fixtures
+            .values()
+            .map(|r| r.path().to_string())
+            .collect()
     }
 
     /// Get all output paths
     pub fn get_output_ids(&self) -> alloc::vec::Vec<String> {
-        self.outputs.values().map(|r| r.path().to_string()).collect()
+        self.outputs
+            .values()
+            .map(|r| r.path().to_string())
+            .collect()
     }
 
     /// Get the current frame ID
@@ -399,7 +420,7 @@ impl ProjectRuntime {
     /// OR created_frame > since_frame
     pub fn get_changed_nodes_since(&self, since_frame: FrameId) -> alloc::vec::Vec<NodeHandle> {
         let mut changed = alloc::vec::Vec::new();
-        
+
         // Check textures
         for (handle, runtime) in &self.textures {
             let base = &runtime.base;
@@ -412,7 +433,7 @@ impl ProjectRuntime {
                 changed.push(*handle);
             }
         }
-        
+
         // Check shaders
         for (handle, runtime) in &self.shaders {
             let base = &runtime.base;
@@ -425,7 +446,7 @@ impl ProjectRuntime {
                 changed.push(*handle);
             }
         }
-        
+
         // Check fixtures
         for (handle, runtime) in &self.fixtures {
             let base = &runtime.base;
@@ -438,7 +459,7 @@ impl ProjectRuntime {
                 changed.push(*handle);
             }
         }
-        
+
         // Check outputs
         for (handle, runtime) in &self.outputs {
             let base = &runtime.base;
@@ -451,7 +472,7 @@ impl ProjectRuntime {
                 changed.push(*handle);
             }
         }
-        
+
         changed
     }
 
@@ -461,51 +482,53 @@ impl ProjectRuntime {
         if let Some(texture) = self.textures.get(&handle) {
             return Some(NodeDetail {
                 path: texture.path().to_string(),
-                state: lp_shared::project::nodes::state::NodeState::Texture(
-                    lp_shared::project::nodes::texture::state::TextureState {
+                state: lp_shared::nodes::state::NodeState::Texture(
+                    lp_shared::nodes::texture::state::TextureState {
                         texture: texture.texture().clone(),
-                    }
+                    },
                 ),
             });
         }
-        
+
         if let Some(shader) = self.shaders.get(&handle) {
             // Extract shader state (GLSL code, errors)
             let glsl = match shader.config() {
-                lp_shared::project::nodes::shader::config::ShaderNode::Single { glsl, .. } => glsl.clone(),
+                lp_shared::nodes::shader::config::ShaderNode::Single { glsl, .. } => glsl.clone(),
             };
             return Some(NodeDetail {
                 path: shader.path().to_string(),
-                state: lp_shared::project::nodes::state::NodeState::Shader(
-                    lp_shared::project::nodes::shader::state::ShaderState {
+                state: lp_shared::nodes::state::NodeState::Shader(
+                    lp_shared::nodes::shader::state::ShaderState {
                         glsl,
                         error: match shader.status() {
                             crate::project::runtime::NodeStatus::Ok => None,
-                            crate::project::runtime::NodeStatus::Error { status_message } => Some(status_message.clone()),
+                            crate::project::runtime::NodeStatus::Error { status_message } => {
+                                Some(status_message.clone())
+                            }
                         },
-                    }
+                    },
                 ),
             });
         }
-        
+
         if let Some(output) = self.outputs.get(&handle) {
             // Extract output state (buffer values)
             return Some(NodeDetail {
                 path: output.path().to_string(),
-                state: lp_shared::project::nodes::state::NodeState::Output(
-                    lp_shared::project::nodes::output::state::OutputState {
+                state: lp_shared::nodes::state::NodeState::Output(
+                    lp_shared::nodes::output::state::OutputState {
                         values: output.buffer().to_vec(),
-                    }
+                    },
                 ),
             });
         }
-        
+
         if let Some(_fixture) = self.fixtures.get(&handle) {
             // TODO: Fixture state not yet defined in NodeState
             // For now, return None
             return None;
         }
-        
+
         None
     }
 

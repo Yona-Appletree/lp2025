@@ -3,7 +3,7 @@
 use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
-use lp_shared::project::nodes::id::{OutputId, TextureId};
+use lp_shared::nodes::id::{OutputId, TextureId};
 
 /// Fixture node types
 #[derive(Debug, Clone, Serialize, Deserialize)]

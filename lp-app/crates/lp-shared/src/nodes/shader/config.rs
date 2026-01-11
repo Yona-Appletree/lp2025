@@ -3,7 +3,7 @@
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
-use crate::project::nodes::id::TextureId;
+use crate::nodes::id::TextureId;
 
 /// Shader node types
 #[derive(Debug, Clone, Serialize, Deserialize)]

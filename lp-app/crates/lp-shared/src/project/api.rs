@@ -1,6 +1,6 @@
+use crate::nodes::handle::NodeHandle;
+use crate::nodes::state::NodeState;
 use crate::project::frame_id::FrameId;
-use crate::project::nodes::handle::NodeHandle;
-use crate::project::nodes::state::NodeState;
 use alloc::string::String;
 use alloc::vec::Vec;
 use hashbrown::HashMap;

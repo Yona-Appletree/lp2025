@@ -3,13 +3,13 @@
 use crate::error::Error;
 use crate::nodes::fixture::config::{FixtureNode, Mapping};
 use crate::project::runtime::NodeStatus;
+use crate::runtime::NodeRuntimeBase;
 use crate::runtime::contexts::FixtureRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
-use crate::runtime::NodeRuntimeBase;
 use alloc::{format, string::String, vec::Vec};
+use lp_shared::nodes::handle::NodeHandle;
+use lp_shared::nodes::id::{OutputId, TextureId};
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
-use lp_shared::project::nodes::id::{OutputId, TextureId};
 
 /// Precomputed sample point for texture sampling
 #[derive(Debug, Clone)]
@@ -162,7 +162,11 @@ impl FixtureNodeRuntime {
     ) -> Result<(), Error> {
         // Resolve IDs to handles
         match config {
-            FixtureNode::CircleList { texture_id, output_id, .. } => {
+            FixtureNode::CircleList {
+                texture_id,
+                output_id,
+                ..
+            } => {
                 self.texture_handle = texture_id_to_handle
                     .get(texture_id)
                     .copied()
@@ -171,7 +175,7 @@ impl FixtureNodeRuntime {
                     .get(output_id)
                     .copied()
                     .unwrap_or(NodeHandle::NONE);
-                
+
                 if self.texture_handle == NodeHandle::NONE {
                     let texture_path: String = texture_id.clone().into();
                     return Err(Error::Validation(format!(
@@ -188,7 +192,7 @@ impl FixtureNodeRuntime {
                 }
             }
         }
-        
+
         // Call regular init (which will set up kernel, etc.)
         self.init(config, ctx)
     }
@@ -249,10 +253,7 @@ impl NodeLifecycle for FixtureNodeRuntime {
             Some(tex) => tex,
             None => {
                 self.status = NodeStatus::Error {
-                    status_message: format!(
-                        "Texture handle {} not found",
-                        self.texture_handle.0
-                    ),
+                    status_message: format!("Texture handle {} not found", self.texture_handle.0),
                 };
                 return Err(Error::Node(format!(
                     "Texture handle {} not found",
@@ -325,10 +326,7 @@ impl NodeLifecycle for FixtureNodeRuntime {
             }
             None => {
                 self.status = NodeStatus::Error {
-                    status_message: format!(
-                        "Output handle {} not found",
-                        self.output_handle.0
-                    ),
+                    status_message: format!("Output handle {} not found", self.output_handle.0),
                 };
                 return Err(Error::Node(format!(
                     "Output handle {} not found",
@@ -392,7 +390,7 @@ impl NodeLifecycle for FixtureNodeRuntime {
 mod tests {
     use super::*;
     use crate::nodes::output::OutputNode;
-    use crate::nodes::texture::{formats, TextureNode};
+    use crate::nodes::texture::{TextureNode, formats};
     use alloc::{string::ToString, vec};
     use hashbrown::HashMap;
 
@@ -409,7 +407,8 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_init() {
-        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
+        let mut runtime =
+            FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         let builder = crate::project::builder::ProjectBuilder::new_test();
         let (builder, output_id) = builder.add_output(OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
@@ -452,7 +451,10 @@ mod tests {
     #[test]
     fn test_fixture_node_runtime_update_samples_texture() {
         // Create texture runtime with a test pattern
-        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
+        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(
+            NodeHandle::NONE,
+            "/test/texture.texture".to_string(),
+        );
         let texture_config = crate::nodes::texture::TextureNode::Memory {
             size: [10, 10],
             format: formats::RGBA8.to_string(),
@@ -483,7 +485,10 @@ mod tests {
         }
 
         // Create output runtime
-        let mut output_runtime = crate::nodes::output::OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
+        let mut output_runtime = crate::nodes::output::OutputNodeRuntime::new(
+            NodeHandle::NONE,
+            "/test/output.output".to_string(),
+        );
         let output_config = crate::nodes::output::OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 18,
@@ -539,7 +544,7 @@ mod tests {
             HashMap::new();
         outputs.insert(output_handle, output_runtime);
         let mut ctx = FixtureRenderContext::new(frame_time, &textures, &mut outputs);
-        
+
         // Set handles in fixture runtime (normally done by init_with_handle_resolution)
         fixture_runtime.texture_handle = texture_handle;
         fixture_runtime.output_handle = output_handle;
@@ -556,7 +561,8 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_update_missing_texture() {
-        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
+        let mut runtime =
+            FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         runtime.texture_handle = NodeHandle::new(999); // Non-existent texture handle
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
@@ -572,7 +578,8 @@ mod tests {
 
     #[test]
     fn test_fixture_node_runtime_update_missing_output() {
-        let mut runtime = FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
+        let mut runtime =
+            FixtureNodeRuntime::new(NodeHandle::NONE, "/test/fixture.fixture".to_string());
         runtime.output_handle = NodeHandle::new(999); // Non-existent output handle
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);

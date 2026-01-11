@@ -2,5 +2,5 @@
 
 pub mod runtime;
 
-pub use lp_shared::project::nodes::texture::config::{formats, TextureNode};
+pub use lp_shared::nodes::texture::config::{TextureNode, formats};
 pub use runtime::TextureNodeRuntime;

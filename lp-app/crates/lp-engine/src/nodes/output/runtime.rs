@@ -1,15 +1,15 @@
 //! Output node runtime
 
 use crate::error::Error;
-use lp_shared::project::nodes::output::config::OutputNode;
 use crate::project::runtime::NodeStatus;
+use crate::runtime::NodeRuntimeBase;
 use crate::runtime::contexts::OutputRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
-use crate::runtime::NodeRuntimeBase;
 use crate::traits::LedOutput;
 use alloc::{format, string::String, vec, vec::Vec};
+use lp_shared::nodes::handle::NodeHandle;
+use lp_shared::nodes::output::config::OutputNode;
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
 
 /// Output node runtime
 pub struct OutputNodeRuntime {
@@ -193,7 +193,8 @@ mod tests {
 
     #[test]
     fn test_output_node_runtime_init() {
-        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
+        let mut runtime =
+            OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 4,
@@ -224,7 +225,8 @@ mod tests {
 
     #[test]
     fn test_output_node_runtime_init_unknown_chip() {
-        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
+        let mut runtime =
+            OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "unknown".to_string(),
             gpio_pin: 4,
@@ -252,7 +254,8 @@ mod tests {
 
     #[test]
     fn test_buffer_mut() {
-        let mut runtime = OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
+        let mut runtime =
+            OutputNodeRuntime::new(NodeHandle::NONE, "/test/output.output".to_string());
         let config = OutputNode::GpioStrip {
             chip: "ws2812".to_string(),
             gpio_pin: 4,

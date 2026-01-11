@@ -11,8 +11,8 @@ pub use contexts::{
 pub use frame_time::FrameTime;
 pub use lifecycle::NodeLifecycle;
 
+use lp_shared::nodes::handle::NodeHandle;
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
 
 /// Base structure for all node runtimes containing handle, path, and frame tracking
 #[derive(Debug)]

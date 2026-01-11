@@ -2095,6 +2095,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lp-engine2"
+version = "40.0.0"
+
+[[package]]
 name = "lp-glsl-compiler"
 version = "40.0.0"
 dependencies = [

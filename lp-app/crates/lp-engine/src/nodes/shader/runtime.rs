@@ -2,20 +2,20 @@
 
 use crate::error::Error;
 use crate::project::runtime::NodeStatus;
+use crate::runtime::NodeRuntimeBase;
 use crate::runtime::contexts::ShaderRenderContext;
 use crate::runtime::lifecycle::NodeLifecycle;
-use crate::runtime::NodeRuntimeBase;
 use alloc::{
     format,
     string::{String, ToString},
     vec,
 };
 use lp_glsl_compiler::frontend::semantic::types::Type;
-use lp_glsl_compiler::{glsl_jit, DecimalFormat, GlslExecutable, GlslOptions, GlslValue, RunMode};
+use lp_glsl_compiler::{DecimalFormat, GlslExecutable, GlslOptions, GlslValue, RunMode, glsl_jit};
+use lp_shared::nodes::handle::NodeHandle;
+use lp_shared::nodes::id::TextureId;
+use lp_shared::nodes::shader::config::ShaderNode;
 use lp_shared::project::frame_id::FrameId;
-use lp_shared::project::nodes::handle::NodeHandle;
-use lp_shared::project::nodes::id::TextureId;
-use lp_shared::project::nodes::shader::config::ShaderNode;
 
 /// Shader node runtime
 pub struct ShaderNodeRuntime {
@@ -107,7 +107,7 @@ impl ShaderNodeRuntime {
                 }
             }
         }
-        
+
         // Call regular init (which will compile shader)
         self.init(config, ctx)
     }
@@ -223,10 +223,7 @@ impl NodeLifecycle for ShaderNodeRuntime {
             Some(tex) => tex,
             None => {
                 self.status = NodeStatus::Error {
-                    status_message: format!(
-                        "Texture handle {} not found",
-                        self.texture_handle.0
-                    ),
+                    status_message: format!("Texture handle {} not found", self.texture_handle.0),
                 };
                 return Err(Error::Node(format!(
                     "Texture handle {} not found",
@@ -296,7 +293,8 @@ mod tests {
 
     #[test]
     fn test_shader_node_runtime_init_valid() {
-        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
+        let mut runtime =
+            ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec4(0.5, 0.5, 0.5, 1.0);
@@ -330,7 +328,8 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_invalid_glsl() {
-        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
+        let mut runtime =
+            ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = "invalid glsl code";
         let builder = crate::project::builder::ProjectBuilder::new_test();
         let (builder, texture_id) = builder.add_texture(TextureNode::Memory {
@@ -357,7 +356,8 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_update_skips_if_no_executable() {
-        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
+        let mut runtime =
+            ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         runtime.executable = None;
 
         let frame_time = crate::runtime::frame_time::FrameTime::new(16, 1000);
@@ -371,7 +371,8 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_wrong_return_type() {
-        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
+        let mut runtime =
+            ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec3 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec3(1.0, 1.0, 1.0);
@@ -402,7 +403,8 @@ vec3 main(vec2 fragCoord, vec2 outputSize, float time) {
 
     #[test]
     fn test_shader_node_runtime_init_wrong_parameter_count() {
-        let mut runtime = ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
+        let mut runtime =
+            ShaderNodeRuntime::new(NodeHandle::NONE, "/test/shader.shader".to_string());
         let glsl = r#"
 vec4 main(vec2 fragCoord, float time) {
     return vec4(1.0, 1.0, 1.0, 1.0);
@@ -434,7 +436,10 @@ vec4 main(vec2 fragCoord, float time) {
     #[test]
     fn test_shader_node_runtime_update_executes_shader_and_writes_pixels() {
         // Create texture runtime
-        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(NodeHandle::NONE, "/test/texture.texture".to_string());
+        let mut texture_runtime = crate::nodes::texture::TextureNodeRuntime::new(
+            NodeHandle::NONE,
+            "/test/texture.texture".to_string(),
+        );
         let texture_config = crate::nodes::texture::TextureNode::Memory {
             size: [4, 4],
             format: crate::nodes::texture::formats::RGBA8.to_string(),
@@ -477,7 +482,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
             HashMap::new();
         textures.insert(texture_handle, texture_runtime);
         let mut ctx = ShaderRenderContext::new(frame_time, &mut textures);
-        
+
         // Set texture handle in shader runtime (normally done by init_with_handle_resolution)
         shader_runtime.texture_handle = texture_handle;
 

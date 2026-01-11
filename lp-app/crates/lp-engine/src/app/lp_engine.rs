@@ -264,7 +264,7 @@ mod tests {
         fn create_output(
             &self,
             _config: &crate::nodes::OutputNode,
-            _id: Option<lp_shared::project::nodes::id::OutputId>,
+            _id: Option<lp_shared::nodes::id::OutputId>,
         ) -> Result<alloc::boxed::Box<dyn crate::traits::LedOutput>, crate::error::Error> {
             Err(crate::error::Error::Node(
                 "Mock output provider".to_string(),
