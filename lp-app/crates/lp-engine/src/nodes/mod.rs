@@ -1,6 +1,16 @@
 use crate::error::Error;
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
 
+pub mod texture;
+pub mod shader;
+pub mod output;
+pub mod fixture;
+
+pub use texture::TextureRuntime;
+pub use shader::ShaderRuntime;
+pub use output::OutputRuntime;
+pub use fixture::FixtureRuntime;
+
 /// Node runtime trait - all node runtimes implement this
 pub trait NodeRuntime: Send + Sync {
     /// Initialize the node
