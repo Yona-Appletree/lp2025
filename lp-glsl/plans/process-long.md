@@ -1,10 +1,13 @@
 # Plan process
 
-Create a new plan directory at `lightplayer/plans/<YY-MM-dd>-<name>`. This will be the base directory for all the plan files.
+Create a new plan directory at `<workspace>/plans/<YY-MM-dd>-<name>`. This will be the base
+directory for all the plan files.
+`<workspace>` is either `lp-app` or `lp-glsl` depending on the scope.
 
 ## Questions
 
-Analyze the current scope of work, and create a plan file 00-questions.md with any questions we need to answer to build this.
+Analyze the current scope of work, and create a plan file 00-questions.md with any questions we need
+to answer to build this.
 
 Once created, ask me the questions ONE AT A TIME with:
 
