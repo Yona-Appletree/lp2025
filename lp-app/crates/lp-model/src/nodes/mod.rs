@@ -13,6 +13,6 @@ pub use handle::NodeHandle;
 pub use specifier::NodeSpecifier;
 
 /// Node config trait - all node configs implement this
-pub trait NodeConfig {
+pub trait NodeConfig: core::fmt::Debug {
     fn kind(&self) -> NodeKind;
 }

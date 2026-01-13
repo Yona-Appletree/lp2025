@@ -1,7 +1,7 @@
 use alloc::string::String;
 
 /// Shader node state - runtime values
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShaderState {
     /// Actual GLSL code loaded from file
     pub glsl_code: String,

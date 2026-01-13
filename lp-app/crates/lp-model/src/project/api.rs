@@ -1,7 +1,9 @@
 use crate::nodes::{NodeHandle, NodeKind, NodeConfig};
 use crate::path::LpPath;
 use crate::project::FrameId;
+use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::vec::Vec;
 
 /// Node specifier for API requests
@@ -28,7 +30,9 @@ pub enum ProjectRequest {
 }
 
 /// Project response from server
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// 
+/// Note: Cannot implement Clone because NodeDetail contains trait object
+#[derive(Debug)]
 pub enum ProjectResponse {
     /// Changes response
     GetChanges {
@@ -89,7 +93,9 @@ pub enum NodeStatus {
 }
 
 /// Node detail - full config + state + status
-#[derive(Debug, Clone, PartialEq)]
+/// 
+/// Note: Cannot implement Clone/PartialEq/Eq because config is a trait object
+#[derive(Debug)]
 pub struct NodeDetail {
     pub path: LpPath,
     pub config: Box<dyn NodeConfig>, // todo!() - will need serialization later
