@@ -2,6 +2,7 @@
 resolver = '2'
 members = [
     "crates/lp-engine",
+    "crates/lp-engine-client",
     "crates/lp-shared",
     "crates/lp-server",
     "crates/lp-api",
