@@ -14,6 +14,7 @@ Create `lp-engine-client` crate with client view that can sync with engine. Keep
 ### 1. Create lp-engine-client crate
 
 **File**: `lp-app/crates/lp-engine-client/Cargo.toml`
+
 ```toml
 [package]
 name = "lp-engine-client"
@@ -35,6 +36,7 @@ alloc = { package = "alloc", version = "1.0", features = ["alloc"] }
 ### 2. Client Project View
 
 **File**: `lp-engine-client/src/project/view.rs`
+
 ```rust
 use lp_model::{
     FrameId, NodeConfig, NodeHandle, NodeKind, NodeState,
@@ -74,14 +76,14 @@ impl ClientProjectView {
             detail_tracking: BTreeSet::new(),
         }
     }
-    
+
     /// Request detail tracking for nodes
     pub fn request_detail(&mut self, handles: Vec<NodeHandle>) {
         for handle in handles {
             self.detail_tracking.insert(handle);
         }
     }
-    
+
     /// Stop detail tracking for nodes
     pub fn stop_detail(&mut self, handles: Vec<NodeHandle>) {
         for handle in handles {
@@ -92,7 +94,7 @@ impl ClientProjectView {
             }
         }
     }
-    
+
     /// Generate detail specifier for sync
     pub fn detail_specifier(&self) -> ApiNodeSpecifier {
         if self.detail_tracking.is_empty() {
@@ -101,7 +103,7 @@ impl ClientProjectView {
             ApiNodeSpecifier::ByHandles(self.detail_tracking.iter().copied().collect())
         }
     }
-    
+
     /// Sync with server (update view from response)
     pub fn sync(&mut self, response: &lp_model::project::api::ProjectResponse) -> Result<(), String> {
         match response {
@@ -113,11 +115,11 @@ impl ClientProjectView {
             } => {
                 // Update frame ID
                 self.frame_id = *current_frame;
-                
+
                 // Prune removed nodes
                 let handles_set: BTreeSet<NodeHandle> = node_handles.iter().copied().collect();
                 self.nodes.retain(|handle, _| handles_set.contains(handle));
-                
+
                 // Apply changes
                 for change in node_changes {
                     match change {
@@ -156,7 +158,7 @@ impl ClientProjectView {
                         }
                     }
                 }
-                
+
                 // Update details
                 for (handle, detail) in node_details {
                     if let Some(entry) = self.nodes.get_mut(handle) {
@@ -165,7 +167,7 @@ impl ClientProjectView {
                         entry.status = detail.status.clone();
                     }
                 }
-                
+
                 Ok(())
             }
         }
@@ -176,6 +178,7 @@ impl ClientProjectView {
 ### 3. Client API Trait
 
 **File**: `lp-engine-client/src/api/client.rs`
+
 ```rust
 use lp_model::project::api::{ProjectRequest, ProjectResponse};
 
@@ -187,6 +190,7 @@ pub trait ClientApi {
 ```
 
 **File**: `lp-engine-client/src/api/mod.rs`
+
 ```rust
 pub mod client;
 
@@ -196,6 +200,7 @@ pub use client::ClientApi;
 ### 4. Module Structure
 
 **File**: `lp-engine-client/src/project/mod.rs`
+
 ```rust
 pub mod view;
 
@@ -203,6 +208,7 @@ pub use view::{ClientNodeEntry, ClientProjectView};
 ```
 
 **File**: `lp-engine-client/src/lib.rs`
+
 ```rust
 #![no_std]
 
