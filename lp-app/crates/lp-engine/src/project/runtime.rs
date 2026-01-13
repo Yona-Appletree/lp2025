@@ -5,9 +5,13 @@ use crate::nodes::{
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
 use lp_model::{
     FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
+    project::api::{
+        ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, NodeStatus as ApiNodeStatus,
+        ProjectResponse,
+    },
 };
 use lp_shared::fs::LpFs;
-use alloc::collections::BTreeMap;
+use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
 use alloc::boxed::Box;
 use alloc::format;
@@ -239,6 +243,137 @@ impl ProjectRuntime {
         // todo!("Flush outputs with state_ver == frame_id")
         
         Ok(())
+    }
+    
+    /// Get changes since a frame (for client sync)
+    pub fn get_changes(
+        &self,
+        since_frame: FrameId,
+        detail_specifier: &ApiNodeSpecifier,
+    ) -> Result<ProjectResponse, Error> {
+        let mut node_handles = Vec::new();
+        let mut node_changes = Vec::new();
+        let mut node_details = BTreeMap::new();
+        
+        // Collect all current handles
+        for handle in self.nodes.keys() {
+            node_handles.push(*handle);
+        }
+        
+        // Determine which handles need detail
+        let detail_handles: BTreeSet<NodeHandle> = match detail_specifier {
+            ApiNodeSpecifier::None => BTreeSet::new(),
+            ApiNodeSpecifier::All => self.nodes.keys().copied().collect(),
+            ApiNodeSpecifier::ByHandles(handles) => handles.iter().copied().collect(),
+        };
+        
+        // Collect changes and details
+        for (handle, entry) in &self.nodes {
+            // Check for changes since since_frame
+            if entry.config_ver.as_i64() > since_frame.as_i64() {
+                node_changes.push(NodeChange::ConfigUpdated {
+                    handle: *handle,
+                    config_ver: entry.config_ver,
+                });
+            }
+            
+            if entry.state_ver.as_i64() > since_frame.as_i64() {
+                node_changes.push(NodeChange::StateUpdated {
+                    handle: *handle,
+                    state_ver: entry.state_ver,
+                });
+            }
+            
+            // Check if node was created after since_frame
+            if entry.config_ver.as_i64() > since_frame.as_i64() && entry.config_ver == entry.state_ver {
+                node_changes.push(NodeChange::Created {
+                    handle: *handle,
+                    path: entry.path.clone(),
+                    kind: entry.kind,
+                });
+            }
+            
+            // Add detail if requested
+            if detail_handles.contains(handle) {
+                let state = match entry.kind {
+                    NodeKind::Texture => {
+                        // todo!("Get actual texture state from runtime")
+                        NodeState::Texture(lp_model::nodes::texture::TextureState {
+                            texture_data: Vec::new(),
+                        })
+                    }
+                    NodeKind::Shader => {
+                        // todo!("Get actual shader state from runtime")
+                        NodeState::Shader(lp_model::nodes::shader::ShaderState {
+                            glsl_code: String::new(),
+                            error: None,
+                        })
+                    }
+                    NodeKind::Output => {
+                        // todo!("Get actual output state from runtime")
+                        NodeState::Output(lp_model::nodes::output::OutputState {
+                            channel_data: Vec::new(),
+                        })
+                    }
+                    NodeKind::Fixture => {
+                        // todo!("Get actual fixture state from runtime")
+                        NodeState::Fixture(lp_model::nodes::fixture::FixtureState {
+                            lamp_colors: Vec::new(),
+                        })
+                    }
+                };
+                
+                let api_status = match &entry.status {
+                    NodeStatus::Created => ApiNodeStatus::Created,
+                    NodeStatus::InitError(msg) => ApiNodeStatus::InitError(msg.clone()),
+                    NodeStatus::Ok => ApiNodeStatus::Ok,
+                    NodeStatus::Warn(msg) => ApiNodeStatus::Warn(msg.clone()),
+                    NodeStatus::Error(msg) => ApiNodeStatus::Error(msg.clone()),
+                };
+                
+                // Clone config based on kind (temporary - will use proper serialization later)
+                let config: Box<dyn NodeConfig> = match entry.kind {
+                    NodeKind::Texture => {
+                        // todo!("Proper config cloning - use serialization or Any trait")
+                        Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                            width: 0,
+                            height: 0,
+                        })
+                    }
+                    NodeKind::Shader => {
+                        Box::new(lp_model::nodes::shader::ShaderConfig::default())
+                    }
+                    NodeKind::Output => {
+                        Box::new(lp_model::nodes::output::OutputConfig::GpioStrip {
+                            pin: 0,
+                        })
+                    }
+                    NodeKind::Fixture => {
+                        Box::new(lp_model::nodes::fixture::FixtureConfig {
+                            output_spec: lp_model::NodeSpecifier::from(""),
+                            texture_spec: lp_model::NodeSpecifier::from(""),
+                            mapping: String::new(),
+                            lamp_type: String::new(),
+                            transform: [[0.0; 4]; 4],
+                        })
+                    }
+                };
+                
+                node_details.insert(*handle, NodeDetail {
+                    path: entry.path.clone(),
+                    config,
+                    state,
+                    status: api_status,
+                });
+            }
+        }
+        
+        Ok(ProjectResponse::GetChanges {
+            current_frame: self.frame_id,
+            node_handles,
+            node_changes,
+            node_details,
+        })
     }
 }
 
