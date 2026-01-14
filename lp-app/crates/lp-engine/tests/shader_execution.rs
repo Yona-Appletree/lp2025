@@ -103,17 +103,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
 }
 "#.as_bytes()).unwrap();
     
-    // Create runtime and initialize
-    let mut runtime = ProjectRuntime::new(Box::new(fs)).unwrap();
-    runtime.load_nodes().unwrap();
-    runtime.initialize_nodes().unwrap();
-    
-    // Tick to advance frame
-    runtime.tick(16);
-    
-    // To trigger shader execution, we need to access the texture
-    // Shaders are executed lazily when get_texture_mut() is called
-    // Let's create a fixture that uses the texture to trigger rendering
+    // Create output and fixture nodes to trigger texture access
     fs.write_file_mut("/src/test.output/node.json", r#"{
         "GpioStrip": {
             "pin": 18
@@ -129,9 +119,13 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         "transform": [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
     }"#.as_bytes()).unwrap();
     
-    // Reload nodes to pick up the fixture
+    // Create runtime and initialize
+    let mut runtime = ProjectRuntime::new(Box::new(fs)).unwrap();
     runtime.load_nodes().unwrap();
     runtime.initialize_nodes().unwrap();
+    
+    // Tick to advance frame
+    runtime.tick(16);
     
     // Render (fixture will access texture, triggering shader execution)
     runtime.render().unwrap();
