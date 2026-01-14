@@ -147,9 +147,10 @@ impl ClientProjectView {
                     }
                 }
 
-                // Update details
+                // Update details (create entries if they don't exist)
                 for (handle, detail) in node_details {
                     if let Some(entry) = self.nodes.get_mut(handle) {
+                        // Update existing entry
                         // Clone config based on kind (temporary - will use proper serialization later)
                         let config: Box<dyn NodeConfig> = match entry.kind {
                             NodeKind::Texture => {
@@ -180,6 +181,51 @@ impl ClientProjectView {
                         entry.config = config;
                         entry.state = Some(detail.state.clone());
                         entry.status = detail.status.clone();
+                    } else {
+                        // Create new entry from detail (node exists but wasn't in Created changes)
+                        // Note: NodeDetail doesn't have kind field, so we infer from state
+                        let kind = match &detail.state {
+                            NodeState::Texture(_) => NodeKind::Texture,
+                            NodeState::Shader(_) => NodeKind::Shader,
+                            NodeState::Output(_) => NodeKind::Output,
+                            NodeState::Fixture(_) => NodeKind::Fixture,
+                        };
+                        
+                        let config: Box<dyn NodeConfig> = match kind {
+                            NodeKind::Texture => {
+                                Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                                    width: 0,
+                                    height: 0,
+                                })
+                            }
+                            NodeKind::Shader => {
+                                Box::new(lp_model::nodes::shader::ShaderConfig::default())
+                            }
+                            NodeKind::Output => {
+                                Box::new(lp_model::nodes::output::OutputConfig::GpioStrip {
+                                    pin: 0,
+                                })
+                            }
+                            NodeKind::Fixture => {
+                                Box::new(lp_model::nodes::fixture::FixtureConfig {
+                                    output_spec: lp_model::NodeSpecifier::from(""),
+                                    texture_spec: lp_model::NodeSpecifier::from(""),
+                                    mapping: String::new(),
+                                    lamp_type: String::new(),
+                                    transform: [[0.0; 4]; 4],
+                                })
+                            }
+                        };
+                        
+                        self.nodes.insert(*handle, ClientNodeEntry {
+                            path: detail.path.clone(),
+                            kind,
+                            config,
+                            config_ver: FrameId::default(),
+                            state: Some(detail.state.clone()),
+                            state_ver: FrameId::default(),
+                            status: detail.status.clone(),
+                        });
                     }
                 }
 
