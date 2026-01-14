@@ -764,32 +764,47 @@ impl<'a> RenderContextImpl<'a> {
         shader_handles.sort_by_key(|(_, order)| *order);
         
         // Render each shader that targets this texture
-        // Create RenderContext once and reuse it for all shaders
-        let mut ctx = RenderContextImpl {
-            nodes,
-            frame_id,
-            frame_time,
-        };
-        
         for (shader_handle, _) in shader_handles {
-            // Get shader runtime and render
-            let shader_entry = ctx.nodes.get_mut(&shader_handle).ok_or_else(|| Error::Other {
-                message: format!("Shader handle {} not found", shader_handle.as_i32()),
-            })?;
+            // Create RenderContext for each shader render
+            let mut ctx = RenderContextImpl {
+                nodes,
+                frame_id,
+                frame_time,
+            };
             
-            if let Some(runtime) = &mut shader_entry.runtime {
-                if let Some(shader_runtime) = runtime.as_any_mut().downcast_mut::<crate::nodes::ShaderRuntime>() {
-                    // Render the shader (this will write to the texture)
-                    shader_runtime.render(&mut ctx as &mut dyn RenderContext)?;
-                    
-                    // Update shader state_ver to current frame
-                    shader_entry.state_ver = frame_id;
+            // Get shader runtime and render
+            // Use unsafe to work around borrow checker (same pattern as fixture rendering)
+            let render_result = {
+                if let Some(entry) = ctx.nodes.get_mut(&shader_handle) {
+                    if let Some(runtime) = entry.runtime.as_mut() {
+                        // runtime is &mut Box<dyn NodeRuntime>
+                        // render() needs &mut self (runtime) and &mut ctx
+                        // Both need mutable access, but runtime is inside ctx.nodes
+                        // Workaround: use unsafe to get raw pointer
+                        let runtime_ptr: *mut dyn NodeRuntime = runtime.as_mut();
+                        // SAFETY: runtime_ptr is valid for the duration of this block
+                        // We're not storing it or using it after the block
+                        unsafe {
+                            (*runtime_ptr).render(&mut ctx)
+                        }
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Ok(())
                 }
+            };
+            
+            render_result?;
+            
+            // Update shader state_ver after render
+            if let Some(entry) = ctx.nodes.get_mut(&shader_handle) {
+                entry.state_ver = frame_id;
             }
         }
         
-        // Update texture state_ver (use ctx.nodes since we have the context)
-        if let Some(entry) = ctx.nodes.get_mut(&node_handle) {
+        // Update texture state_ver
+        if let Some(entry) = nodes.get_mut(&node_handle) {
             entry.state_ver = frame_id;
         }
         
