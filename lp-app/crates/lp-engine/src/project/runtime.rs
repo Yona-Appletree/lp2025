@@ -393,8 +393,7 @@ impl ProjectRuntime {
                     NodeKind::Texture => {
                         // Get actual texture state from runtime
                         if let Some(runtime) = &entry.runtime {
-                            // Use Any trait for downcasting
-                            use core::any::Any;
+                            // Use Any trait for downcasting (downcast_ref is from Any trait)
                             if let Some(tex_runtime) = runtime.as_any().downcast_ref::<TextureRuntime>() {
                                 NodeState::Texture(tex_runtime.get_state())
                             } else {
