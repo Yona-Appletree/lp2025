@@ -486,6 +486,7 @@ impl ProjectRuntime {
 /// Init context implementation
 struct InitContext<'a> {
     runtime: &'a ProjectRuntime,
+    #[allow(dead_code)] // Used for chroot filesystem creation, may be needed for future features
     node_path: &'a LpPath,
     node_fs: alloc::boxed::Box<dyn LpFs>,
 }
