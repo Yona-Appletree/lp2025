@@ -297,6 +297,57 @@ impl ProjectRuntime {
         Ok(())
     }
 
+    /// Ensure all nodes initialized successfully
+    ///
+    /// Returns an error if any nodes failed to initialize, with details about
+    /// which nodes failed and why. Warnings are ignored (nodes with warnings
+    /// are considered successfully initialized).
+    pub fn ensure_all_nodes_initialized(&self) -> Result<(), Error> {
+        let mut failed_nodes = Vec::new();
+
+        for (_, entry) in &self.nodes {
+            match &entry.status {
+                NodeStatus::Ok | NodeStatus::Warn(_) => {
+                    // Node initialized successfully (warnings are acceptable)
+                }
+                NodeStatus::Created => {
+                    failed_nodes.push(format!(
+                        "{} ({:?}): not initialized",
+                        entry.path.as_str(),
+                        entry.kind
+                    ));
+                }
+                NodeStatus::InitError(msg) => {
+                    failed_nodes.push(format!(
+                        "{} ({:?}): initialization error: {}",
+                        entry.path.as_str(),
+                        entry.kind,
+                        msg
+                    ));
+                }
+                NodeStatus::Error(msg) => {
+                    failed_nodes.push(format!(
+                        "{} ({:?}): error: {}",
+                        entry.path.as_str(),
+                        entry.kind,
+                        msg
+                    ));
+                }
+            }
+        }
+
+        if failed_nodes.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::Other {
+                message: format!(
+                    "Some nodes failed to initialize:\n  {}",
+                    failed_nodes.join("\n  ")
+                ),
+            })
+        }
+    }
+
     /// Advance to next frame and render
     ///
     /// Updates frame ID and frame time, then renders the frame.

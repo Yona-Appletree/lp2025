@@ -22,16 +22,7 @@ fn test_end_to_end_shader_time_based() {
     // Initialize all nodes
     runtime.load_nodes().unwrap();
     runtime.initialize_nodes().unwrap();
-
-    // Verify shader initialized successfully
-    let shader_handle = runtime
-        .resolve_path_to_handle(shader_path.as_str())
-        .unwrap();
-    let shader_entry = runtime.nodes.get(&shader_handle).unwrap();
-    assert!(
-        matches!(shader_entry.status, lp_engine::project::NodeStatus::Ok),
-        "Shader should initialize successfully"
-    );
+    runtime.ensure_all_nodes_initialized().unwrap();
 
     // Create client view
     let mut client_view = ClientProjectView::new();
