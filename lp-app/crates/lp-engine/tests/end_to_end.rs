@@ -77,7 +77,7 @@ fn sync_client_view(runtime: &ProjectRuntime, client_view: &mut ClientProjectVie
 /// Assert first output channel RGB values
 ///
 /// Output channels are RGB (3 bytes per channel). Checks that the first channel
-/// has the expected RGB values with tolerance.
+/// has the expected RGB values (exact match).
 fn assert_first_output_rgb(data: &[u8], expected_r: u8) {
     assert!(
         data.len() >= 3,
@@ -90,22 +90,12 @@ fn assert_first_output_rgb(data: &[u8], expected_r: u8) {
     let b = data[2];
 
     // Shader outputs vec4(mod(time, 1.0), 0.0, 0.0, 1.0), so we expect red channel
-    // to match time-based value, green and blue to be 0
-    assert!(
-        r.abs_diff(expected_r) <= 1,
-        "Output channel 0 R: expected {} ± 1, got {}",
-        expected_r,
-        r
+    // to match time-based value exactly, green and blue to be 0
+    assert_eq!(
+        r, expected_r,
+        "Output channel 0 R: expected {}, got {}",
+        expected_r, r
     );
-    assert!(
-        g == 0,
-        "Output channel 0 G: expected 0, got {}",
-        g
-    );
-    assert!(
-        b == 0,
-        "Output channel 0 B: expected 0, got {}",
-        b
-    );
+    assert_eq!(g, 0, "Output channel 0 G: expected 0, got {}", g);
+    assert_eq!(b, 0, "Output channel 0 B: expected 0, got {}", b);
 }
-
