@@ -336,6 +336,7 @@ version = "40.0.0"
 dependencies = [
  "hashbrown",
  "log",
+ "lp-shared",
  "serde",
  "serde_json",
  "tempfile",
