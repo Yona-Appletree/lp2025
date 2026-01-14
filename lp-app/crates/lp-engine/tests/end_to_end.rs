@@ -8,19 +8,11 @@ fn test_end_to_end_shader_time_based() {
     let mut fs = LpFsMemory::new();
     let mut builder = ProjectBuilder::new(&mut fs);
 
-    // Add texture
-    let texture_path = builder.texture().add(&mut builder);
-
-    // Add shader
-    builder.shader(&texture_path).add(&mut builder);
-
-    // Add output
-    let output_path = builder.output().add(&mut builder);
-
-    // Add fixture
-    builder
-        .fixture(&output_path, &texture_path)
-        .add(&mut builder);
+    // Add nodes with defaults
+    let texture_path = builder.texture_basic();
+    builder.shader_basic(&texture_path);
+    let output_path = builder.output_basic();
+    builder.fixture_basic(&output_path, &texture_path);
 
     // Build project files
     builder.build();

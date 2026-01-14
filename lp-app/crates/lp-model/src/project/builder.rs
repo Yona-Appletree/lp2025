@@ -155,6 +155,26 @@ impl<'a> ProjectBuilder<'a> {
         }
     }
 
+    /// Add a texture node with defaults (16x16)
+    pub fn texture_basic(&mut self) -> LpPath {
+        self.texture().add(self)
+    }
+
+    /// Add a shader node with defaults (time-based sawtooth shader)
+    pub fn shader_basic(&mut self, texture_path: &LpPath) -> LpPath {
+        self.shader(texture_path).add(self)
+    }
+
+    /// Add an output node with defaults (GPIO pin 0)
+    pub fn output_basic(&mut self) -> LpPath {
+        self.output().add(self)
+    }
+
+    /// Add a fixture node with defaults
+    pub fn fixture_basic(&mut self, output_path: &LpPath, texture_path: &LpPath) -> LpPath {
+        self.fixture(output_path, texture_path).add(self)
+    }
+
     /// Build completes - writes project.json and all node files
     pub fn build(mut self) {
         // Write project.json
