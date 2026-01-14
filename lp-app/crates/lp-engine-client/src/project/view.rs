@@ -1,12 +1,11 @@
-use lp_model::{
-    FrameId, NodeConfig, NodeHandle, NodeKind,
-    project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
-    LpPath,
-};
+use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::boxed::Box;
+use lp_model::{
+    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
+    project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
+};
 
 /// Client view of project
 pub struct ClientProjectView {
@@ -67,7 +66,10 @@ impl ClientProjectView {
     }
 
     /// Sync with server (update view from response)
-    pub fn sync(&mut self, response: &lp_model::project::api::ProjectResponse) -> Result<(), String> {
+    pub fn sync(
+        &mut self,
+        response: &lp_model::project::api::ProjectResponse,
+    ) -> Result<(), String> {
         match response {
             lp_model::project::api::ProjectResponse::GetChanges {
                 current_frame,
@@ -89,7 +91,7 @@ impl ClientProjectView {
                             // Create new entry with placeholder config
                             let config: Box<dyn NodeConfig> = match kind {
                                 NodeKind::Texture => {
-                                    Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                                    Box::new(lp_model::nodes::texture::TextureConfig {
                                         width: 0,
                                         height: 0,
                                     })
@@ -108,20 +110,24 @@ impl ClientProjectView {
                                         texture_spec: lp_model::NodeSpecifier::from(""),
                                         mapping: String::new(),
                                         lamp_type: String::new(),
+                                        color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                         transform: [[0.0; 4]; 4],
                                     })
                                 }
                             };
-                            
-                            self.nodes.insert(*handle, ClientNodeEntry {
-                                path: path.clone(),
-                                kind: *kind,
-                                config,
-                                config_ver: FrameId::default(),
-                                state: None,
-                                state_ver: FrameId::default(),
-                                status: NodeStatus::Created,
-                            });
+
+                            self.nodes.insert(
+                                *handle,
+                                ClientNodeEntry {
+                                    path: path.clone(),
+                                    kind: *kind,
+                                    config,
+                                    config_ver: FrameId::default(),
+                                    state: None,
+                                    state_ver: FrameId::default(),
+                                    status: NodeStatus::Created,
+                                },
+                            );
                         }
                         NodeChange::ConfigUpdated { handle, config_ver } => {
                             if let Some(entry) = self.nodes.get_mut(handle) {
@@ -154,7 +160,7 @@ impl ClientProjectView {
                         // Clone config based on kind (temporary - will use proper serialization later)
                         let config: Box<dyn NodeConfig> = match entry.kind {
                             NodeKind::Texture => {
-                                Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                                Box::new(lp_model::nodes::texture::TextureConfig {
                                     width: 0,
                                     height: 0,
                                 })
@@ -173,11 +179,12 @@ impl ClientProjectView {
                                     texture_spec: lp_model::NodeSpecifier::from(""),
                                     mapping: String::new(),
                                     lamp_type: String::new(),
+                                    color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                     transform: [[0.0; 4]; 4],
                                 })
                             }
                         };
-                        
+
                         entry.config = config;
                         entry.state = Some(detail.state.clone());
                         entry.status = detail.status.clone();
@@ -190,10 +197,10 @@ impl ClientProjectView {
                             NodeState::Output(_) => NodeKind::Output,
                             NodeState::Fixture(_) => NodeKind::Fixture,
                         };
-                        
+
                         let config: Box<dyn NodeConfig> = match kind {
                             NodeKind::Texture => {
-                                Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                                Box::new(lp_model::nodes::texture::TextureConfig {
                                     width: 0,
                                     height: 0,
                                 })
@@ -212,20 +219,24 @@ impl ClientProjectView {
                                     texture_spec: lp_model::NodeSpecifier::from(""),
                                     mapping: String::new(),
                                     lamp_type: String::new(),
+                                    color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                     transform: [[0.0; 4]; 4],
                                 })
                             }
                         };
-                        
-                        self.nodes.insert(*handle, ClientNodeEntry {
-                            path: detail.path.clone(),
-                            kind,
-                            config,
-                            config_ver: FrameId::default(),
-                            state: Some(detail.state.clone()),
-                            state_ver: FrameId::default(),
-                            status: detail.status.clone(),
-                        });
+
+                        self.nodes.insert(
+                            *handle,
+                            ClientNodeEntry {
+                                path: detail.path.clone(),
+                                kind,
+                                config,
+                                config_ver: FrameId::default(),
+                                state: Some(detail.state.clone()),
+                                state_ver: FrameId::default(),
+                                status: detail.status.clone(),
+                            },
+                        );
                     }
                 }
 

@@ -1,4 +1,5 @@
 use alloc::string::String;
+use lp_model::NodeKind;
 
 /// Engine error type
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +30,15 @@ pub enum Error {
         /// Reason for invalidity
         reason: String,
     },
+    /// Wrong node kind (for resolution)
+    WrongNodeKind {
+        /// Node specifier that was resolved
+        specifier: String,
+        /// Expected node kind
+        expected: NodeKind,
+        /// Actual node kind
+        actual: NodeKind,
+    },
     /// Other error
     Other {
         /// Error message
@@ -50,6 +60,9 @@ impl core::fmt::Display for Error {
             }
             Error::InvalidConfig { node_path, reason } => {
                 write!(f, "Invalid config for {}: {}", node_path, reason)
+            }
+            Error::WrongNodeKind { specifier, expected, actual } => {
+                write!(f, "Wrong node kind for {}: expected {:?}, got {:?}", specifier, expected, actual)
             }
             Error::Other { message } => {
                 write!(f, "Error: {}", message)

@@ -3,13 +3,10 @@ use serde::{Deserialize, Serialize};
 
 /// Texture node configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TextureConfig {
-    /// Memory texture - simple buffer
-    Memory {
-        width: u32,
-        height: u32,
-        // format: todo!(), // Will add format later
-    },
+pub struct TextureConfig {
+    pub width: u32,
+    pub height: u32,
+    // format: todo!() - will be added later
 }
 
 impl NodeConfig for TextureConfig {
@@ -24,7 +21,7 @@ mod tests {
 
     #[test]
     fn test_texture_config_kind() {
-        let config = TextureConfig::Memory {
+        let config = TextureConfig {
             width: 100,
             height: 200,
         };

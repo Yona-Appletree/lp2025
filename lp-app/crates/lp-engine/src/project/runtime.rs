@@ -113,7 +113,7 @@ impl ProjectRuntime {
                     // This is a temporary solution until we have a better way
                     let config: Box<dyn NodeConfig> = match kind {
                         NodeKind::Texture => {
-                            Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                            Box::new(lp_model::nodes::texture::TextureConfig {
                                 width: 0,
                                 height: 0,
                             })
@@ -132,6 +132,7 @@ impl ProjectRuntime {
                                 texture_spec: lp_model::NodeSpecifier::from(""),
                                 mapping: String::new(),
                                 lamp_type: String::new(),
+                                color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                 transform: [[0.0; 4]; 4],
                             })
                         }
@@ -335,7 +336,7 @@ impl ProjectRuntime {
                 let config: Box<dyn NodeConfig> = match entry.kind {
                     NodeKind::Texture => {
                         // todo!("Proper config cloning - use serialization or Any trait")
-                        Box::new(lp_model::nodes::texture::TextureConfig::Memory {
+                        Box::new(lp_model::nodes::texture::TextureConfig {
                             width: 0,
                             height: 0,
                         })
@@ -354,6 +355,7 @@ impl ProjectRuntime {
                             texture_spec: lp_model::NodeSpecifier::from(""),
                             mapping: String::new(),
                             lamp_type: String::new(),
+                            color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                             transform: [[0.0; 4]; 4],
                         })
                     }
