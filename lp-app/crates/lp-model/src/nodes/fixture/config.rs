@@ -31,12 +31,12 @@ impl ColorOrder {
             ColorOrder::Bgr => "bgr",
         }
     }
-    
+
     /// Get bytes per pixel (always 3 for RGB variants)
     pub fn bytes_per_pixel(&self) -> usize {
         3
     }
-    
+
     /// Write RGB values to buffer in the correct order
     pub fn write_rgb(&self, buffer: &mut [u8], offset: usize, r: u8, g: u8, b: u8) {
         if offset + 3 > buffer.len() {
@@ -117,44 +117,44 @@ mod tests {
         };
         assert_eq!(config.kind(), NodeKind::Fixture);
     }
-    
+
     #[test]
     fn test_color_order_as_str() {
         assert_eq!(ColorOrder::Rgb.as_str(), "rgb");
         assert_eq!(ColorOrder::Grb.as_str(), "grb");
         assert_eq!(ColorOrder::Bgr.as_str(), "bgr");
     }
-    
+
     #[test]
     fn test_color_order_bytes_per_pixel() {
         assert_eq!(ColorOrder::Rgb.bytes_per_pixel(), 3);
         assert_eq!(ColorOrder::Grb.bytes_per_pixel(), 3);
     }
-    
+
     #[test]
     fn test_color_order_write_rgb() {
         let mut buffer = [0u8; 10];
-        
+
         ColorOrder::Rgb.write_rgb(&mut buffer, 0, 100, 200, 255);
         assert_eq!(buffer[0], 100);
         assert_eq!(buffer[1], 200);
         assert_eq!(buffer[2], 255);
-        
+
         ColorOrder::Grb.write_rgb(&mut buffer, 3, 100, 200, 255);
-        assert_eq!(buffer[3], 200);  // G first
-        assert_eq!(buffer[4], 100);  // R second
-        assert_eq!(buffer[5], 255);  // B third
-        
+        assert_eq!(buffer[3], 200); // G first
+        assert_eq!(buffer[4], 100); // R second
+        assert_eq!(buffer[5], 255); // B third
+
         ColorOrder::Bgr.write_rgb(&mut buffer, 6, 100, 200, 255);
-        assert_eq!(buffer[6], 255);  // B first
-        assert_eq!(buffer[7], 200);  // G second
-        assert_eq!(buffer[8], 100);   // R third
+        assert_eq!(buffer[6], 255); // B first
+        assert_eq!(buffer[7], 200); // G second
+        assert_eq!(buffer[8], 100); // R third
     }
-    
+
     #[test]
     fn test_color_order_write_rgb_bounds_check() {
-        let mut buffer = [0u8; 2];  // Too small
-        
+        let mut buffer = [0u8; 2]; // Too small
+
         ColorOrder::Rgb.write_rgb(&mut buffer, 0, 100, 200, 255);
         // Should not panic, just return early
         // Buffer should be unchanged or partially written

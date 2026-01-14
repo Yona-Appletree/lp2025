@@ -1,8 +1,11 @@
 use crate::error::Error;
-use crate::nodes::{
-    NodeRuntime, TextureRuntime, ShaderRuntime, OutputRuntime, FixtureRuntime,
-};
-use crate::runtime::contexts::{NodeInitContext, RenderContext};
+use crate::nodes::{FixtureRuntime, NodeRuntime, OutputRuntime, ShaderRuntime, TextureRuntime};
+use crate::runtime::contexts::RenderContext;
+use alloc::boxed::Box;
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use lp_model::{
     FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
     project::api::{
@@ -11,11 +14,6 @@ use lp_model::{
     },
 };
 use lp_shared::fs::LpFs;
-use alloc::collections::{BTreeMap, BTreeSet};
-use alloc::vec::Vec;
-use alloc::boxed::Box;
-use alloc::format;
-use alloc::string::String;
 
 /// Project runtime - manages nodes and rendering
 pub struct ProjectRuntime {
@@ -66,7 +64,7 @@ impl ProjectRuntime {
     /// Create new project runtime
     pub fn new(fs: Box<dyn LpFs>) -> Result<Self, Error> {
         let _config = crate::project::loader::load_from_filesystem(fs.as_ref())?;
-        
+
         Ok(Self {
             frame_id: FrameId::default(),
             fs,
@@ -74,17 +72,17 @@ impl ProjectRuntime {
             next_handle: 1,
         })
     }
-    
+
     /// Load nodes from filesystem (doesn't initialize them)
     pub fn load_nodes(&mut self) -> Result<(), Error> {
         let node_paths = crate::project::loader::discover_nodes(self.fs.as_ref())?;
-        
+
         for path in node_paths {
             match crate::project::loader::load_node(self.fs.as_ref(), &path) {
                 Ok((path, config)) => {
                     let handle = NodeHandle::new(self.next_handle);
                     self.next_handle += 1;
-                    
+
                     let kind = config.kind();
                     let entry = NodeEntry {
                         path,
@@ -95,49 +93,43 @@ impl ProjectRuntime {
                         runtime: None,
                         state_ver: FrameId::default(),
                     };
-                    
+
                     self.nodes.insert(handle, entry);
                 }
                 Err(e) => {
                     // Create entry with error status
                     let handle = NodeHandle::new(self.next_handle);
                     self.next_handle += 1;
-                    
+
                     // Try to determine kind from path
                     let kind = match crate::project::loader::node_kind_from_path(&path) {
                         Ok(k) => k,
                         Err(_) => continue, // Skip unknown types
                     };
-                    
+
                     // Create a dummy config based on kind
                     // This is a temporary solution until we have a better way
                     let config: Box<dyn NodeConfig> = match kind {
-                        NodeKind::Texture => {
-                            Box::new(lp_model::nodes::texture::TextureConfig {
-                                width: 0,
-                                height: 0,
-                            })
-                        }
+                        NodeKind::Texture => Box::new(lp_model::nodes::texture::TextureConfig {
+                            width: 0,
+                            height: 0,
+                        }),
                         NodeKind::Shader => {
                             Box::new(lp_model::nodes::shader::ShaderConfig::default())
                         }
                         NodeKind::Output => {
-                            Box::new(lp_model::nodes::output::OutputConfig::GpioStrip {
-                                pin: 0,
-                            })
+                            Box::new(lp_model::nodes::output::OutputConfig::GpioStrip { pin: 0 })
                         }
-                        NodeKind::Fixture => {
-                            Box::new(lp_model::nodes::fixture::FixtureConfig {
-                                output_spec: lp_model::NodeSpecifier::from(""),
-                                texture_spec: lp_model::NodeSpecifier::from(""),
-                                mapping: String::new(),
-                                lamp_type: String::new(),
-                                color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
-                                transform: [[0.0; 4]; 4],
-                            })
-                        }
+                        NodeKind::Fixture => Box::new(lp_model::nodes::fixture::FixtureConfig {
+                            output_spec: lp_model::NodeSpecifier::from(""),
+                            texture_spec: lp_model::NodeSpecifier::from(""),
+                            mapping: String::new(),
+                            lamp_type: String::new(),
+                            color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
+                            transform: [[0.0; 4]; 4],
+                        }),
                     };
-                    
+
                     let entry = NodeEntry {
                         path,
                         kind,
@@ -147,15 +139,15 @@ impl ProjectRuntime {
                         runtime: None,
                         state_ver: FrameId::default(),
                     };
-                    
+
                     self.nodes.insert(handle, entry);
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Initialize all nodes in dependency order
     pub fn initialize_nodes(&mut self) -> Result<(), Error> {
         // Initialize in order: textures → shaders → fixtures → outputs
@@ -165,32 +157,42 @@ impl ProjectRuntime {
             NodeKind::Fixture,
             NodeKind::Output,
         ];
-        
+
         for kind in init_order.iter() {
-            let handles: Vec<NodeHandle> = self.nodes
+            let handles: Vec<NodeHandle> = self
+                .nodes
                 .iter()
                 .filter(|(_, entry)| entry.kind == *kind && entry.status == NodeStatus::Created)
                 .map(|(handle, _)| *handle)
                 .collect();
-            
+
             for handle in handles {
+                // Get node path and kind before mutable borrow
+                let (node_path, node_kind) = {
+                    let entry = self.nodes.get(&handle)
+                        .ok_or_else(|| Error::Other {
+                            message: format!("Node handle {} not found", handle.as_i32()),
+                        })?;
+                    (entry.path.clone(), entry.kind)
+                };
+                
+                // Create runtime based on kind
+                let mut runtime: Box<dyn NodeRuntime> = match node_kind {
+                    NodeKind::Texture => Box::new(TextureRuntime::new()),
+                    NodeKind::Shader => Box::new(ShaderRuntime::new()),
+                    NodeKind::Output => Box::new(OutputRuntime::new()),
+                    NodeKind::Fixture => Box::new(FixtureRuntime::new()),
+                };
+                
+                // Create init context and initialize (needs immutable borrow of self)
+                let init_result = {
+                    let ctx = InitContext::new(self, &node_path)?;
+                    runtime.init(&ctx)
+                };
+                
+                // Now do mutable operations (context is dropped)
                 if let Some(entry) = self.nodes.get_mut(&handle) {
-                    // Create runtime based on kind
-                    let mut runtime: Box<dyn NodeRuntime> = match entry.kind {
-                        NodeKind::Texture => Box::new(TextureRuntime::new()),
-                        NodeKind::Shader => Box::new(ShaderRuntime::new()),
-                        NodeKind::Output => Box::new(OutputRuntime::new()),
-                        NodeKind::Fixture => Box::new(FixtureRuntime::new()),
-                    };
-                    
-                    // Create init context (stub for now)
-                    let ctx = InitContext {
-                        fs: self.fs.as_ref(),
-                        // todo!("Add node resolution to context")
-                    };
-                    
-                    // Initialize
-                    match runtime.init(&ctx) {
+                    match init_result {
                         Ok(()) => {
                             entry.status = NodeStatus::Ok;
                             entry.runtime = Some(runtime);
@@ -203,28 +205,29 @@ impl ProjectRuntime {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Advance to next frame
     pub fn tick(&mut self) {
         self.frame_id = self.frame_id.next();
     }
-    
+
     /// Render current frame
     pub fn render(&mut self) -> Result<(), Error> {
         // Render all fixtures
-        let fixture_handles: Vec<NodeHandle> = self.nodes
+        let fixture_handles: Vec<NodeHandle> = self
+            .nodes
             .iter()
             .filter(|(_, entry)| {
-                entry.kind == NodeKind::Fixture && 
-                entry.runtime.is_some() &&
-                matches!(entry.status, NodeStatus::Ok)
+                entry.kind == NodeKind::Fixture
+                    && entry.runtime.is_some()
+                    && matches!(entry.status, NodeStatus::Ok)
             })
             .map(|(handle, _)| *handle)
             .collect();
-        
+
         for handle in fixture_handles {
             if let Some(entry) = self.nodes.get_mut(&handle) {
                 if let Some(runtime) = &mut entry.runtime {
@@ -232,7 +235,7 @@ impl ProjectRuntime {
                     let mut ctx = RenderContextImpl {
                         // todo!("Add texture/output access to context")
                     };
-                    
+
                     // Render fixture
                     if let Err(e) = runtime.render(&mut ctx) {
                         entry.status = NodeStatus::Error(format!("{}", e));
@@ -240,12 +243,12 @@ impl ProjectRuntime {
                 }
             }
         }
-        
+
         // todo!("Flush outputs with state_ver == frame_id")
-        
+
         Ok(())
     }
-    
+
     /// Get changes since a frame (for client sync)
     pub fn get_changes(
         &self,
@@ -255,19 +258,19 @@ impl ProjectRuntime {
         let mut node_handles = Vec::new();
         let mut node_changes = Vec::new();
         let mut node_details = BTreeMap::new();
-        
+
         // Collect all current handles
         for handle in self.nodes.keys() {
             node_handles.push(*handle);
         }
-        
+
         // Determine which handles need detail
         let detail_handles: BTreeSet<NodeHandle> = match detail_specifier {
             ApiNodeSpecifier::None => BTreeSet::new(),
             ApiNodeSpecifier::All => self.nodes.keys().copied().collect(),
             ApiNodeSpecifier::ByHandles(handles) => handles.iter().copied().collect(),
         };
-        
+
         // Collect changes and details
         for (handle, entry) in &self.nodes {
             // Check for changes since since_frame
@@ -277,23 +280,25 @@ impl ProjectRuntime {
                     config_ver: entry.config_ver,
                 });
             }
-            
+
             if entry.state_ver.as_i64() > since_frame.as_i64() {
                 node_changes.push(NodeChange::StateUpdated {
                     handle: *handle,
                     state_ver: entry.state_ver,
                 });
             }
-            
+
             // Check if node was created after since_frame
-            if entry.config_ver.as_i64() > since_frame.as_i64() && entry.config_ver == entry.state_ver {
+            if entry.config_ver.as_i64() > since_frame.as_i64()
+                && entry.config_ver == entry.state_ver
+            {
                 node_changes.push(NodeChange::Created {
                     handle: *handle,
                     path: entry.path.clone(),
                     kind: entry.kind,
                 });
             }
-            
+
             // Add detail if requested
             if detail_handles.contains(handle) {
                 let state = match entry.kind {
@@ -323,7 +328,7 @@ impl ProjectRuntime {
                         })
                     }
                 };
-                
+
                 let api_status = match &entry.status {
                     NodeStatus::Created => ApiNodeStatus::Created,
                     NodeStatus::InitError(msg) => ApiNodeStatus::InitError(msg.clone()),
@@ -331,7 +336,7 @@ impl ProjectRuntime {
                     NodeStatus::Warn(msg) => ApiNodeStatus::Warn(msg.clone()),
                     NodeStatus::Error(msg) => ApiNodeStatus::Error(msg.clone()),
                 };
-                
+
                 // Clone config based on kind (temporary - will use proper serialization later)
                 let config: Box<dyn NodeConfig> = match entry.kind {
                     NodeKind::Texture => {
@@ -341,35 +346,32 @@ impl ProjectRuntime {
                             height: 0,
                         })
                     }
-                    NodeKind::Shader => {
-                        Box::new(lp_model::nodes::shader::ShaderConfig::default())
-                    }
+                    NodeKind::Shader => Box::new(lp_model::nodes::shader::ShaderConfig::default()),
                     NodeKind::Output => {
-                        Box::new(lp_model::nodes::output::OutputConfig::GpioStrip {
-                            pin: 0,
-                        })
+                        Box::new(lp_model::nodes::output::OutputConfig::GpioStrip { pin: 0 })
                     }
-                    NodeKind::Fixture => {
-                        Box::new(lp_model::nodes::fixture::FixtureConfig {
-                            output_spec: lp_model::NodeSpecifier::from(""),
-                            texture_spec: lp_model::NodeSpecifier::from(""),
-                            mapping: String::new(),
-                            lamp_type: String::new(),
-                            color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
-                            transform: [[0.0; 4]; 4],
-                        })
-                    }
+                    NodeKind::Fixture => Box::new(lp_model::nodes::fixture::FixtureConfig {
+                        output_spec: lp_model::NodeSpecifier::from(""),
+                        texture_spec: lp_model::NodeSpecifier::from(""),
+                        mapping: String::new(),
+                        lamp_type: String::new(),
+                        color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
+                        transform: [[0.0; 4]; 4],
+                    }),
                 };
-                
-                node_details.insert(*handle, NodeDetail {
-                    path: entry.path.clone(),
-                    config,
-                    state,
-                    status: api_status,
-                });
+
+                node_details.insert(
+                    *handle,
+                    NodeDetail {
+                        path: entry.path.clone(),
+                        config,
+                        state,
+                        status: api_status,
+                    },
+                );
             }
         }
-        
+
         Ok(ProjectResponse::GetChanges {
             current_frame: self.frame_id,
             node_handles,
@@ -379,17 +381,94 @@ impl ProjectRuntime {
     }
 }
 
-/// Stub init context implementation
+/// Init context implementation
 struct InitContext<'a> {
-    fs: &'a dyn LpFs,
+    runtime: &'a ProjectRuntime,
+    node_path: &'a LpPath,
+    node_fs: alloc::boxed::Box<dyn LpFs>,
 }
 
-impl<'a> NodeInitContext for InitContext<'a> {
-    fn get_node_fs(&self) -> &dyn LpFs {
-        self.fs
+impl<'a> InitContext<'a> {
+    pub fn new(runtime: &'a ProjectRuntime, node_path: &'a LpPath) -> Result<Self, Error> {
+        let node_dir = node_path.as_str();
+        let node_fs = runtime.fs.chroot(node_dir).map_err(|e| Error::Io {
+            path: node_dir.to_string(),
+            details: format!("Failed to chroot: {:?}", e),
+        })?;
+        
+        Ok(Self {
+            runtime,
+            node_path,
+            node_fs,
+        })
+    }
+}
+
+impl<'a> crate::runtime::contexts::NodeInitContext for InitContext<'a> {
+    fn resolve_node(&self, spec: &lp_model::NodeSpecifier) -> Result<lp_model::NodeHandle, Error> {
+        let spec_path = spec.as_str();
+        let node_path = if spec_path.starts_with('/') {
+            // Absolute path
+            lp_model::LpPath::from(spec_path)
+        } else {
+            // Relative path - resolve from node directory
+            // For now, assume relative paths are not supported (todo!)
+            return Err(Error::NotFound {
+                path: spec_path.to_string(),
+            });
+        };
+        
+        // Look up node by path
+        for (handle, entry) in &self.runtime.nodes {
+            if entry.path == node_path {
+                return Ok(*handle);
+            }
+        }
+        
+        Err(Error::NotFound {
+            path: spec_path.to_string(),
+        })
     }
     
-    // Other methods use default todo!() implementations
+    fn resolve_output(&self, spec: &lp_model::NodeSpecifier) -> Result<crate::runtime::contexts::OutputHandle, Error> {
+        let handle = self.resolve_node(spec)?;
+        let entry = self.runtime.nodes.get(&handle)
+            .ok_or_else(|| Error::NotFound {
+                path: spec.as_str().to_string(),
+            })?;
+        
+        if entry.kind != lp_model::NodeKind::Output {
+            return Err(Error::WrongNodeKind {
+                specifier: spec.as_str().to_string(),
+                expected: lp_model::NodeKind::Output,
+                actual: entry.kind,
+            });
+        }
+        
+        Ok(crate::runtime::contexts::OutputHandle::new(handle))
+    }
+    
+    fn resolve_texture(&self, spec: &lp_model::NodeSpecifier) -> Result<crate::runtime::contexts::TextureHandle, Error> {
+        let handle = self.resolve_node(spec)?;
+        let entry = self.runtime.nodes.get(&handle)
+            .ok_or_else(|| Error::NotFound {
+                path: spec.as_str().to_string(),
+            })?;
+        
+        if entry.kind != lp_model::NodeKind::Texture {
+            return Err(Error::WrongNodeKind {
+                specifier: spec.as_str().to_string(),
+                expected: lp_model::NodeKind::Texture,
+                actual: entry.kind,
+            });
+        }
+        
+        Ok(crate::runtime::contexts::TextureHandle::new(handle))
+    }
+    
+    fn get_node_fs(&self) -> &dyn lp_shared::fs::LpFs {
+        self.node_fs.as_ref()
+    }
 }
 
 /// Stub render context implementation

@@ -61,8 +61,16 @@ impl core::fmt::Display for Error {
             Error::InvalidConfig { node_path, reason } => {
                 write!(f, "Invalid config for {}: {}", node_path, reason)
             }
-            Error::WrongNodeKind { specifier, expected, actual } => {
-                write!(f, "Wrong node kind for {}: expected {:?}, got {:?}", specifier, expected, actual)
+            Error::WrongNodeKind {
+                specifier,
+                expected,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "Wrong node kind for {}: expected {:?}, got {:?}",
+                    specifier, expected, actual
+                )
             }
             Error::Other { message } => {
                 write!(f, "Error: {}", message)

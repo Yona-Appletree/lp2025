@@ -1,41 +1,46 @@
 use crate::error::Error;
-use lp_model::NodeSpecifier;
+use lp_model::{NodeHandle, NodeSpecifier};
 use lp_shared::fs::LpFs;
 
-#[allow(dead_code)] // Will be used when implementing resolution
-
-/// Handles for resolved nodes (opaque types for now)
-pub struct TextureHandle(u32);
-pub struct OutputHandle(u32);
+/// Handle for resolved texture nodes
+pub struct TextureHandle(NodeHandle);
 
 impl TextureHandle {
-    pub fn new(id: u32) -> Self {
-        Self(id)
+    pub fn new(handle: NodeHandle) -> Self {
+        Self(handle)
+    }
+    
+    pub fn as_node_handle(&self) -> NodeHandle {
+        self.0
     }
 }
 
+/// Handle for resolved output nodes
+pub struct OutputHandle(NodeHandle);
+
 impl OutputHandle {
-    pub fn new(id: u32) -> Self {
-        Self(id)
+    pub fn new(handle: NodeHandle) -> Self {
+        Self(handle)
+    }
+    
+    pub fn as_node_handle(&self) -> NodeHandle {
+        self.0
     }
 }
 
 /// Context for node initialization
 pub trait NodeInitContext {
+    /// Resolve a node specifier to a node handle (common method)
+    fn resolve_node(&self, spec: &NodeSpecifier) -> Result<NodeHandle, Error>;
+    
     /// Resolve an output node specifier to a handle
-    fn resolve_output(&self, _spec: &NodeSpecifier) -> Result<OutputHandle, Error> {
-        todo!("Node resolution not implemented yet")
-    }
+    fn resolve_output(&self, spec: &NodeSpecifier) -> Result<OutputHandle, Error>;
     
     /// Resolve a texture node specifier to a handle
-    fn resolve_texture(&self, _spec: &NodeSpecifier) -> Result<TextureHandle, Error> {
-        todo!("Node resolution not implemented yet")
-    }
+    fn resolve_texture(&self, spec: &NodeSpecifier) -> Result<TextureHandle, Error>;
     
     /// Get filesystem for this node
-    fn get_node_fs(&self) -> &dyn LpFs {
-        todo!("Filesystem access not implemented yet")
-    }
+    fn get_node_fs(&self) -> &dyn LpFs;
 }
 
 /// Context for rendering
