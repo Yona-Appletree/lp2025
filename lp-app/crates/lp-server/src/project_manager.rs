@@ -5,6 +5,7 @@ extern crate alloc;
 use crate::error::ServerError;
 use crate::project::Project;
 use alloc::{
+    boxed::Box,
     format,
     string::{String, ToString},
     vec::Vec,
@@ -44,7 +45,7 @@ impl ProjectManager {
     ///
     /// Creates a Project instance and loads it into memory.
     /// todo!("Refactor to use new ProjectRuntime API")
-    pub fn load_project(&mut self, name: String, fs: Box<dyn LpFs>) -> Result<(), ServerError> {
+    pub fn load_project(&mut self, name: String, fs: alloc::boxed::Box<dyn LpFs>) -> Result<(), ServerError> {
         // Check if already loaded
         if self.projects.contains_key(&name) {
             return Ok(()); // Already loaded

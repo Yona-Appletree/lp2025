@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use crate::error::ServerError;
-use alloc::{format, string::String};
+use alloc::{boxed::Box, format, string::String};
 use lp_engine::ProjectRuntime;
 use lp_shared::fs::LpFs;
 
