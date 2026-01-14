@@ -764,14 +764,14 @@ impl<'a> RenderContextImpl<'a> {
         shader_handles.sort_by_key(|(_, order)| *order);
         
         // Render each shader that targets this texture
+        // Create RenderContext once and reuse it for all shaders
+        let mut ctx = RenderContextImpl {
+            nodes,
+            frame_id,
+            frame_time,
+        };
+        
         for (shader_handle, _) in shader_handles {
-            // Create RenderContext for this shader render
-            let mut ctx = RenderContextImpl {
-                nodes,
-                frame_id,
-                frame_time,
-            };
-            
             // Get shader runtime and render
             let shader_entry = ctx.nodes.get_mut(&shader_handle).ok_or_else(|| Error::Other {
                 message: format!("Shader handle {} not found", shader_handle.as_i32()),
