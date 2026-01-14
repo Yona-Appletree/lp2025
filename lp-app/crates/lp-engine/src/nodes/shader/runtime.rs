@@ -67,8 +67,9 @@ impl NodeRuntime for ShaderRuntime {
         // glsl_path is relative to node directory, and node_fs is chrooted to node directory
         // so we can use the path directly
         let fs = ctx.get_node_fs();
-        let source_bytes = fs.read_file(&config.glsl_path).map_err(|e| Error::Io {
-            path: config.glsl_path.clone(),
+        let glsl_path = &config.glsl_path;
+        let source_bytes = fs.read_file(glsl_path).map_err(|e| Error::Io {
+            path: glsl_path.clone(),
             details: format!("Failed to read GLSL file: {:?}", e),
         })?;
         
