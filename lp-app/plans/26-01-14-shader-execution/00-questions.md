@@ -48,10 +48,12 @@ Implementing shader runtime execution:
 
 6. **Time Parameter**: ✅ **ANSWERED**
 
-   - Use `ProjectRuntime.frame_id` converted to float seconds
-   - Or track separate time counter (frame_id * frame_duration)
-   - For now, use simple conversion: `time = frame_id.as_i64() as f32 * 0.016` (60fps)
+   - Track frame time in `ProjectRuntime` with `delta_ms` and `total_ms` (like old engine)
+   - `tick()` method should take `delta_ms: u32` parameter (from caller)
+   - Update frame time: `total_ms += delta_ms`, `delta_ms = delta_ms`
+   - Convert to seconds for shader: `time = total_ms as f32 / 1000.0`
    - Pass time as third parameter to shader main()
+   - Reference: old engine had `FrameTime` struct and `tick(delta_ms: u32)` pattern
 
 7. **Render Order**: ✅ **ANSWERED**
 

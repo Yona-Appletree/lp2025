@@ -45,6 +45,24 @@ impl NodeRuntime for ShaderRuntime {
 }
 ```
 
+### Frame Time Tracking
+```rust
+// project/runtime.rs (or new runtime/frame_time.rs)
+pub struct FrameTime {
+    pub delta_ms: u32,   // Time since last frame in milliseconds
+    pub total_ms: u32,   // Total time since project start in milliseconds
+}
+
+impl ProjectRuntime {
+    pub fn tick(&mut self, delta_ms: u32) {  // MODIFY: Add delta_ms parameter
+        self.frame_id = FrameId(self.frame_id.as_i64() + 1);
+        // Update frame time
+        self.frame_time.total_ms += delta_ms;
+        self.frame_time.delta_ms = delta_ms;
+    }
+}
+```
+
 ### Render Context Updates
 ```rust
 // runtime/contexts.rs
@@ -52,7 +70,7 @@ pub trait RenderContext {
     fn get_texture(&mut self, handle: TextureHandle) -> Result<&Texture, Error>;
     fn get_texture_mut(&mut self, handle: TextureHandle) -> Result<&mut Texture, Error>;  // NEW
     fn get_output(&mut self, handle: OutputHandle, universe: u32, start_ch: u32, ch_count: u32) -> Result<&mut [u8], Error>;
-    fn get_time(&self) -> f32;  // NEW: Get current frame time
+    fn get_time(&self) -> f32;  // NEW: Get current frame time in seconds (total_ms / 1000.0)
 }
 ```
 
@@ -191,7 +209,7 @@ impl NodeRuntime for ShaderRuntime {
 
 3. **Texture Mutability**: Add `get_texture_mut()` to `RenderContext` trait. This is cleaner than accessing texture runtime directly and maintains the abstraction.
 
-4. **Time Calculation**: Use simple frame-based time: `time = frame_id.as_i64() as f32 * 0.016` (assuming 60fps). Can be made configurable later.
+4. **Time Calculation**: Track frame time with `delta_ms` and `total_ms` (like old engine). `tick()` takes `delta_ms: u32` parameter. Convert to seconds: `time = total_ms as f32 / 1000.0`. This allows variable frame rates and accurate time tracking.
 
 5. **Error Handling**: Store compilation errors in state, don't fail initialization. Execution errors fail the render but don't crash the system.
 
