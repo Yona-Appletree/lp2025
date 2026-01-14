@@ -110,13 +110,15 @@ impl NodeRuntime for ShaderRuntime {
             message: String::from("Shader not compiled"),
         })?;
 
+        // Get time before mutable borrow
+        let time = ctx.get_time();
+
         // Get mutable texture access
         let texture = ctx.get_texture_mut(texture_handle)?;
 
         let width = texture.width();
         let height = texture.height();
         let output_size = [width as f32, height as f32];
-        let time = ctx.get_time();
 
         // Execute shader for each pixel
         for y in 0..height {
