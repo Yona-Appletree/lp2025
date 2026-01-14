@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::nodes::{FixtureRuntime, NodeRuntime, OutputRuntime, ShaderRuntime, TextureRuntime};
-use crate::runtime::contexts::RenderContext;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
@@ -392,26 +391,41 @@ impl ProjectRuntime {
             if detail_handles.contains(handle) {
                 let state = match entry.kind {
                     NodeKind::Texture => {
-                        // todo!("Get actual texture state from runtime")
-                        NodeState::Texture(lp_model::nodes::texture::TextureState {
-                            texture_data: Vec::new(),
-                        })
+                        // Get actual texture state from runtime
+                        if let Some(runtime) = &entry.runtime {
+                            // Use Any trait for downcasting
+                            use core::any::Any;
+                            if let Some(tex_runtime) = runtime.as_any().downcast_ref::<TextureRuntime>() {
+                                NodeState::Texture(tex_runtime.get_state())
+                            } else {
+                                // Fallback to empty state
+                                NodeState::Texture(lp_model::nodes::texture::TextureState {
+                                    texture_data: Vec::new(),
+                                })
+                            }
+                        } else {
+                            NodeState::Texture(lp_model::nodes::texture::TextureState {
+                                texture_data: Vec::new(),
+                            })
+                        }
                     }
                     NodeKind::Shader => {
-                        // todo!("Get actual shader state from runtime")
+                        // Shader runtime not fully implemented yet
                         NodeState::Shader(lp_model::nodes::shader::ShaderState {
                             glsl_code: String::new(),
                             error: None,
                         })
                     }
                     NodeKind::Output => {
-                        // todo!("Get actual output state from runtime")
+                        // Output runtime not fully implemented yet
                         NodeState::Output(lp_model::nodes::output::OutputState {
                             channel_data: Vec::new(),
                         })
                     }
                     NodeKind::Fixture => {
-                        // todo!("Get actual fixture state from runtime")
+                        // Fixture runtime state extraction
+                        // FixtureState has lamp_colors - we'd need to extract from runtime
+                        // For now, return empty (will implement when fixture state is needed)
                         NodeState::Fixture(lp_model::nodes::fixture::FixtureState {
                             lamp_colors: Vec::new(),
                         })
@@ -612,10 +626,13 @@ impl<'a> crate::runtime::contexts::RenderContext for RenderContextImpl<'a> {
     fn get_output(&mut self, handle: crate::runtime::contexts::OutputHandle, _universe: u32, _start_ch: u32, _ch_count: u32) -> Result<&mut [u8], Error> {
         // Get output runtime
         let node_handle = handle.as_node_handle();
-        let _entry = self.nodes.get_mut(&node_handle)
+        let entry = self.nodes.get_mut(&node_handle)
             .ok_or_else(|| Error::NotFound {
                 path: format!("output-{}", node_handle.as_i32()),
             })?;
+        
+        // Update output state_ver to current frame (state changed when accessed)
+        entry.state_ver = self.frame_id;
         
         // Get output buffer from runtime
         // Note: OutputRuntime not implemented yet, so this will be a todo!()
