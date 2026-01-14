@@ -19,7 +19,7 @@ impl NodeRuntime for OutputRuntime {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &dyn RenderContext) -> Result<(), Error> {
+    fn render(&mut self, _ctx: &mut dyn RenderContext) -> Result<(), Error> {
         // todo!("Output rendering - flush buffers")
         Ok(())
     }

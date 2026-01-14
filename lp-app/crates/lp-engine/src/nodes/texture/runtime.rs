@@ -71,7 +71,7 @@ impl NodeRuntime for TextureRuntime {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &dyn RenderContext) -> Result<(), Error> {
+    fn render(&mut self, _ctx: &mut dyn RenderContext) -> Result<(), Error> {
         // No-op - textures don't render themselves, shaders render to textures
         Ok(())
     }

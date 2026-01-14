@@ -177,7 +177,7 @@ impl ProjectRuntime {
                     (entry.path.clone(), entry.kind)
                 };
 
-                // Extract config before creating runtime (for textures)
+                // Extract config before creating runtime (for textures and fixtures)
                 // Load config from filesystem since we can't extract from Box<dyn NodeConfig>
                 let texture_config = if node_kind == NodeKind::Texture {
                     let entry = self.nodes.get(&handle).ok_or_else(|| Error::Other {
@@ -200,6 +200,27 @@ impl ProjectRuntime {
                     None
                 };
 
+                let fixture_config = if node_kind == NodeKind::Fixture {
+                    let entry = self.nodes.get(&handle).ok_or_else(|| Error::Other {
+                        message: format!("Node handle {} not found", handle.as_i32()),
+                    })?;
+                    // Reload config from filesystem (workaround for trait object limitation)
+                    let node_json_path = format!("{}/node.json", entry.path.as_str());
+                    let data = self.fs.read_file(&node_json_path).map_err(|e| Error::Io {
+                        path: node_json_path.clone(),
+                        details: format!("Failed to read: {:?}", e),
+                    })?;
+                    Some(
+                        serde_json::from_slice::<lp_model::nodes::fixture::FixtureConfig>(&data)
+                            .map_err(|e| Error::Parse {
+                                file: node_json_path,
+                                error: format!("Failed to parse fixture config: {}", e),
+                            })?,
+                    )
+                } else {
+                    None
+                };
+
                 // Create runtime based on kind
                 let mut runtime: Box<dyn NodeRuntime> = match node_kind {
                     NodeKind::Texture => {
@@ -211,7 +232,13 @@ impl ProjectRuntime {
                     }
                     NodeKind::Shader => Box::new(ShaderRuntime::new()),
                     NodeKind::Output => Box::new(OutputRuntime::new()),
-                    NodeKind::Fixture => Box::new(FixtureRuntime::new()),
+                    NodeKind::Fixture => {
+                        let mut fixture_runtime = FixtureRuntime::new();
+                        if let Some(config) = fixture_config {
+                            fixture_runtime.set_config(config);
+                        }
+                        Box::new(fixture_runtime)
+                    }
                 };
 
                 // Create init context and initialize (needs immutable borrow of self)

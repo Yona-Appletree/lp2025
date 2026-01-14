@@ -19,7 +19,7 @@ pub trait NodeRuntime: Send + Sync {
     fn init(&mut self, ctx: &dyn NodeInitContext) -> Result<(), Error>;
 
     /// Render the node
-    fn render(&mut self, ctx: &dyn RenderContext) -> Result<(), Error>;
+    fn render(&mut self, ctx: &mut dyn RenderContext) -> Result<(), Error>;
 
     /// Destroy the node (cleanup)
     fn destroy(&mut self) -> Result<(), Error> {
