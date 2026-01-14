@@ -789,6 +789,13 @@ impl<'a> RenderContextImpl<'a> {
         // Sort by render_order (lowest first)
         shader_handles.sort_by_key(|(_, order)| *order);
         
+        // Mark texture as rendering BEFORE calling shader.render() to prevent infinite recursion
+        // When shader.render() calls get_texture_mut(), it will see state_ver >= frame_id
+        // and skip re-rendering
+        if let Some(entry) = nodes.get_mut(&node_handle) {
+            entry.state_ver = frame_id;
+        }
+        
         // Render each shader that targets this texture
         for (shader_handle, _) in shader_handles {
             // Create RenderContext for each shader render
@@ -827,11 +834,6 @@ impl<'a> RenderContextImpl<'a> {
             if let Some(entry) = ctx.nodes.get_mut(&shader_handle) {
                 entry.state_ver = frame_id;
             }
-        }
-        
-        // Update texture state_ver
-        if let Some(entry) = nodes.get_mut(&node_handle) {
-            entry.state_ver = frame_id;
         }
         
         Ok(())
