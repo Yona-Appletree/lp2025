@@ -4,16 +4,13 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use crate::project::Project;
-use crate::template;
 use alloc::{
     format,
     string::{String, ToString},
     vec::Vec,
 };
 use hashbrown::HashMap;
-use lp_engine::app::EngineEnv;
-use lp_engine::traits::LpFs;
-use lp_shared::project::config::ProjectConfig;
+use lp_shared::fs::LpFs;
 
 /// Manages multiple project instances
 pub struct ProjectManager {
@@ -38,81 +35,25 @@ impl ProjectManager {
     /// Create a new project
     ///
     /// Creates the project directory structure using the provided filesystem.
-    /// The caller must provide a Platform with the appropriate filesystem (at server root) and OutputProvider.
-    pub fn create_project(&mut self, name: String, platform: EngineEnv) -> Result<(), ServerError> {
-        // Check if project already exists
-        if self.projects.contains_key(&name) {
-            return Err(ServerError::ProjectExists(name));
-        }
-
-        let project_path = format!("{}/{}", self.projects_base_dir, name);
-        let project_json_path = format!("{}/project.json", project_path);
-
-        // Check if project already exists on filesystem
-        if platform.fs.file_exists(&project_json_path).unwrap_or(false) {
-            return Err(ServerError::ProjectExists(name));
-        }
-
-        // Create project.json
-        let config = ProjectConfig {
-            uid: name.clone(),
-            name: format!("{} Project", name),
-        };
-        let json = serde_json::to_string_pretty(&config).map_err(|e| {
-            ServerError::Serialization(format!("Failed to serialize project config: {}", e))
-        })?;
-        platform
-            .fs
-            .write_file(&project_json_path, json.as_bytes())
-            .map_err(|e| ServerError::Filesystem(format!("Failed to write project.json: {}", e)))?;
-
-        // Chroot the filesystem to the project directory to create the template
-        let project_fs = platform.fs.chroot(&project_path).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to chroot to project directory: {}", e))
-        })?;
-
-        // Create the default project template
-        template::create_default_project_template(project_fs.as_ref()).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to create project template: {}", e))
-        })?;
-
-        // Load the newly created project
-        self.load_project(name, platform)
+    /// todo!("Refactor to use new ProjectRuntime API")
+    pub fn create_project(&mut self, _name: String, _fs: Box<dyn LpFs>) -> Result<(), ServerError> {
+        todo!("Refactor to use new ProjectRuntime API")
     }
 
     /// Load a project from the filesystem
     ///
     /// Creates a Project instance and loads it into memory.
-    /// The caller must provide a Platform with a filesystem at the server root and an OutputProvider.
-    /// This method will chroot the filesystem to the project directory.
-    pub fn load_project(&mut self, name: String, platform: EngineEnv) -> Result<(), ServerError> {
+    /// todo!("Refactor to use new ProjectRuntime API")
+    pub fn load_project(&mut self, name: String, fs: Box<dyn LpFs>) -> Result<(), ServerError> {
         // Check if already loaded
         if self.projects.contains_key(&name) {
             return Ok(()); // Already loaded
         }
 
         let project_path = format!("{}/{}", self.projects_base_dir, name);
-        let project_json_path = format!("{}/project.json", project_path);
 
-        // Check if project exists
-        if !platform.fs.file_exists(&project_json_path).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to check project existence: {}", e))
-        })? {
-            return Err(ServerError::ProjectNotFound(name.clone()));
-        }
-
-        // Chroot the filesystem to the project directory
-        // This creates a new filesystem view where paths are relative to the project root
-        let project_fs = platform.fs.chroot(&project_path).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to chroot to project directory: {}", e))
-        })?;
-
-        // Create a new Platform with the chrooted filesystem
-        let project_platform = EngineEnv::new(project_fs, platform.output);
-
-        // Create and load project
-        // Now paths like "/project.json" will resolve relative to the project directory
-        let project = Project::new(name.clone(), "/project.json".to_string(), project_platform)?;
+        // Create a new project instance
+        let project = Project::new(name.clone(), project_path, fs)?;
         self.projects.insert(name, project);
 
         Ok(())

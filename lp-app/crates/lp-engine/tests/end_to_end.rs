@@ -1,5 +1,3 @@
-extern crate alloc;
-
 use lp_engine::ProjectRuntime;
 use lp_engine_client::ClientProjectView;
 use lp_shared::fs::LpFsMemory;

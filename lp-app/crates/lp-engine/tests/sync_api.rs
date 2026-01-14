@@ -40,7 +40,7 @@ fn test_sync_api_get_changes() {
         ProjectResponse::GetChanges {
             current_frame,
             node_handles,
-            node_changes,
+            node_changes: _,
             node_details,
         } => {
             // Should have at least one node

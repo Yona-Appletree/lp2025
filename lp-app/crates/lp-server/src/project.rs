@@ -4,33 +4,27 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use alloc::{format, string::String};
-use lp_engine::app::{EngineEnv, LpEngine};
-use lp_engine::error::Error as CoreError;
+use lp_engine::ProjectRuntime;
+use lp_shared::fs::LpFs;
 
-/// A project instance wrapping an LpEngine
+/// A project instance wrapping a ProjectRuntime
 pub struct Project {
     /// Project name/identifier
     name: String,
     /// Project filesystem path
     path: String,
-    /// The underlying LpEngine instance
-    engine: LpEngine,
+    /// The underlying ProjectRuntime instance
+    runtime: ProjectRuntime,
 }
 
 impl Project {
     /// Create a new project instance
     ///
     /// The project must already exist on the filesystem.
-    pub fn new(name: String, path: String, engine_env: EngineEnv) -> Result<Self, ServerError> {
-        let mut engine = LpEngine::new(engine_env);
+    pub fn new(name: String, path: String, fs: Box<dyn LpFs>) -> Result<Self, ServerError> {
+        let runtime = ProjectRuntime::new(fs).map_err(|e| ServerError::Core(format!("{}", e)))?;
 
-        // Load the project
-        engine.load_project().map_err(|e| match e {
-            CoreError::Filesystem(msg) => ServerError::Filesystem(msg),
-            e => ServerError::Core(format!("{}", e)),
-        })?;
-
-        Ok(Self { name, path, engine })
+        Ok(Self { name, path, runtime })
     }
 
     /// Get the project name
@@ -43,21 +37,19 @@ impl Project {
         &self.path
     }
 
-    /// Get mutable access to the underlying LpEngine
-    pub fn engine_mut(&mut self) -> &mut LpEngine {
-        &mut self.engine
+    /// Get mutable access to the underlying ProjectRuntime
+    pub fn runtime_mut(&mut self) -> &mut ProjectRuntime {
+        &mut self.runtime
     }
 
-    /// Get immutable access to the underlying LpEngine
-    pub fn engine(&self) -> &LpEngine {
-        &self.engine
+    /// Get immutable access to the underlying ProjectRuntime
+    pub fn runtime(&self) -> &ProjectRuntime {
+        &self.runtime
     }
 
     /// Reload the project from the filesystem
     pub fn reload(&mut self) -> Result<(), ServerError> {
-        self.engine.load_project().map_err(|e| match e {
-            CoreError::Filesystem(msg) => ServerError::Filesystem(msg),
-            e => ServerError::Core(format!("{}", e)),
-        })
+        // todo!("Implement project reload")
+        Ok(())
     }
 }

@@ -115,7 +115,7 @@ pub enum NodeState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::string::ToString;
+    use alloc::{string::ToString, vec};
 
     #[test]
     fn test_api_node_specifier() {
