@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use lp_model::{
@@ -242,6 +243,38 @@ impl ClientProjectView {
 
                 Ok(())
             }
+        }
+    }
+
+    /// Get texture data for a node handle
+    ///
+    /// Returns the texture data bytes, or an error if:
+    /// - The node doesn't exist
+    /// - The node is not a texture node
+    /// - The node doesn't have state (not being tracked for detail)
+    pub fn get_texture_data(&self, handle: NodeHandle) -> Result<Vec<u8>, String> {
+        let entry = self.nodes.get(&handle).ok_or_else(|| {
+            format!("Node handle {} not found in client view", handle.as_i32())
+        })?;
+
+        if entry.kind != NodeKind::Texture {
+            return Err(format!(
+                "Node {} is not a texture node (kind: {:?})",
+                entry.path.as_str(),
+                entry.kind
+            ));
+        }
+
+        match &entry.state {
+            Some(NodeState::Texture(tex_state)) => Ok(tex_state.texture_data.clone()),
+            Some(_) => Err(format!(
+                "Node {} has wrong state type (expected Texture)",
+                entry.path.as_str()
+            )),
+            None => Err(format!(
+                "Node {} does not have state (not being tracked for detail)",
+                entry.path.as_str()
+            )),
         }
     }
 }

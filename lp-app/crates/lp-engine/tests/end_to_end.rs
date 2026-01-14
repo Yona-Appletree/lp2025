@@ -38,15 +38,7 @@ fn test_end_to_end_shader_time_based() {
     sync_client_view(&runtime, &mut client_view);
 
     // Get texture data from client view
-    let frame1_data = {
-        let entry = client_view.nodes.get(&texture_handle).unwrap();
-        match &entry.state {
-            Some(lp_model::project::api::NodeState::Texture(tex_state)) => {
-                tex_state.texture_data.clone()
-            }
-            _ => panic!("Expected texture state"),
-        }
-    };
+    let frame1_data = client_view.get_texture_data(texture_handle).unwrap();
     assert_eq!(
         frame1_data.len(),
         16 * 16 * 4,
@@ -56,15 +48,7 @@ fn test_end_to_end_shader_time_based() {
     // Frame 2: Verify time-based change
     runtime.tick(16).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    let frame2_data = {
-        let entry = client_view.nodes.get(&texture_handle).unwrap();
-        match &entry.state {
-            Some(lp_model::project::api::NodeState::Texture(tex_state)) => {
-                tex_state.texture_data.clone()
-            }
-            _ => panic!("Expected texture state"),
-        }
-    };
+    let frame2_data = client_view.get_texture_data(texture_handle).unwrap();
     assert_ne!(
         &frame1_data[0..4],
         &frame2_data[0..4],
@@ -74,15 +58,7 @@ fn test_end_to_end_shader_time_based() {
     // Frame 3: Verify continued change
     runtime.tick(16).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    let frame3_data = {
-        let entry = client_view.nodes.get(&texture_handle).unwrap();
-        match &entry.state {
-            Some(lp_model::project::api::NodeState::Texture(tex_state)) => {
-                tex_state.texture_data.clone()
-            }
-            _ => panic!("Expected texture state"),
-        }
-    };
+    let frame3_data = client_view.get_texture_data(texture_handle).unwrap();
     assert_ne!(
         &frame1_data[0..4],
         &frame3_data[0..4],
