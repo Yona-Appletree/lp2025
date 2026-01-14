@@ -788,8 +788,8 @@ impl<'a> RenderContextImpl<'a> {
             }
         }
         
-        // Update texture state_ver
-        if let Some(entry) = nodes.get_mut(&node_handle) {
+        // Update texture state_ver (use ctx.nodes since we have the context)
+        if let Some(entry) = ctx.nodes.get_mut(&node_handle) {
             entry.state_ver = frame_id;
         }
         
