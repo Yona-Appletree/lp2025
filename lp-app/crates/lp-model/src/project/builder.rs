@@ -1,21 +1,20 @@
 //! Project builder for creating test projects with a fluent API
 
-use alloc::{format, string::String};
-use serde_json;
-use lp_shared::fs::LpFs;
-use crate::path::LpPath;
 use crate::nodes::fixture::ColorOrder;
 use crate::nodes::{
-    texture::TextureConfig,
-    shader::ShaderConfig,
-    output::OutputConfig,
-    fixture::FixtureConfig,
+    fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig, texture::TextureConfig,
     NodeSpecifier,
 };
+use crate::path::LpPath;
+use alloc::{format, string::String};
+use lp_shared::fs::LpFs;
+use serde_json;
 
 /// Builder for creating test projects
 pub struct ProjectBuilder<'a> {
     fs: &'a mut dyn LpFs,
+    uid: String,
+    name: String,
     texture_id: u32,
     shader_id: u32,
     output_id: u32,
@@ -54,7 +53,6 @@ pub struct OutputBuilder {
     pin: u32,
 }
 
-
 /// Builder for fixture nodes
 pub struct FixtureBuilder {
     output_path: LpPath,
@@ -66,10 +64,12 @@ pub struct FixtureBuilder {
 }
 
 impl<'a> ProjectBuilder<'a> {
-    /// Create a new ProjectBuilder
+    /// Create a new ProjectBuilder with default uid and name
     pub fn new(fs: &'a mut dyn LpFs) -> Self {
         Self {
             fs,
+            uid: String::from("test"),
+            name: String::from("Test Project"),
             texture_id: 1,
             shader_id: 1,
             output_id: 1,
@@ -77,16 +77,24 @@ impl<'a> ProjectBuilder<'a> {
         }
     }
 
-    /// Set project metadata
-    pub fn with_project(mut self, uid: &str, name: &str) -> Self {
-        let project_json = format!(r#"{{"uid": "{}", "name": "{}"}}"#, uid, name);
-        self.write_file_helper("/project.json", project_json.as_bytes())
-            .expect("Failed to write project.json");
+    /// Set project UID (defaults to "test")
+    pub fn with_uid(mut self, uid: &str) -> Self {
+        self.uid = String::from(uid);
+        self
+    }
+
+    /// Set project name (defaults to "Test Project")
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.name = String::from(name);
         self
     }
 
     /// Helper to write files - tries write_file_mut for LpFsMemory, falls back to write_file
-    fn write_file_helper(&mut self, path: &str, data: &[u8]) -> Result<(), lp_shared::error::FsError> {
+    fn write_file_helper(
+        &mut self,
+        path: &str,
+        data: &[u8],
+    ) -> Result<(), lp_shared::error::FsError> {
         // For LpFsMemory, we need to use write_file_mut
         // Since we can't downcast through trait objects safely, we'll use a workaround:
         // Try write_file first, and if it fails with the specific error, we know it's LpFsMemory
@@ -118,16 +126,16 @@ impl<'a> ProjectBuilder<'a> {
     pub fn shader(&mut self, texture_path: &LpPath) -> ShaderBuilder {
         ShaderBuilder {
             texture_path: texture_path.clone(),
-            glsl_source: String::from("vec4 main(vec2 fragCoord, vec2 outputSize, float time) {\n    return vec4(mod(time, 1.0), 0.0, 0.0, 1.0);\n}"),
+            glsl_source: String::from(
+                "vec4 main(vec2 fragCoord, vec2 outputSize, float time) {\n    return vec4(mod(time, 1.0), 0.0, 0.0, 1.0);\n}",
+            ),
             render_order: 0,
         }
     }
 
     /// Start building an output node (defaults to GPIO pin 0)
     pub fn output(&mut self) -> OutputBuilder {
-        OutputBuilder {
-            pin: 0,
-        }
+        OutputBuilder { pin: 0 }
     }
 
     /// Start building a fixture node
@@ -147,9 +155,13 @@ impl<'a> ProjectBuilder<'a> {
         }
     }
 
-    /// Build completes - filesystem is already modified
-    pub fn build(self) {
-        // Filesystem is already modified, nothing to do
+    /// Build completes - writes project.json and all node files
+    pub fn build(mut self) {
+        // Write project.json
+        let project_json = format!(r#"{{"uid": "{}", "name": "{}"}}"#, self.uid, self.name);
+        self.write_file_helper("/project.json", project_json.as_bytes())
+            .expect("Failed to write project.json");
+        // Node files are already written by their respective add() methods
     }
 }
 
@@ -158,21 +170,21 @@ impl TextureBuilder {
     pub fn add(self, builder: &mut ProjectBuilder) -> LpPath {
         let id = builder.texture_id;
         builder.texture_id += 1;
-        
+
         let path_str = format!("/src/texture-{}.texture", id);
         let node_path = format!("{}/node.json", path_str);
-        
+
         let config = TextureConfig {
             width: self.width,
             height: self.height,
         };
-        
-        let json = serde_json::to_string(&config)
-            .expect("Failed to serialize texture config");
-        
-        builder.write_file_helper(&node_path, json.as_bytes())
+
+        let json = serde_json::to_string(&config).expect("Failed to serialize texture config");
+
+        builder
+            .write_file_helper(&node_path, json.as_bytes())
             .expect("Failed to write texture node.json");
-        
+
         LpPath::from(path_str)
     }
 }
@@ -194,26 +206,27 @@ impl ShaderBuilder {
     pub fn add(self, builder: &mut ProjectBuilder) -> LpPath {
         let id = builder.shader_id;
         builder.shader_id += 1;
-        
+
         let path_str = format!("/src/shader-{}.shader", id);
         let node_path = format!("{}/node.json", path_str);
         let glsl_path = format!("{}/main.glsl", path_str);
-        
+
         let config = ShaderConfig {
             glsl_path: String::from("main.glsl"),
             texture_spec: NodeSpecifier::from(self.texture_path.as_str()),
             render_order: self.render_order,
         };
-        
-        let json = serde_json::to_string(&config)
-            .expect("Failed to serialize shader config");
-        
-        builder.write_file_helper(&node_path, json.as_bytes())
+
+        let json = serde_json::to_string(&config).expect("Failed to serialize shader config");
+
+        builder
+            .write_file_helper(&node_path, json.as_bytes())
             .expect("Failed to write shader node.json");
-        
-        builder.write_file_helper(&glsl_path, self.glsl_source.as_bytes())
+
+        builder
+            .write_file_helper(&glsl_path, self.glsl_source.as_bytes())
             .expect("Failed to write shader GLSL file");
-        
+
         LpPath::from(path_str)
     }
 }
@@ -229,18 +242,18 @@ impl OutputBuilder {
     pub fn add(self, builder: &mut ProjectBuilder) -> LpPath {
         let id = builder.output_id;
         builder.output_id += 1;
-        
+
         let path_str = format!("/src/output-{}.output", id);
         let node_path = format!("{}/node.json", path_str);
-        
+
         let config = OutputConfig::GpioStrip { pin: self.pin };
-        
-        let json = serde_json::to_string(&config)
-            .expect("Failed to serialize output config");
-        
-        builder.write_file_helper(&node_path, json.as_bytes())
+
+        let json = serde_json::to_string(&config).expect("Failed to serialize output config");
+
+        builder
+            .write_file_helper(&node_path, json.as_bytes())
             .expect("Failed to write output node.json");
-        
+
         LpPath::from(path_str)
     }
 }
@@ -274,10 +287,10 @@ impl FixtureBuilder {
     pub fn add(self, builder: &mut ProjectBuilder) -> LpPath {
         let id = builder.fixture_id;
         builder.fixture_id += 1;
-        
+
         let path_str = format!("/src/fixture-{}.fixture", id);
         let node_path = format!("{}/node.json", path_str);
-        
+
         let config = FixtureConfig {
             output_spec: NodeSpecifier::from(self.output_path.as_str()),
             texture_spec: NodeSpecifier::from(self.texture_path.as_str()),
@@ -286,13 +299,13 @@ impl FixtureBuilder {
             color_order: self.color_order,
             transform: self.transform,
         };
-        
-        let json = serde_json::to_string(&config)
-            .expect("Failed to serialize fixture config");
-        
-        builder.write_file_helper(&node_path, json.as_bytes())
+
+        let json = serde_json::to_string(&config).expect("Failed to serialize fixture config");
+
+        builder
+            .write_file_helper(&node_path, json.as_bytes())
             .expect("Failed to write fixture node.json");
-        
+
         LpPath::from(path_str)
     }
 }

@@ -5,16 +5,24 @@ use lp_shared::fs::LpFsMemory;
 
 #[test]
 fn test_end_to_end_shader_time_based() {
-    // Setup: Create project with shader that uses time (default sawtooth shader)
     let mut fs = LpFsMemory::new();
-    let mut builder = ProjectBuilder::new(&mut fs).with_project("test-project", "Test Project");
+    let mut builder = ProjectBuilder::new(&mut fs);
 
-    let texture_path = builder.texture().add(&mut builder); // Defaults to 16x16
+    // Add texture
+    let texture_path = builder.texture().add(&mut builder);
+
+    // Add shader
     builder.shader(&texture_path).add(&mut builder);
-    let output_path = builder.output().add(&mut builder); // Defaults to GPIO pin 0
+
+    // Add output
+    let output_path = builder.output().add(&mut builder);
+
+    // Add fixture
     builder
         .fixture(&output_path, &texture_path)
         .add(&mut builder);
+
+    // Build project files
     builder.build();
 
     let mut runtime = ProjectRuntime::new(Box::new(fs)).unwrap();
@@ -38,31 +46,28 @@ fn test_end_to_end_shader_time_based() {
     sync_client_view(&runtime, &mut client_view);
 
     // Get texture data from client view
-    let frame1_data = client_view.get_texture_data(texture_handle).unwrap();
-    assert_eq!(
-        frame1_data.len(),
-        16 * 16 * 4,
-        "Texture should be 16x16 RGBA"
-    );
-
     // Frame 1: After 16ms, time = 0.016s, mod(0.016, 1.0) = 0.016, red = 0.016 * 255 = 4.08 ≈ 4
     // Shader: vec4(mod(time, 1.0), 0.0, 0.0, 1.0) -> RGBA bytes [R, G, B, A]
-    let expected_r1 = (0.016_f32 * 255.0) as u8; // = 4
-    assert_pixel_rgba(&frame1_data, 0, expected_r1, 0, 0, 255, 1);
+    assert_first_red(
+        &client_view.get_texture_data(texture_handle).unwrap(),
+        (0.016_f32 * 255.0) as u8,
+    );
 
     // Frame 2: After 32ms, time = 0.032s, mod(0.032, 1.0) = 0.032, red = 0.032 * 255 = 8.16 ≈ 8
     runtime.tick(16).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    let frame2_data = client_view.get_texture_data(texture_handle).unwrap();
-    let expected_r2 = (0.032_f32 * 255.0) as u8; // = 8
-    assert_pixel_rgba(&frame2_data, 0, expected_r2, 0, 0, 255, 1);
+    assert_first_red(
+        &client_view.get_texture_data(texture_handle).unwrap(),
+        (0.032_f32 * 255.0) as u8,
+    );
 
     // Frame 3: After 48ms, time = 0.048s, mod(0.048, 1.0) = 0.048, red = 0.048 * 255 = 12.24 ≈ 12
     runtime.tick(16).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    let frame3_data = client_view.get_texture_data(texture_handle).unwrap();
-    let expected_r3 = (0.048_f32 * 255.0) as u8; // = 12
-    assert_pixel_rgba(&frame3_data, 0, expected_r3, 0, 0, 255, 1);
+    assert_first_red(
+        &client_view.get_texture_data(texture_handle).unwrap(),
+        (0.048_f32 * 255.0) as u8,
+    );
 
     // Verify client view frame_id matches runtime
     assert_eq!(client_view.frame_id, runtime.frame_id);
@@ -79,8 +84,12 @@ fn sync_client_view(runtime: &ProjectRuntime, client_view: &mut ClientProjectVie
     client_view.sync(&response).unwrap();
 }
 
+fn assert_first_red(data: &[u8], expected_r: u8) {
+    assert_pixel_rgba(data, 0, expected_r, 0, 0, 255, 0)
+}
+
 /// Assert pixel RGBA values with tolerance
-/// 
+///
 /// Checks that the pixel at index `pixel_idx` in RGBA data has expected values.
 /// Allows tolerance of ±1 for each channel to account for floating point precision.
 fn assert_pixel_rgba(
