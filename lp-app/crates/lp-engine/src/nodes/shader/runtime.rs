@@ -49,6 +49,11 @@ impl ShaderRuntime {
     pub fn targets_texture(&self, texture_handle: TextureHandle) -> bool {
         self.texture_handle.map_or(false, |h| h == texture_handle)
     }
+
+    /// Get the shader config (for state extraction)
+    pub fn get_config(&self) -> Option<&ShaderConfig> {
+        self.config.as_ref()
+    }
 }
 
 impl NodeRuntime for ShaderRuntime {

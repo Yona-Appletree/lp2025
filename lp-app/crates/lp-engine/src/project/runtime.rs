@@ -500,7 +500,22 @@ impl ProjectRuntime {
                             height: 0,
                         })
                     }
-                    NodeKind::Shader => Box::new(lp_model::nodes::shader::ShaderConfig::default()),
+                    NodeKind::Shader => {
+                        // Extract actual shader config from runtime
+                        if let Some(runtime) = &entry.runtime {
+                            if let Some(shader_runtime) = runtime.as_any().downcast_ref::<ShaderRuntime>() {
+                                if let Some(shader_config) = shader_runtime.get_config() {
+                                    Box::new(shader_config.clone())
+                                } else {
+                                    Box::new(lp_model::nodes::shader::ShaderConfig::default())
+                                }
+                            } else {
+                                Box::new(lp_model::nodes::shader::ShaderConfig::default())
+                            }
+                        } else {
+                            Box::new(lp_model::nodes::shader::ShaderConfig::default())
+                        }
+                    }
                     NodeKind::Output => {
                         Box::new(lp_model::nodes::output::OutputConfig::GpioStrip { pin: 0 })
                     }
