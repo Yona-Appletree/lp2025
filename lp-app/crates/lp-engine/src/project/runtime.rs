@@ -297,19 +297,17 @@ impl ProjectRuntime {
         Ok(())
     }
 
-    /// Advance to next frame
+    /// Advance to next frame and render
     ///
-    /// Updates frame ID and frame time.
+    /// Updates frame ID and frame time, then renders the frame.
     /// `delta_ms` is the time elapsed since the last frame in milliseconds.
-    pub fn tick(&mut self, delta_ms: u32) {
+    pub fn tick(&mut self, delta_ms: u32) -> Result<(), Error> {
+        // Update frame ID and time
         self.frame_id = self.frame_id.next();
-        // Update frame time
         self.frame_time.total_ms += delta_ms;
         self.frame_time.delta_ms = delta_ms;
-    }
-
-    /// Render current frame
-    pub fn render(&mut self) -> Result<(), Error> {
+        
+        // Render the frame
         // Render all fixtures
         let fixture_handles: Vec<NodeHandle> = self
             .nodes
