@@ -12,6 +12,8 @@ anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tungstenite = { version = "0.21", features = ["native-tls"] }
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.21"
 lp-model = { path = "../../crates/lp-model" }
 lp-server = { path = "../../crates/lp-server" }
 lp-client = { path = "../../crates/lp-client" }
