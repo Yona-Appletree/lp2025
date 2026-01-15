@@ -61,7 +61,7 @@ Then you will create a new file for each phase, named like 01-phase-title.md.
 
 Then commit the plan to git with the message "lpc: create plan <name>"
 
-Each phase should end with:
+Each phase should include:
 
 - a success criteria section
 - all code should compile
