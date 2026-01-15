@@ -280,12 +280,13 @@ impl LpFs for LpFsStd {
                 })?;
 
                 // Build the relative path from canonical root
-                let relative_path = canonical_entry.strip_prefix(&canonical_root).map_err(|_| {
-                    FsError::Filesystem(format!(
-                        "Failed to compute relative path from root: entry={:?}, root={:?}",
-                        canonical_entry, canonical_root
-                    ))
-                })?;
+                let relative_path =
+                    canonical_entry.strip_prefix(&canonical_root).map_err(|_| {
+                        FsError::Filesystem(format!(
+                            "Failed to compute relative path from root: entry={:?}, root={:?}",
+                            canonical_entry, canonical_root
+                        ))
+                    })?;
 
                 // Convert to string with leading slash
                 let path_str = format!("/{}", relative_path.to_string_lossy().replace('\\', "/"));

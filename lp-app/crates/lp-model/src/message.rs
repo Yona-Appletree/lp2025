@@ -52,13 +52,9 @@ pub enum ClientRequest {
     /// Filesystem operation request
     Filesystem(FsRequest),
     /// Load a project
-    LoadProject {
-        path: String,
-    },
+    LoadProject { path: String },
     /// Unload a project
-    UnloadProject {
-        handle: ProjectHandle,
-    },
+    UnloadProject { handle: ProjectHandle },
     /// Project-specific request
     ProjectRequest {
         handle: ProjectHandle,
@@ -182,8 +178,8 @@ mod tests {
 
     #[test]
     fn test_project_request() {
-        use crate::project::api::ApiNodeSpecifier;
         use crate::project::FrameId;
+        use crate::project::api::ApiNodeSpecifier;
         let req = ClientRequest::ProjectRequest {
             handle: ProjectHandle::new(1),
             request: ProjectRequest::GetChanges {

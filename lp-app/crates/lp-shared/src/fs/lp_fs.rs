@@ -43,7 +43,11 @@ pub trait LpFs {
     ///
     /// If `recursive` is `true`, lists all files and directories recursively. If `false`, only lists
     /// immediate children.
-    fn list_dir(&self, path: &str, recursive: bool) -> Result<alloc::vec::Vec<alloc::string::String>, FsError>;
+    fn list_dir(
+        &self,
+        path: &str,
+        recursive: bool,
+    ) -> Result<alloc::vec::Vec<alloc::string::String>, FsError>;
 
     /// Delete a file from the filesystem
     ///

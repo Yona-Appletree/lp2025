@@ -2,7 +2,9 @@
 ///
 /// Handles can change on reload (not stable). Paths are for loading/resolving;
 /// handles are for runtime references.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 #[serde(transparent)]
 pub struct NodeHandle(pub i32);
 

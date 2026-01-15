@@ -84,21 +84,32 @@ impl ProjectManager {
             .map_err(|e| ServerError::Filesystem(format!("Failed to chroot to project: {}", e)))?;
 
         // Create a new project instance
-        let mut project = Project::new(name.clone(), project_path.clone(), project_fs, output_provider)?;
+        let mut project = Project::new(
+            name.clone(),
+            project_path.clone(),
+            project_fs,
+            output_provider,
+        )?;
 
         // Auto-initialize the project runtime
         project.runtime_mut().load_nodes().map_err(|e| {
             ServerError::Core(format!("Failed to load nodes for project {}: {}", name, e))
         })?;
         project.runtime_mut().init_nodes().map_err(|e| {
-            ServerError::Core(format!("Failed to initialize nodes for project {}: {}", name, e))
-        })?;
-        project.runtime_mut().ensure_all_nodes_initialized().map_err(|e| {
             ServerError::Core(format!(
-                "Failed to ensure all nodes initialized for project {}: {}",
+                "Failed to initialize nodes for project {}: {}",
                 name, e
             ))
         })?;
+        project
+            .runtime_mut()
+            .ensure_all_nodes_initialized()
+            .map_err(|e| {
+                ServerError::Core(format!(
+                    "Failed to ensure all nodes initialized for project {}: {}",
+                    name, e
+                ))
+            })?;
 
         // Store mappings
         self.projects.insert(handle, project);

@@ -122,12 +122,13 @@ impl OutputProvider for MemoryOutputProvider {
         let mut state = self.state.borrow_mut();
 
         // Check if handle exists and get mutable reference
-        let channel_state = state
-            .channels
-            .get_mut(&handle)
-            .ok_or_else(|| OutputError::InvalidHandle {
-                handle: handle.as_i32(),
-            })?;
+        let channel_state =
+            state
+                .channels
+                .get_mut(&handle)
+                .ok_or_else(|| OutputError::InvalidHandle {
+                    handle: handle.as_i32(),
+                })?;
 
         // Validate data length
         if data.len() != channel_state.byte_count as usize {

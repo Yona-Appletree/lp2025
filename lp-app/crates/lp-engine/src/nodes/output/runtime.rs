@@ -2,10 +2,10 @@ use crate::error::Error;
 use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::output::{OutputChannelHandle, OutputFormat};
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
+use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use lp_model::nodes::output::OutputConfig;
-use alloc::boxed::Box;
 use lp_shared::fs::fs_event::FsChange;
 
 /// Output node runtime

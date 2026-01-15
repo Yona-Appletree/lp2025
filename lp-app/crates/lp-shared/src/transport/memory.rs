@@ -9,9 +9,9 @@
 extern crate alloc;
 
 use crate::transport::{ClientTransport, ServerTransport};
-use lp_model::{ClientMessage, ServerMessage, TransportError};
 use alloc::{collections::VecDeque, format, rc::Rc, string::ToString, vec::Vec};
 use core::cell::RefCell;
+use lp_model::{ClientMessage, ServerMessage, TransportError};
 use serde_json;
 
 /// Shared state for bidirectional communication

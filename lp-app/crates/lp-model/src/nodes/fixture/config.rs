@@ -98,7 +98,7 @@ impl NodeConfig for FixtureConfig {
     fn kind(&self) -> NodeKind {
         NodeKind::Fixture
     }
-    
+
     fn as_any(&self) -> &dyn core::any::Any {
         self
     }

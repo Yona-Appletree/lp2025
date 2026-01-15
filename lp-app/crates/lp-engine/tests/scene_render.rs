@@ -1,11 +1,11 @@
 extern crate alloc;
 
+use alloc::rc::Rc;
+use core::cell::RefCell;
 use lp_engine::{MemoryOutputProvider, ProjectRuntime};
 use lp_engine_client::ClientProjectView;
 use lp_model::project::ProjectBuilder;
 use lp_shared::fs::LpFsMemory;
-use alloc::rc::Rc;
-use core::cell::RefCell;
 
 #[test]
 fn test_scene_render() {
@@ -62,7 +62,11 @@ fn test_scene_render() {
 }
 
 /// Assert that the first output channel in the memory provider has the expected red value
-fn assert_memory_output_red(provider: &Rc<RefCell<MemoryOutputProvider>>, pin: u32, expected_r: u8) {
+fn assert_memory_output_red(
+    provider: &Rc<RefCell<MemoryOutputProvider>>,
+    pin: u32,
+    expected_r: u8,
+) {
     let handle = provider
         .borrow()
         .get_handle_for_pin(pin)

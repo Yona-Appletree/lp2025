@@ -4,8 +4,8 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use lp_model::{
-    project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
     FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
+    project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
 };
 
 /// Client view of project

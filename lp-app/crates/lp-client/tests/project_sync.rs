@@ -10,14 +10,14 @@ extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, string::String};
 use core::cell::RefCell;
-use lp_client::{ClientError, LpClient, LocalMemoryTransport};
+use lp_client::{ClientError, LocalMemoryTransport, LpClient};
 use lp_model::{
+    Message,
     project::{
+        FrameId,
         api::{ApiNodeSpecifier, SerializableProjectResponse},
         handle::ProjectHandle,
-        FrameId,
     },
-    Message,
 };
 use lp_server::LpServer;
 use lp_shared::fs::{LpFs, LpFsMemory, LpFsMemoryShared};
@@ -285,7 +285,12 @@ fn test_project_get_changes() {
 /// synchronous message processing in tests.
 fn setup_server_and_client(
     fs: LpFsMemory,
-) -> (LpServer, LpClient, LocalMemoryTransport, LocalMemoryTransport) {
+) -> (
+    LpServer,
+    LpClient,
+    LocalMemoryTransport,
+    LocalMemoryTransport,
+) {
     // Create transport pair
     let (client_transport, server_transport) = LocalMemoryTransport::new_pair();
 

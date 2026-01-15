@@ -3,10 +3,10 @@ use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
 use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use lp_model::{
-    nodes::texture::{TextureConfig, TextureState},
     NodeHandle,
+    nodes::texture::{TextureConfig, TextureState},
 };
-use lp_shared::{fs::fs_event::FsChange, Texture};
+use lp_shared::{Texture, fs::fs_event::FsChange};
 
 /// Texture node runtime
 pub struct TextureRuntime {

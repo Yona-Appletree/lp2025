@@ -9,14 +9,14 @@
 
 extern crate alloc;
 
-use lp_client::{ClientError, LpClient, LocalMemoryTransport};
+use alloc::{boxed::Box, rc::Rc};
+use core::cell::RefCell;
+use lp_client::{ClientError, LocalMemoryTransport, LpClient};
 use lp_model::Message;
 use lp_server::LpServer;
 use lp_shared::fs::{LpFsMemory, LpFsMemoryShared};
 use lp_shared::output::MemoryOutputProvider;
 use lp_shared::transport::{ClientTransport, ServerTransport};
-use alloc::{boxed::Box, rc::Rc};
-use core::cell::RefCell;
 
 /// Set up server and client with memory transport
 ///
@@ -36,11 +36,7 @@ fn setup_server_and_client(
     // Create server with shared filesystem (allows mutation through immutable trait)
     let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
     let shared_fs = LpFsMemoryShared::new(fs);
-    let server = LpServer::new(
-        output_provider,
-        Box::new(shared_fs),
-        "projects".to_string(),
-    );
+    let server = LpServer::new(output_provider, Box::new(shared_fs), "projects".to_string());
 
     // Create client
     let client = LpClient::new();
@@ -85,9 +81,11 @@ fn process_messages(
                 let message = Message::Client(client_msg);
 
                 // Process on server
-                let responses = server.tick(0, vec![message]).map_err(|e| ClientError::Other {
-                    message: format!("Server error: {}", e),
-                })?;
+                let responses = server
+                    .tick(0, vec![message])
+                    .map_err(|e| ClientError::Other {
+                        message: format!("Server error: {}", e),
+                    })?;
 
                 // Send responses back through server transport
                 for response in responses {
@@ -140,7 +138,6 @@ fn process_messages(
     Ok(())
 }
 
-
 #[test]
 fn test_filesystem_sync() {
     // Set up filesystem with initial files
@@ -157,22 +154,43 @@ fn test_filesystem_sync() {
     // Test read
     let (request_msg, request_id) = client.fs_read("/projects/test/file1.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let content = client.extract_read_response(request_id, response).unwrap();
     assert_eq!(content, b"content1");
 
     // Test write
-    let (request_msg, request_id) = client.fs_write("/projects/test/new.txt".to_string(), b"new content".to_vec());
+    let (request_msg, request_id) = client.fs_write(
+        "/projects/test/new.txt".to_string(),
+        b"new content".to_vec(),
+    );
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     client.extract_write_response(request_id, response).unwrap();
 
     // Verify write by reading
     let (request_msg, request_id) = client.fs_read("/projects/test/new.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let content = client.extract_read_response(request_id, response).unwrap();
     assert_eq!(content, b"new content");
@@ -180,9 +198,17 @@ fn test_filesystem_sync() {
     // Test list (non-recursive)
     let (request_msg, request_id) = client.fs_list_dir("/projects/test".to_string(), false);
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    let entries = client.extract_list_dir_response(request_id, response).unwrap();
+    let entries = client
+        .extract_list_dir_response(request_id, response)
+        .unwrap();
     assert!(entries.contains(&"/projects/test/file1.txt".to_string()));
     assert!(entries.contains(&"/projects/test/new.txt".to_string()));
     assert!(entries.contains(&"/projects/test/nested".to_string()));
@@ -190,31 +216,63 @@ fn test_filesystem_sync() {
     // Test list (recursive)
     let (request_msg, request_id) = client.fs_list_dir("/projects/test".to_string(), true);
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    let entries = client.extract_list_dir_response(request_id, response).unwrap();
+    let entries = client
+        .extract_list_dir_response(request_id, response)
+        .unwrap();
     assert!(entries.contains(&"/projects/test/nested/file2.txt".to_string()));
 
     // Test delete file
     let (request_msg, request_id) = client.fs_delete_file("/projects/test/new.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    client.extract_delete_file_response(request_id, response).unwrap();
+    client
+        .extract_delete_file_response(request_id, response)
+        .unwrap();
 
     // Test delete directory (recursive)
     let (request_msg, request_id) = client.fs_delete_dir("/projects/test/nested".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    client.extract_delete_dir_response(request_id, response).unwrap();
+    client
+        .extract_delete_dir_response(request_id, response)
+        .unwrap();
 
     // Verify deletions
     let (request_msg, request_id) = client.fs_list_dir("/projects/test".to_string(), true);
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    let entries = client.extract_list_dir_response(request_id, response).unwrap();
+    let entries = client
+        .extract_list_dir_response(request_id, response)
+        .unwrap();
     assert!(!entries.contains(&"/projects/test/new.txt".to_string()));
     assert!(!entries.contains(&"/projects/test/nested".to_string()));
 }
@@ -224,10 +282,17 @@ fn test_fs_read() {
     let mut fs = LpFsMemory::new();
     fs.write_file_mut("/test.txt", b"hello world").unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
     let (request_msg, request_id) = client.fs_read("/test.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let content = client.extract_read_response(request_id, response).unwrap();
     assert_eq!(content, b"hello world");
@@ -236,17 +301,31 @@ fn test_fs_read() {
 #[test]
 fn test_fs_write() {
     let fs = LpFsMemory::new();
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
-    let (request_msg, request_id) = client.fs_write("/test.txt".to_string(), b"written content".to_vec());
+    let (request_msg, request_id) =
+        client.fs_write("/test.txt".to_string(), b"written content".to_vec());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     client.extract_write_response(request_id, response).unwrap();
 
     let (request_msg, request_id) = client.fs_read("/test.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let content = client.extract_read_response(request_id, response).unwrap();
     assert_eq!(content, b"written content");
@@ -257,26 +336,47 @@ fn test_fs_delete_file() {
     let mut fs = LpFsMemory::new();
     fs.write_file_mut("/test.txt", b"content").unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     // Verify file exists
     let (request_msg, request_id) = client.fs_read("/test.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let _content = client.extract_read_response(request_id, response).unwrap();
 
     // Delete file
     let (request_msg, request_id) = client.fs_delete_file("/test.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    client.extract_delete_file_response(request_id, response).unwrap();
+    client
+        .extract_delete_file_response(request_id, response)
+        .unwrap();
 
     // Verify file doesn't exist
     let (request_msg, request_id) = client.fs_read("/test.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result = client.extract_read_response(request_id, response);
     assert!(result.is_err(), "File should not exist");
@@ -286,41 +386,75 @@ fn test_fs_delete_file() {
 fn test_fs_delete_dir() {
     let mut fs = LpFsMemory::new();
     fs.write_file_mut("/dir/file1.txt", b"content1").unwrap();
-    fs.write_file_mut("/dir/nested/file2.txt", b"content2").unwrap();
+    fs.write_file_mut("/dir/nested/file2.txt", b"content2")
+        .unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     // Verify files exist
     let (request_msg, request_id) = client.fs_read("/dir/file1.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let _content = client.extract_read_response(request_id, response).unwrap();
 
     let (request_msg, request_id) = client.fs_read("/dir/nested/file2.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let _content = client.extract_read_response(request_id, response).unwrap();
 
     // Delete directory (recursive)
     let (request_msg, request_id) = client.fs_delete_dir("/dir".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    client.extract_delete_dir_response(request_id, response).unwrap();
+    client
+        .extract_delete_dir_response(request_id, response)
+        .unwrap();
 
     // Verify files are gone
     let (request_msg, request_id) = client.fs_read("/dir/file1.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result1 = client.extract_read_response(request_id, response);
     assert!(result1.is_err(), "File should not exist");
 
     let (request_msg, request_id) = client.fs_read("/dir/nested/file2.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result2 = client.extract_read_response(request_id, response);
     assert!(result2.is_err(), "File should not exist");
@@ -331,15 +465,25 @@ fn test_fs_list_dir_non_recursive() {
     let mut fs = LpFsMemory::new();
     fs.write_file_mut("/dir/file1.txt", b"content1").unwrap();
     fs.write_file_mut("/dir/file2.txt", b"content2").unwrap();
-    fs.write_file_mut("/dir/nested/file3.txt", b"content3").unwrap();
+    fs.write_file_mut("/dir/nested/file3.txt", b"content3")
+        .unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     let (request_msg, request_id) = client.fs_list_dir("/dir".to_string(), false);
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    let entries = client.extract_list_dir_response(request_id, response).unwrap();
+    let entries = client
+        .extract_list_dir_response(request_id, response)
+        .unwrap();
 
     // Should contain immediate children only
     assert!(entries.contains(&"/dir/file1.txt".to_string()));
@@ -353,16 +497,27 @@ fn test_fs_list_dir_non_recursive() {
 fn test_fs_list_dir_recursive() {
     let mut fs = LpFsMemory::new();
     fs.write_file_mut("/dir/file1.txt", b"content1").unwrap();
-    fs.write_file_mut("/dir/nested/file2.txt", b"content2").unwrap();
-    fs.write_file_mut("/dir/nested/deep/file3.txt", b"content3").unwrap();
+    fs.write_file_mut("/dir/nested/file2.txt", b"content2")
+        .unwrap();
+    fs.write_file_mut("/dir/nested/deep/file3.txt", b"content3")
+        .unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     let (request_msg, request_id) = client.fs_list_dir("/dir".to_string(), true);
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
-    let entries = client.extract_list_dir_response(request_id, response).unwrap();
+    let entries = client
+        .extract_list_dir_response(request_id, response)
+        .unwrap();
 
     // Should contain all files recursively
     assert!(entries.contains(&"/dir/file1.txt".to_string()));
@@ -373,11 +528,18 @@ fn test_fs_list_dir_recursive() {
 #[test]
 fn test_fs_read_not_found() {
     let fs = LpFsMemory::new();
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     let (request_msg, request_id) = client.fs_read("/nonexistent.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result = client.extract_read_response(request_id, response);
 
@@ -393,11 +555,18 @@ fn test_fs_read_not_found() {
 #[test]
 fn test_fs_delete_not_found() {
     let fs = LpFsMemory::new();
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     let (request_msg, request_id) = client.fs_delete_file("/nonexistent.txt".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result = client.extract_delete_file_response(request_id, response);
 
@@ -407,12 +576,19 @@ fn test_fs_delete_not_found() {
 #[test]
 fn test_fs_delete_root() {
     let fs = LpFsMemory::new();
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     // Attempting to delete root should fail
     let (request_msg, request_id) = client.fs_delete_dir("/".to_string());
     send_client_message(&mut client_transport, request_msg).unwrap();
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
     let response = client.get_response(request_id).unwrap();
     let result = client.extract_delete_dir_response(request_id, response);
 
@@ -436,7 +612,8 @@ fn test_multiple_requests() {
     fs.write_file_mut("/file2.txt", b"content2").unwrap();
     fs.write_file_mut("/file3.txt", b"content3").unwrap();
 
-    let (mut server, mut client, mut client_transport, mut server_transport) = setup_server_and_client(fs);
+    let (mut server, mut client, mut client_transport, mut server_transport) =
+        setup_server_and_client(fs);
 
     // Send multiple read requests
     let (request_msg, request_id1) = client.fs_read("/file1.txt".to_string());
@@ -449,18 +626,30 @@ fn test_multiple_requests() {
     send_client_message(&mut client_transport, request_msg).unwrap();
 
     // Process all requests
-    process_messages(&mut client, &mut server, &mut client_transport, &mut server_transport).unwrap();
+    process_messages(
+        &mut client,
+        &mut server,
+        &mut client_transport,
+        &mut server_transport,
+    )
+    .unwrap();
 
     // Verify all responses match
     let response1 = client.get_response(request_id1).unwrap();
-    let content1 = client.extract_read_response(request_id1, response1).unwrap();
+    let content1 = client
+        .extract_read_response(request_id1, response1)
+        .unwrap();
     assert_eq!(content1, b"content1");
 
     let response2 = client.get_response(request_id2).unwrap();
-    let content2 = client.extract_read_response(request_id2, response2).unwrap();
+    let content2 = client
+        .extract_read_response(request_id2, response2)
+        .unwrap();
     assert_eq!(content2, b"content2");
 
     let response3 = client.get_response(request_id3).unwrap();
-    let content3 = client.extract_read_response(request_id3, response3).unwrap();
+    let content3 = client
+        .extract_read_response(request_id3, response3)
+        .unwrap();
     assert_eq!(content3, b"content3");
 }

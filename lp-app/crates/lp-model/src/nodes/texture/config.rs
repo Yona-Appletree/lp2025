@@ -13,7 +13,7 @@ impl NodeConfig for TextureConfig {
     fn kind(&self) -> NodeKind {
         NodeKind::Texture
     }
-    
+
     fn as_any(&self) -> &dyn core::any::Any {
         self
     }

@@ -5,7 +5,12 @@ extern crate alloc;
 use crate::error::ServerError;
 use crate::handlers;
 use crate::project_manager::ProjectManager;
-use alloc::{boxed::Box, rc::Rc, string::{String, ToString}, vec::Vec};
+use alloc::{
+    boxed::Box,
+    rc::Rc,
+    string::{String, ToString},
+    vec::Vec,
+};
 use core::cell::RefCell;
 use lp_model::Message;
 use lp_shared::fs::LpFs;

@@ -7,9 +7,9 @@ use crate::project_manager::ProjectManager;
 use alloc::{format, rc::Rc, string::String, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
+    ClientMessage, ServerMessage,
     project::api::SerializableProjectResponse,
     server::{AvailableProject, FsRequest, FsResponse, ServerResponse},
-    ClientMessage, ServerMessage,
 };
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
@@ -48,75 +48,53 @@ pub fn handle_client_message(
 }
 
 /// Handle a filesystem request
-fn handle_fs_request(
-    fs: &mut dyn LpFs,
-    request: FsRequest,
-) -> Result<FsResponse, ServerError> {
+fn handle_fs_request(fs: &mut dyn LpFs, request: FsRequest) -> Result<FsResponse, ServerError> {
     match request {
-        FsRequest::Read { path } => {
-            match fs.read_file(&path) {
-                Ok(data) => Ok(FsResponse::Read {
-                    path,
-                    data: Some(data),
-                    error: None,
-                }),
-                Err(e) => Ok(FsResponse::Read {
-                    path,
-                    data: None,
-                    error: Some(format!("{}", e)),
-                }),
-            }
-        }
-        FsRequest::Write { path, data } => {
-            match fs.write_file(&path, &data) {
-                Ok(()) => Ok(FsResponse::Write {
-                    path,
-                    error: None,
-                }),
-                Err(e) => Ok(FsResponse::Write {
-                    path,
-                    error: Some(format!("{}", e)),
-                }),
-            }
-        }
-        FsRequest::DeleteFile { path } => {
-            match fs.delete_file(&path) {
-                Ok(()) => Ok(FsResponse::DeleteFile {
-                    path,
-                    error: None,
-                }),
-                Err(e) => Ok(FsResponse::DeleteFile {
-                    path,
-                    error: Some(format!("{}", e)),
-                }),
-            }
-        }
-        FsRequest::DeleteDir { path } => {
-            match fs.delete_dir(&path) {
-                Ok(()) => Ok(FsResponse::DeleteDir {
-                    path,
-                    error: None,
-                }),
-                Err(e) => Ok(FsResponse::DeleteDir {
-                    path,
-                    error: Some(format!("{}", e)),
-                }),
-            }
-        }
-        FsRequest::ListDir { path, recursive } => {
-            match fs.list_dir(&path, recursive) {
-                Ok(entries) => Ok(FsResponse::ListDir {
-                    path,
-                    entries,
-                    error: None,
-                }),
-                Err(e) => Ok(FsResponse::ListDir {
-                    path,
-                    entries: Vec::new(),
-                    error: Some(format!("{}", e)),
-                }),
-            }
-        }
+        FsRequest::Read { path } => match fs.read_file(&path) {
+            Ok(data) => Ok(FsResponse::Read {
+                path,
+                data: Some(data),
+                error: None,
+            }),
+            Err(e) => Ok(FsResponse::Read {
+                path,
+                data: None,
+                error: Some(format!("{}", e)),
+            }),
+        },
+        FsRequest::Write { path, data } => match fs.write_file(&path, &data) {
+            Ok(()) => Ok(FsResponse::Write { path, error: None }),
+            Err(e) => Ok(FsResponse::Write {
+                path,
+                error: Some(format!("{}", e)),
+            }),
+        },
+        FsRequest::DeleteFile { path } => match fs.delete_file(&path) {
+            Ok(()) => Ok(FsResponse::DeleteFile { path, error: None }),
+            Err(e) => Ok(FsResponse::DeleteFile {
+                path,
+                error: Some(format!("{}", e)),
+            }),
+        },
+        FsRequest::DeleteDir { path } => match fs.delete_dir(&path) {
+            Ok(()) => Ok(FsResponse::DeleteDir { path, error: None }),
+            Err(e) => Ok(FsResponse::DeleteDir {
+                path,
+                error: Some(format!("{}", e)),
+            }),
+        },
+        FsRequest::ListDir { path, recursive } => match fs.list_dir(&path, recursive) {
+            Ok(entries) => Ok(FsResponse::ListDir {
+                path,
+                entries,
+                error: None,
+            }),
+            Err(e) => Ok(FsResponse::ListDir {
+                path,
+                entries: Vec::new(),
+                error: Some(format!("{}", e)),
+            }),
+        },
     }
 }
 

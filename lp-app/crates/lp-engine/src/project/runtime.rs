@@ -71,7 +71,10 @@ pub enum NodeStatus {
 
 impl ProjectRuntime {
     /// Create new project runtime
-    pub fn new(fs: Box<dyn LpFs>, output_provider: Rc<RefCell<dyn OutputProvider>>) -> Result<Self, Error> {
+    pub fn new(
+        fs: Box<dyn LpFs>,
+        output_provider: Rc<RefCell<dyn OutputProvider>>,
+    ) -> Result<Self, Error> {
         let _config = crate::project::loader::load_from_filesystem(fs.as_ref())?;
 
         Ok(Self {

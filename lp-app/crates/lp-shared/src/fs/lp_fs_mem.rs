@@ -1,7 +1,7 @@
 //! In-memory filesystem implementation for testing
 
 use crate::error::FsError;
-use crate::fs::{fs_event::ChangeType, fs_event::FsChange, LpFs};
+use crate::fs::{LpFs, fs_event::ChangeType, fs_event::FsChange};
 use alloc::{
     format,
     rc::Rc,
@@ -85,7 +85,7 @@ impl LpFsMemory {
         let normalized = Self::normalize_path(path);
         let existed = self.files.contains_key(&normalized);
         self.files.insert(normalized.clone(), data.to_vec());
-        
+
         // Record change
         let change_type = if existed {
             ChangeType::Modify
@@ -93,7 +93,7 @@ impl LpFsMemory {
             ChangeType::Create
         };
         self.record_change(normalized, change_type);
-        
+
         Ok(())
     }
 
@@ -103,7 +103,7 @@ impl LpFsMemory {
         Self::validate_path_for_deletion(path)?;
         self.validate_path(path)?;
         let normalized = Self::normalize_path(path);
-        
+
         // Check if it's a directory (by checking if any file starts with normalized + "/")
         let dir_prefix = format!("{}/", normalized);
         for file_path in self.files.keys() {
@@ -114,14 +114,14 @@ impl LpFsMemory {
                 )));
             }
         }
-        
+
         if self.files.remove(&normalized).is_none() {
             return Err(FsError::NotFound(path.to_string()));
         }
-        
+
         // Record change
         self.record_change(normalized, ChangeType::Delete);
-        
+
         Ok(())
     }
 
@@ -131,28 +131,28 @@ impl LpFsMemory {
         Self::validate_path_for_deletion(path)?;
         self.validate_path(path)?;
         let normalized = Self::normalize_path(path);
-        
+
         // Check if it's actually a directory (has files with this prefix)
         let prefix = if normalized.ends_with('/') {
             normalized.clone()
         } else {
             format!("{}/", normalized)
         };
-        
+
         let mut found_any = false;
         let mut files_to_remove = Vec::new();
-        
+
         for file_path in self.files.keys() {
             if file_path.starts_with(&prefix) || file_path == &normalized {
                 files_to_remove.push(file_path.clone());
                 found_any = true;
             }
         }
-        
+
         if !found_any {
             return Err(FsError::NotFound(path.to_string()));
         }
-        
+
         // Remove all files with this prefix (recursive deletion)
         for file_path in files_to_remove {
             let normalized_path = Self::normalize_path(&file_path);
@@ -160,7 +160,7 @@ impl LpFsMemory {
             // Record change
             self.record_change(normalized_path, ChangeType::Delete);
         }
-        
+
         Ok(())
     }
 
@@ -498,8 +498,10 @@ mod tests {
     fn test_list_dir_recursive() {
         let mut fs = LpFsMemory::new();
         fs.write_file_mut("/src/file1.txt", b"content1").unwrap();
-        fs.write_file_mut("/src/nested/file2.txt", b"content2").unwrap();
-        fs.write_file_mut("/src/nested/deep/file3.txt", b"content3").unwrap();
+        fs.write_file_mut("/src/nested/file2.txt", b"content2")
+            .unwrap();
+        fs.write_file_mut("/src/nested/deep/file3.txt", b"content3")
+            .unwrap();
 
         let entries = fs.list_dir("/src", true).unwrap();
         assert!(entries.contains(&"/src/file1.txt".to_string()));
@@ -521,7 +523,8 @@ mod tests {
     fn test_delete_dir() {
         let mut fs = LpFsMemory::new();
         fs.write_file_mut("/dir/file1.txt", b"content1").unwrap();
-        fs.write_file_mut("/dir/nested/file2.txt", b"content2").unwrap();
+        fs.write_file_mut("/dir/nested/file2.txt", b"content2")
+            .unwrap();
         assert!(fs.file_exists("/dir/file1.txt").unwrap());
         assert!(fs.file_exists("/dir/nested/file2.txt").unwrap());
 

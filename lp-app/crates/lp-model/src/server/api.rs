@@ -1,4 +1,4 @@
-use crate::project::{api::SerializableProjectResponse, ProjectHandle, ProjectRequest};
+use crate::project::{ProjectHandle, ProjectRequest, api::SerializableProjectResponse};
 use crate::server::fs_api::{FsRequest, FsResponse};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -10,13 +10,9 @@ pub enum ServerRequest {
     /// Filesystem operation request
     Filesystem(FsRequest),
     /// Load a project
-    LoadProject {
-        path: String,
-    },
+    LoadProject { path: String },
     /// Unload a project
-    UnloadProject {
-        handle: ProjectHandle,
-    },
+    UnloadProject { handle: ProjectHandle },
     /// Project-specific request
     ProjectRequest {
         handle: ProjectHandle,
