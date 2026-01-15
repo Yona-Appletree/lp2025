@@ -10,11 +10,10 @@ extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, string::String};
 use core::cell::RefCell;
-use lp_client::{ClientError, LpClient, MemoryTransport};
+use lp_client::{ClientError, LpClient, LocalMemoryTransport};
 use lp_model::{
     project::{
         api::{ApiNodeSpecifier, SerializableProjectResponse},
-        builder::ProjectBuilder,
         handle::ProjectHandle,
         FrameId,
     },
@@ -23,7 +22,7 @@ use lp_model::{
 use lp_server::LpServer;
 use lp_shared::fs::{LpFs, LpFsMemory, LpFsMemoryShared};
 use lp_shared::output::MemoryOutputProvider;
-use lp_shared::transport::{ClientTransport, Message as TransportMessage, ServerTransport};
+use lp_shared::transport::{ClientTransport, ServerTransport};
 
 #[test]
 fn test_project_load_unload() {
@@ -64,8 +63,7 @@ fn test_project_load_unload() {
 
     // Unload project
     let (unload_msg, unload_id) = client.project_unload(handle);
-    let payload = serde_json::to_vec(&unload_msg).unwrap();
-    ClientTransport::send(&mut client_transport, TransportMessage { payload }).unwrap();
+    send_client_message(&mut client_transport, unload_msg).unwrap();
     process_messages(
         &mut client,
         &mut server,
@@ -109,8 +107,7 @@ fn test_project_list_operations() {
 
     // List available projects (should include our project)
     let (list_msg, list_id) = client.project_list_available();
-    let payload = serde_json::to_vec(&list_msg).unwrap();
-    ClientTransport::send(&mut client_transport, TransportMessage { payload }).unwrap();
+    send_client_message(&mut client_transport, list_msg).unwrap();
     process_messages(
         &mut client,
         &mut server,
@@ -140,14 +137,7 @@ fn test_project_list_operations() {
 
     // List loaded projects (should include our project)
     let (loaded_msg, loaded_id) = client.project_list_loaded();
-    let loaded_payload = serde_json::to_vec(&loaded_msg).unwrap();
-    ClientTransport::send(
-        &mut client_transport,
-        TransportMessage {
-            payload: loaded_payload,
-        },
-    )
-    .unwrap();
+    send_client_message(&mut client_transport, loaded_msg).unwrap();
     process_messages(
         &mut client,
         &mut server,
@@ -203,8 +193,7 @@ fn test_project_lifecycle() {
 
     // Unload project
     let (unload_msg, unload_id) = client.project_unload(handle);
-    let payload = serde_json::to_vec(&unload_msg).unwrap();
-    ClientTransport::send(&mut client_transport, TransportMessage { payload }).unwrap();
+    send_client_message(&mut client_transport, unload_msg).unwrap();
     process_messages(
         &mut client,
         &mut server,
@@ -263,8 +252,7 @@ fn test_project_get_changes() {
     // Get changes
     let (changes_msg, changes_id) =
         client.project_get_changes(handle, FrameId::default(), ApiNodeSpecifier::All);
-    let payload = serde_json::to_vec(&changes_msg).unwrap();
-    ClientTransport::send(&mut client_transport, TransportMessage { payload }).unwrap();
+    send_client_message(&mut client_transport, changes_msg).unwrap();
     process_messages(
         &mut client,
         &mut server,
@@ -297,9 +285,9 @@ fn test_project_get_changes() {
 /// synchronous message processing in tests.
 fn setup_server_and_client(
     fs: LpFsMemory,
-) -> (LpServer, LpClient, MemoryTransport, MemoryTransport) {
+) -> (LpServer, LpClient, LocalMemoryTransport, LocalMemoryTransport) {
     // Create transport pair
-    let (client_transport, server_transport) = MemoryTransport::new_pair();
+    let (client_transport, server_transport) = LocalMemoryTransport::new_pair();
 
     // Create server with shared filesystem (allows mutation through immutable trait)
     let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
@@ -312,6 +300,22 @@ fn setup_server_and_client(
     (server, client, client_transport, server_transport)
 }
 
+/// Extract ClientMessage from Message envelope and send via transport
+fn send_client_message(
+    transport: &mut LocalMemoryTransport,
+    msg: Message,
+) -> Result<(), ClientError> {
+    let client_msg = match msg {
+        Message::Client(msg) => msg,
+        Message::Server(_) => {
+            return Err(ClientError::Protocol {
+                message: "Expected Client message".to_string(),
+            });
+        }
+    };
+    ClientTransport::send(transport, client_msg).map_err(ClientError::from)
+}
+
 /// Process messages synchronously between client and server
 ///
 /// This bridges messages through the transport, processing them on both
@@ -319,18 +323,16 @@ fn setup_server_and_client(
 fn process_messages(
     client: &mut LpClient,
     server: &mut LpServer,
-    client_transport: &mut MemoryTransport,
-    server_transport: &mut MemoryTransport,
+    client_transport: &mut LocalMemoryTransport,
+    server_transport: &mut LocalMemoryTransport,
 ) -> Result<(), ClientError> {
     // Process client -> server messages
     loop {
         match ServerTransport::receive(&mut *server_transport) {
-            Ok(Some(msg)) => {
-                // Deserialize message
-                let message: Message =
-                    serde_json::from_slice(&msg.payload).map_err(|e| ClientError::Protocol {
-                        message: format!("Failed to deserialize: {}", e),
-                    })?;
+            Ok(Some(client_msg)) => {
+                // Transport handles deserialization, we get ClientMessage directly
+                // Wrap in Message envelope for server.tick()
+                let message = Message::Client(client_msg);
 
                 // Process on server
                 let responses = server
@@ -341,12 +343,18 @@ fn process_messages(
 
                 // Send responses back through server transport
                 for response in responses {
-                    let payload =
-                        serde_json::to_vec(&response).map_err(|e| ClientError::Protocol {
-                            message: format!("Failed to serialize: {}", e),
-                        })?;
-                    ServerTransport::send(&mut *server_transport, TransportMessage { payload })
-                        .map_err(ClientError::from)?;
+                    // Extract ServerMessage from Message envelope
+                    match response {
+                        Message::Server(server_msg) => {
+                            ServerTransport::send(&mut *server_transport, server_msg)
+                                .map_err(ClientError::from)?;
+                        }
+                        Message::Client(_) => {
+                            return Err(ClientError::Protocol {
+                                message: "Server received client message".to_string(),
+                            });
+                        }
+                    }
                 }
             }
             Ok(None) => break,
@@ -359,12 +367,10 @@ fn process_messages(
     // Process server -> client messages
     loop {
         match ClientTransport::receive(&mut *client_transport) {
-            Ok(Some(msg)) => {
-                // Deserialize message
-                let message: Message =
-                    serde_json::from_slice(&msg.payload).map_err(|e| ClientError::Protocol {
-                        message: format!("Failed to deserialize: {}", e),
-                    })?;
+            Ok(Some(server_msg)) => {
+                // Transport handles deserialization, we get ServerMessage directly
+                // Wrap in Message envelope for client.tick()
+                let message = Message::Server(server_msg);
 
                 // Process on client
                 let _outgoing = client.tick(vec![message]).map_err(|e| ClientError::Other {
@@ -436,14 +442,7 @@ fn sync_project_to_server(
             };
 
             let (write_msg, write_id) = client.fs_write(server_path.clone(), content);
-            let write_payload = serde_json::to_vec(&write_msg).unwrap();
-            ClientTransport::send(
-                &mut *client_transport,
-                TransportMessage {
-                    payload: write_payload,
-                },
-            )
-            .unwrap();
+            send_client_message(&mut *client_transport, write_msg).unwrap();
             process_messages(client, server, client_transport, server_transport)?;
 
             let write_response = client.get_response(write_id).unwrap();
@@ -467,8 +466,7 @@ fn load_project_on_server(
     project_path: &str,
 ) -> Result<ProjectHandle, ClientError> {
     let (request_msg, request_id) = client.project_load(project_path.to_string());
-    let payload = serde_json::to_vec(&request_msg).unwrap();
-    ClientTransport::send(&mut *client_transport, TransportMessage { payload }).unwrap();
+    send_client_message(&mut *client_transport, request_msg).unwrap();
     process_messages(client, server, client_transport, server_transport)?;
 
     let response = client.get_response(request_id).unwrap();
