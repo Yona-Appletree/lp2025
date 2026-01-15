@@ -3,7 +3,8 @@
 //! Defines the interface for server-side transport implementations.
 //! Messages are consumed (moved) on send, and receive is non-blocking.
 
-use crate::transport::{Message, TransportError};
+use crate::transport::Message;
+use lp_model::TransportError;
 
 /// Trait for server-side transport implementations
 ///
