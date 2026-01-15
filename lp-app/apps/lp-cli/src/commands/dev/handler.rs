@@ -13,8 +13,10 @@ use crate::transport::HostSpecifier;
 use crate::transport::WebSocketClientTransport;
 use crate::transport::local::create_local_transport_pair;
 use lp_client::LpClient;
+use lp_model::Message;
 use lp_shared::fs::LpFsStd;
 use lp_shared::transport::ClientTransport;
+use std::time::Duration;
 use tokio::runtime::Runtime;
 use tokio::task::LocalSet;
 
@@ -119,14 +121,61 @@ fn handle_dev_local(
                     ],
                 );
 
-                // TODO: Enter client loop (will be implemented in Phase 6)
-                // For now, just wait a bit to show it's working
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                // Enter client loop with Ctrl+C handling
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {
+                        println!("\nShutting down...");
+                    }
+                    result = run_client_loop(&mut client, &mut client_transport) => {
+                        result?;
+                    }
+                }
 
                 Ok(())
             })
             .await
     })
+}
+
+/// Run the client loop
+///
+/// Continuously polls the transport for incoming messages and processes them
+/// via the client. Runs until an error occurs or the transport is closed.
+async fn run_client_loop(client: &mut LpClient, transport: &mut dyn ClientTransport) -> Result<()> {
+    loop {
+        // Collect incoming messages
+        let mut incoming_messages = Vec::new();
+
+        // Poll transport for messages (non-blocking)
+        loop {
+            match transport.receive() {
+                Ok(Some(server_msg)) => {
+                    // Wrap in Message envelope for client.tick()
+                    incoming_messages.push(Message::Server(server_msg));
+                }
+                Ok(None) => {
+                    // No more messages available
+                    break;
+                }
+                Err(e) => {
+                    // Transport error - log and return
+                    eprintln!("Transport error: {}", e);
+                    return Err(anyhow::anyhow!("Transport error: {}", e));
+                }
+            }
+        }
+
+        // Process messages if any
+        if !incoming_messages.is_empty() {
+            if let Err(e) = client.tick(incoming_messages) {
+                eprintln!("Client error: {}", e);
+                return Err(anyhow::anyhow!("Client error: {}", e));
+            }
+        }
+
+        // Small sleep to avoid busy-waiting
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
 }
 
 /// Handle dev command with WebSocket server
@@ -179,7 +228,20 @@ fn handle_dev_websocket(
         ],
     );
 
-    // TODO: Enter client loop (will be implemented in Phase 6)
-    // For now, just return
-    Ok(())
+    // Create tokio runtime for async operations
+    let runtime = Runtime::new()?;
+
+    // Run async code with Ctrl+C handling
+    runtime.block_on(async {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                println!("\nShutting down...");
+            }
+            result = run_client_loop(&mut client, transport.as_mut()) => {
+                result?;
+            }
+        }
+
+        Ok(())
+    })
 }
