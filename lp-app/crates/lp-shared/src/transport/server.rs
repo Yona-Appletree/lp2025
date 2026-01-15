@@ -2,9 +2,10 @@
 //!
 //! Defines the interface for server-side transport implementations.
 //! Messages are consumed (moved) on send, and receive is non-blocking.
+//!
+//! The transport handles serialization/deserialization internally.
 
-use crate::transport::Message;
-use lp_model::TransportError;
+use lp_model::{ClientMessage, ServerMessage, TransportError};
 
 /// Trait for server-side transport implementations
 ///
@@ -12,48 +13,55 @@ use lp_model::TransportError;
 /// messages. Messages are consumed (moved) on send, and receive is non-blocking
 /// (returns `None` if no message is available).
 ///
+/// The transport handles serialization/deserialization internally.
+///
 /// Separate from `ClientTransport` for clarity, even though the interface is
-/// identical. This allows for different implementations or future extensions
+/// similar. This allows for different implementations or future extensions
 /// specific to server-side use cases.
 ///
 /// # Examples
 ///
 /// ```rust,no_run
-/// use lp_shared::transport::{ServerTransport, Message, TransportError};
+/// use lp_shared::transport::ServerTransport;
+/// use lp_model::{ClientMessage, ServerMessage, TransportError};
 ///
 /// struct MyTransport;
 ///
 /// impl ServerTransport for MyTransport {
-///     fn send(&mut self, msg: Message) -> Result<(), TransportError> {
-///         // Send message
+///     fn send(&mut self, msg: ServerMessage) -> Result<(), TransportError> {
+///         // Send message (transport handles serialization)
 ///         Ok(())
 ///     }
 ///
-///     fn receive(&mut self) -> Result<Option<Message>, TransportError> {
-///         // Receive message (non-blocking)
+///     fn receive(&mut self) -> Result<Option<ClientMessage>, TransportError> {
+///         // Receive message (transport handles deserialization)
 ///         Ok(None)
 ///     }
 /// }
 /// ```
 pub trait ServerTransport {
-    /// Send a message (consumes the message)
+    /// Send a server message (consumes the message)
+    ///
+    /// The transport handles serialization internally.
     ///
     /// # Arguments
     ///
-    /// * `msg` - The message to send (consumed/moved)
+    /// * `msg` - The server message to send (consumed/moved)
     ///
     /// # Returns
     ///
     /// * `Ok(())` if the message was sent successfully
     /// * `Err(TransportError)` if sending failed
-    fn send(&mut self, msg: Message) -> Result<(), TransportError>;
+    fn send(&mut self, msg: ServerMessage) -> Result<(), TransportError>;
 
-    /// Receive a message (non-blocking)
+    /// Receive a client message (non-blocking)
+    ///
+    /// The transport handles deserialization internally.
     ///
     /// # Returns
     ///
-    /// * `Ok(Some(Message))` if a message is available
+    /// * `Ok(Some(ClientMessage))` if a message is available
     /// * `Ok(None)` if no message is available (non-blocking)
     /// * `Err(TransportError)` if receiving failed
-    fn receive(&mut self) -> Result<Option<Message>, TransportError>;
+    fn receive(&mut self) -> Result<Option<ClientMessage>, TransportError>;
 }
