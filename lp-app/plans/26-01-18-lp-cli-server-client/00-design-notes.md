@@ -247,6 +247,12 @@ I recommend **Option B** (`tungstenite` sync) initially because:
 
 However, for the server side, we may need async to handle multiple connections. We might need different approaches for client vs server.
 
+**DECIDED:**
+- Client: Use synchronous `tungstenite` (matches polling interface)
+- Server: Can use async/std in `lp-cli` (it's fine to use std there)
+- If websocket implementations go in `lp-shared`, they need to be feature-gated
+- Transport design has been refactored to work directly with `ClientMessage`/`ServerMessage` types
+
 ---
 
 ### Question 5: Project Creation Command Structure
@@ -292,6 +298,8 @@ I recommend **Option A** (separate `create` command) because:
 - Matches user's mention of `lp-cli create <dir>`
 - Simpler mental model
 
+**DECIDED: Option A - Separate `create` command**
+
 ---
 
 ### Question 6: Default Port for WebSocket Server
@@ -322,6 +330,11 @@ I recommend **Option B** (uncommon port like 8765) because:
 - Less likely to conflict
 - Can be overridden via config if needed
 - Clear that it's a custom service
+
+**DECIDED: Port 2812**
+- Easy to remember (WS2812 LED)
+- Not commonly used
+- Can be overridden via config if needed
 
 ---
 
@@ -366,6 +379,11 @@ I recommend **Option A** (flat structure) initially because:
 - Can add subdirectories later as needed
 - Focus on core functionality first
 
+**DECIDED:**
+- Start with flat structure (server.json, projects/)
+- Directory paths (like logs/, projects/) should be configurable in server.json
+- This makes it more flexible and configurable rather than hardcoding paths
+
 ---
 
 ### Question 8: Client Push Logic - Project Name Resolution
@@ -402,6 +420,10 @@ I recommend **Option A** (use `uid` from project.json) because:
 - `uid` is designed to be unique identifier
 - Matches user's suggestion
 - Server can create project if it doesn't exist (via LoadProject or similar)
+- Can add override flag later if needed
+
+**DECIDED: Option A - Use `uid` from project.json**
+- Server automatically creates project if it doesn't exist when pushing
 - Can add override flag later if needed
 
 ---
@@ -450,6 +472,8 @@ I recommend **Option A** (commands as separate modules) because:
 - Good separation of concerns
 - Matches common CLI app patterns
 
+**DECIDED: Option A - Commands as separate modules**
+
 ---
 
 ### Question 10: Error Handling and User Experience
@@ -484,6 +508,8 @@ I recommend **Option A** (`anyhow`) because:
 - Easy error context and messages
 - Standard choice for Rust CLIs
 - Dependency is acceptable
+
+**DECIDED: Option A - Use `anyhow` for error handling**
 
 ---
 
