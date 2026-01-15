@@ -1,8 +1,8 @@
-use lp_engine::ProjectRuntime;
-use lp_engine_client::test_util::assert_first_output_red;
+use lp_engine::{MemoryOutputProvider, ProjectRuntime};
 use lp_engine_client::ClientProjectView;
 use lp_model::project::ProjectBuilder;
 use lp_shared::fs::LpFsMemory;
+use std::sync::Arc;
 
 #[test]
 fn test_end_to_end_shader_time_based() {
@@ -24,8 +24,11 @@ fn test_end_to_end_shader_time_based() {
     // Build project
     builder.build();
 
+    // Create output provider
+    let output_provider = Arc::new(MemoryOutputProvider::new());
+
     // Start runtime
-    let mut runtime = ProjectRuntime::new(Box::new(fs)).unwrap();
+    let mut runtime = ProjectRuntime::new(Box::new(fs), output_provider.clone()).unwrap();
     runtime.load_nodes().unwrap();
     runtime.init_nodes().unwrap();
     runtime.ensure_all_nodes_initialized().unwrap();
@@ -45,20 +48,49 @@ fn test_end_to_end_shader_time_based() {
     // Frame 1
     runtime.tick(4).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    assert_first_output_red(&mut client_view, output_handle, 1);
+    assert_memory_output_red(&output_provider, 0, 1);
 
     // Frame 2
     runtime.tick(4).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    assert_first_output_red(&mut client_view, output_handle, 2);
+    assert_memory_output_red(&output_provider, 0, 2);
 
     // Frame 3
     runtime.tick(4).unwrap();
     sync_client_view(&runtime, &mut client_view);
-    assert_first_output_red(&mut client_view, output_handle, 3);
+    assert_memory_output_red(&output_provider, 0, 3);
 
     // Verify client view frame_id matches runtime
     assert_eq!(client_view.frame_id, runtime.frame_id);
+}
+
+/// Assert that the first output channel in the memory provider has the expected red value
+fn assert_memory_output_red(provider: &MemoryOutputProvider, pin: u32, expected_r: u8) {
+    let handle = provider
+        .get_handle_for_pin(pin)
+        .expect("Output channel should be open");
+
+    let data = provider
+        .get_data(handle)
+        .expect("Output channel should have data");
+
+    assert!(
+        data.len() >= 3,
+        "Output data should have at least 3 bytes (RGB) for first channel, got {}",
+        data.len()
+    );
+
+    let r = data[0];
+    let g = data[1];
+    let b = data[2];
+
+    assert_eq!(
+        r, expected_r,
+        "Output channel 0 R: expected {}, got {}",
+        expected_r, r
+    );
+    assert_eq!(g, 0, "Output channel 0 G: expected 0, got {}", g);
+    assert_eq!(b, 0, "Output channel 0 B: expected 0, got {}", b);
 }
 
 /// Sync the client view with the runtime
@@ -66,5 +98,5 @@ fn sync_client_view(runtime: &ProjectRuntime, client_view: &mut ClientProjectVie
     let response = runtime
         .get_changes(client_view.frame_id, &client_view.detail_specifier())
         .unwrap();
-    client_view.sync(&response).unwrap();
+    client_view.apply_changes(&response).unwrap();
 }

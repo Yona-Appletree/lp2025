@@ -4,8 +4,8 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use lp_model::{
-    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
     project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
+    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
 };
 
 /// Client view of project
@@ -63,7 +63,7 @@ impl ClientProjectView {
     }
 
     /// Sync with server (update view from response)
-    pub fn sync(
+    pub fn apply_changes(
         &mut self,
         response: &lp_model::project::api::ProjectResponse,
     ) -> Result<(), String> {

@@ -3,8 +3,8 @@
 extern crate alloc;
 
 use crate::error::ServerError;
-use alloc::{boxed::Box, format, string::String};
-use lp_engine::ProjectRuntime;
+use alloc::{boxed::Box, format, string::String, sync::Arc};
+use lp_engine::{MemoryOutputProvider, ProjectRuntime};
 use lp_shared::fs::LpFs;
 
 /// A project instance wrapping a ProjectRuntime
@@ -22,7 +22,11 @@ impl Project {
     ///
     /// The project must already exist on the filesystem.
     pub fn new(name: String, path: String, fs: Box<dyn LpFs>) -> Result<Self, ServerError> {
-        let runtime = ProjectRuntime::new(fs).map_err(|e| ServerError::Core(format!("{}", e)))?;
+        // Create output provider (for now, use memory provider)
+        // TODO: Use hardware provider for ESP32
+        let output_provider = Arc::new(MemoryOutputProvider::new());
+        let runtime = ProjectRuntime::new(fs, output_provider)
+            .map_err(|e| ServerError::Core(format!("{}", e)))?;
 
         Ok(Self {
             name,

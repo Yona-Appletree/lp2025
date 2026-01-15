@@ -6,6 +6,5 @@ pub use runtime::{NodeEntry, NodeStatus, ProjectRuntime};
 
 // Re-export API types for convenience
 pub use lp_model::project::api::{
-    ApiNodeSpecifier, ProjectRequest, ProjectResponse,
-    NodeChange, NodeDetail, NodeState,
+    ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, ProjectRequest, ProjectResponse,
 };

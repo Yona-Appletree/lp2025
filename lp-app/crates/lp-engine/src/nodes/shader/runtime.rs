@@ -2,10 +2,10 @@ use crate::error::Error;
 use crate::nodes::NodeRuntime;
 use crate::runtime::contexts::{NodeInitContext, RenderContext, TextureHandle};
 use alloc::{boxed::Box, format, string::String};
-use lp_glsl_compiler::{DecimalFormat, GlslExecutable, GlslOptions, RunMode, glsl_jit};
+use lp_glsl_compiler::{glsl_jit, DecimalFormat, GlslExecutable, GlslOptions, RunMode};
 use lp_model::{
-    NodeHandle,
     nodes::shader::{ShaderConfig, ShaderState},
+    NodeHandle,
 };
 
 /// Shader node runtime

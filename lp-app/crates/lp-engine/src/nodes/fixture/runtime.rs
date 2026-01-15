@@ -1,6 +1,6 @@
 use crate::error::Error;
-use crate::nodes::NodeRuntime;
 use crate::nodes::fixture::sampling_kernel::SamplingKernel;
+use crate::nodes::NodeRuntime;
 use crate::runtime::contexts::{NodeInitContext, OutputHandle, RenderContext, TextureHandle};
 use alloc::{string::String, vec, vec::Vec};
 use lp_model::nodes::fixture::{ColorOrder, FixtureConfig};

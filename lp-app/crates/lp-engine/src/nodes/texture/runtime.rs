@@ -3,8 +3,8 @@ use crate::nodes::NodeRuntime;
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
 use alloc::{format, string::ToString, vec::Vec};
 use lp_model::{
-    NodeHandle,
     nodes::texture::{TextureConfig, TextureState},
+    NodeHandle,
 };
 use lp_shared::Texture;
 

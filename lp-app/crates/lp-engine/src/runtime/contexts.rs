@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::output::OutputProvider;
 use lp_model::{NodeHandle, NodeSpecifier};
 use lp_shared::fs::LpFs;
 
@@ -43,6 +44,9 @@ pub trait NodeInitContext {
 
     /// Get filesystem for this node
     fn get_node_fs(&self) -> &dyn LpFs;
+
+    /// Get output provider
+    fn output_provider(&self) -> &dyn OutputProvider;
 }
 
 use lp_shared::Texture;
@@ -66,4 +70,7 @@ pub trait RenderContext {
         start_ch: u32,
         ch_count: u32,
     ) -> Result<&mut [u8], Error>;
+
+    /// Get output provider
+    fn output_provider(&self) -> &dyn OutputProvider;
 }

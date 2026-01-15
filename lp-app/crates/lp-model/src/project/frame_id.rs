@@ -6,11 +6,11 @@ impl FrameId {
     pub fn new(id: i64) -> Self {
         Self(id)
     }
-    
+
     pub fn as_i64(self) -> i64 {
         self.0
     }
-    
+
     pub fn next(self) -> Self {
         Self(self.0 + 1)
     }

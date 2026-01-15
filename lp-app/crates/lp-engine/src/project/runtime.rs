@@ -1,17 +1,19 @@
 use crate::error::Error;
 use crate::nodes::{FixtureRuntime, NodeRuntime, OutputRuntime, ShaderRuntime, TextureRuntime};
+use crate::output::OutputProvider;
 use crate::runtime::frame_time::FrameTime;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use lp_model::{
     project::api::{
         ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, NodeStatus as ApiNodeStatus,
         ProjectResponse,
-    }, FrameId, LpPath, NodeConfig, NodeHandle,
-    NodeKind,
+    },
+    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
 };
 use lp_shared::fs::LpFs;
 #[cfg(feature = "std")]
@@ -25,6 +27,8 @@ pub struct ProjectRuntime {
     pub frame_time: FrameTime,
     /// Filesystem (owned for now)
     pub fs: Box<dyn LpFs>,
+    /// Output provider (shared across nodes)
+    pub output_provider: Arc<dyn OutputProvider>,
     /// Node entries
     pub nodes: BTreeMap<NodeHandle, NodeEntry>,
     /// Next handle to assign
@@ -66,13 +70,14 @@ pub enum NodeStatus {
 
 impl ProjectRuntime {
     /// Create new project runtime
-    pub fn new(fs: Box<dyn LpFs>) -> Result<Self, Error> {
+    pub fn new(fs: Box<dyn LpFs>, output_provider: Arc<dyn OutputProvider>) -> Result<Self, Error> {
         let _config = crate::project::loader::load_from_filesystem(fs.as_ref())?;
 
         Ok(Self {
             frame_id: FrameId::default(),
             frame_time: FrameTime::zero(),
             fs,
+            output_provider,
             nodes: BTreeMap::new(),
             next_handle: 1,
         })
@@ -381,6 +386,7 @@ impl ProjectRuntime {
                     nodes: &mut self.nodes,
                     frame_id: self.frame_id,
                     frame_time: self.frame_time,
+                    output_provider: Arc::clone(&self.output_provider),
                 };
 
                 // Get runtime and render in one go
@@ -417,7 +423,46 @@ impl ProjectRuntime {
             }
         }
 
-        // todo!("Flush outputs with state_ver == frame_id")
+        // Flush outputs with state_ver == frame_id (outputs that were written to this frame)
+        let output_handles: Vec<NodeHandle> = self
+            .nodes
+            .iter()
+            .filter(|(_, entry)| {
+                entry.kind == NodeKind::Output
+                    && entry.runtime.is_some()
+                    && entry.state_ver == self.frame_id
+                    && matches!(entry.status, NodeStatus::Ok)
+            })
+            .map(|(handle, _)| *handle)
+            .collect();
+
+        for handle in output_handles {
+            let render_result = {
+                let mut ctx = RenderContextImpl {
+                    nodes: &mut self.nodes,
+                    frame_id: self.frame_id,
+                    frame_time: self.frame_time,
+                    output_provider: Arc::clone(&self.output_provider),
+                };
+
+                if let Some(entry) = ctx.nodes.get_mut(&handle) {
+                    if let Some(runtime) = entry.runtime.as_mut() {
+                        let runtime_ptr: *mut dyn NodeRuntime = runtime.as_mut();
+                        unsafe { (*runtime_ptr).render(&mut ctx) }
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Ok(())
+                }
+            };
+
+            if let Err(e) = render_result {
+                if let Some(entry) = self.nodes.get_mut(&handle) {
+                    entry.status = NodeStatus::Error(format!("{}", e));
+                }
+            }
+        }
 
         Ok(())
     }
@@ -735,6 +780,10 @@ impl<'a> crate::runtime::contexts::NodeInitContext for InitContext<'a> {
     fn get_node_fs(&self) -> &dyn lp_shared::fs::LpFs {
         self.node_fs.as_ref()
     }
+
+    fn output_provider(&self) -> &dyn OutputProvider {
+        self.runtime.output_provider.as_ref()
+    }
 }
 
 /// Render context implementation
@@ -742,6 +791,7 @@ struct RenderContextImpl<'a> {
     nodes: &'a mut BTreeMap<NodeHandle, NodeEntry>,
     frame_id: FrameId,
     frame_time: FrameTime,
+    output_provider: Arc<dyn OutputProvider>,
 }
 
 impl<'a> crate::runtime::contexts::RenderContext for RenderContextImpl<'a> {
@@ -750,7 +800,13 @@ impl<'a> crate::runtime::contexts::RenderContext for RenderContextImpl<'a> {
         handle: crate::runtime::contexts::TextureHandle,
     ) -> Result<&lp_shared::Texture, Error> {
         // Ensure texture is rendered (lazy rendering)
-        Self::ensure_texture_rendered(self.nodes, handle, self.frame_id, self.frame_time)?;
+        Self::ensure_texture_rendered(
+            self.nodes,
+            handle,
+            self.frame_id,
+            self.frame_time,
+            Arc::clone(&self.output_provider),
+        )?;
 
         // Get texture runtime
         let node_handle = handle.as_node_handle();
@@ -787,7 +843,13 @@ impl<'a> crate::runtime::contexts::RenderContext for RenderContextImpl<'a> {
         handle: crate::runtime::contexts::TextureHandle,
     ) -> Result<&mut lp_shared::Texture, Error> {
         // Ensure texture is rendered (lazy rendering)
-        Self::ensure_texture_rendered(self.nodes, handle, self.frame_id, self.frame_time)?;
+        Self::ensure_texture_rendered(
+            self.nodes,
+            handle,
+            self.frame_id,
+            self.frame_time,
+            Arc::clone(&self.output_provider),
+        )?;
 
         // Get texture runtime
         let node_handle = handle.as_node_handle();
@@ -861,6 +923,10 @@ impl<'a> crate::runtime::contexts::RenderContext for RenderContextImpl<'a> {
             })
         }
     }
+
+    fn output_provider(&self) -> &dyn OutputProvider {
+        self.output_provider.as_ref()
+    }
 }
 
 impl<'a> RenderContextImpl<'a> {
@@ -875,6 +941,7 @@ impl<'a> RenderContextImpl<'a> {
         handle: crate::runtime::contexts::TextureHandle,
         frame_id: FrameId,
         frame_time: FrameTime,
+        output_provider: Arc<dyn OutputProvider>,
     ) -> Result<(), Error> {
         let node_handle = handle.as_node_handle();
 
@@ -927,6 +994,7 @@ impl<'a> RenderContextImpl<'a> {
                 nodes,
                 frame_id,
                 frame_time,
+                output_provider: Arc::clone(&output_provider),
             };
 
             // Get shader runtime and render

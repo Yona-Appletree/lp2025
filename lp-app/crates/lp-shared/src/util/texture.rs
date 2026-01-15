@@ -17,7 +17,11 @@ impl Texture {
     ///
     /// Allocates buffer and initializes to zeros.
     /// Returns an error if the format is invalid.
-    pub fn new(width: u32, height: u32, format: alloc::string::String) -> Result<Self, TextureError> {
+    pub fn new(
+        width: u32,
+        height: u32,
+        format: alloc::string::String,
+    ) -> Result<Self, TextureError> {
         if !formats::is_valid(&format) {
             return Err(TextureError::InvalidFormat(format));
         }

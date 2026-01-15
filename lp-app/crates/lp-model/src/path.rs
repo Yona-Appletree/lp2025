@@ -1,7 +1,7 @@
 use alloc::string::{String, ToString};
 
 /// Light Player path - absolute paths from project root
-/// 
+///
 /// Currently supports absolute paths only. Designed to support relative paths
 /// later when nodes become nestable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11,7 +11,7 @@ impl LpPath {
     pub fn new(path: String) -> Self {
         Self(path)
     }
-    
+
     pub fn as_str(&self) -> &str {
         &self.0
     }

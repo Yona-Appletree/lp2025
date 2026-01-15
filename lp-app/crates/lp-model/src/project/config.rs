@@ -2,7 +2,7 @@ use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
 /// Project configuration - minimal, no nodes field
-/// 
+///
 /// Nodes are discovered from filesystem, not stored in config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectConfig {

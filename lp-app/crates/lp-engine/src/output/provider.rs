@@ -1,0 +1,73 @@
+use crate::error::Error;
+
+/// Handle for an opened output channel
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct OutputChannelHandle(i32);
+
+impl OutputChannelHandle {
+    /// Create a new output channel handle
+    pub fn new(id: i32) -> Self {
+        Self(id)
+    }
+
+    /// Get the underlying i32 value
+    pub fn as_i32(&self) -> i32 {
+        self.0
+    }
+
+    /// Check if this is an invalid handle (typically -1)
+    pub fn is_invalid(&self) -> bool {
+        self.0 < 0
+    }
+}
+
+/// Output format/protocol
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    /// WS2811/WS2812 RGB LED protocol
+    Ws2811,
+}
+
+/// Trait for output providers (hardware drivers, test implementations, etc.)
+pub trait OutputProvider {
+    /// Open an output channel
+    ///
+    /// # Arguments
+    /// * `pin` - GPIO pin number
+    /// * `byte_count` - Total number of bytes to allocate for this channel
+    /// * `format` - Output format/protocol
+    ///
+    /// # Returns
+    /// Returns `OutputChannelHandle` on success, or `Error` if:
+    /// - Pin is already open
+    /// - Invalid parameters
+    /// - Hardware initialization failed
+    fn open(
+        &self,
+        pin: u32,
+        byte_count: u32,
+        format: OutputFormat,
+    ) -> Result<OutputChannelHandle, Error>;
+
+    /// Write data to an output channel
+    ///
+    /// # Arguments
+    /// * `handle` - Output channel handle from `open()`
+    /// * `data` - Data to write (must match `byte_count` from `open()`)
+    ///
+    /// # Returns
+    /// Returns `Ok(())` on success, or `Error` if:
+    /// - Handle is invalid
+    /// - Data length doesn't match expected byte_count
+    /// - Hardware write failed
+    fn write(&self, handle: OutputChannelHandle, data: &[u8]) -> Result<(), Error>;
+
+    /// Close an output channel
+    ///
+    /// # Arguments
+    /// * `handle` - Output channel handle from `open()`
+    ///
+    /// # Returns
+    /// Returns `Ok(())` on success, or `Error` if handle is invalid
+    fn close(&self, handle: OutputChannelHandle) -> Result<(), Error>;
+}

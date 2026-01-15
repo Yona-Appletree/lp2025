@@ -68,7 +68,7 @@ fn test_sync_with_changes() {
     };
 
     // Sync
-    view.sync(&response).unwrap();
+    view.apply_changes(&response).unwrap();
 
     // Verify view updated
     assert_eq!(view.frame_id, FrameId::new(1));

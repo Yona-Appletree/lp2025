@@ -96,7 +96,8 @@ mod tests {
     fn test_sampling_kernel_samples_in_circle() {
         let kernel = SamplingKernel::new(0.5);
         for sample in &kernel.samples {
-            let dist = (sample.offset_u * sample.offset_u + sample.offset_v * sample.offset_v).sqrt();
+            let dist =
+                (sample.offset_u * sample.offset_u + sample.offset_v * sample.offset_v).sqrt();
             assert!(dist <= kernel.radius);
         }
     }

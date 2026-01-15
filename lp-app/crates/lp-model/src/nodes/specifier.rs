@@ -2,7 +2,7 @@ use alloc::string::{String, ToString};
 use serde::{Deserialize, Serialize};
 
 /// Node specifier - currently just a path string
-/// 
+///
 /// May support other specifier types in the future (e.g., expressions, handles).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NodeSpecifier(pub String);
@@ -11,7 +11,7 @@ impl NodeSpecifier {
     pub fn new(spec: String) -> Self {
         Self(spec)
     }
-    
+
     pub fn as_str(&self) -> &str {
         &self.0
     }

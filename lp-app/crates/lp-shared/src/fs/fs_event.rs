@@ -2,7 +2,6 @@
 
 use alloc::string::String;
 
-
 /// Represents an event caused by a file or directory change
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FsChange {

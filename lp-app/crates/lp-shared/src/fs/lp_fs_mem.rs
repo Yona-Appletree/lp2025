@@ -396,15 +396,15 @@ mod tests {
         assert!(chrooted.file_exists("main.glsl").unwrap());
         assert!(chrooted.file_exists("/main.glsl").unwrap());
         assert!(chrooted.file_exists("./main.glsl").unwrap());
-        
+
         // Read file with relative path
         let content = chrooted.read_file("main.glsl").unwrap();
         assert_eq!(content, b"shader code");
-        
+
         // Read file with absolute path (normalized)
         let content2 = chrooted.read_file("/main.glsl").unwrap();
         assert_eq!(content2, b"shader code");
-        
+
         // Read file with ./ prefix
         let content3 = chrooted.read_file("./main.glsl").unwrap();
         assert_eq!(content3, b"shader code");
@@ -422,15 +422,15 @@ mod tests {
         assert!(chrooted.file_exists("c/file.txt").unwrap());
         assert!(chrooted.file_exists("./c/file.txt").unwrap());
         assert!(chrooted.file_exists("/c/file.txt").unwrap());
-        
+
         assert!(chrooted.file_exists("other.txt").unwrap());
         assert!(chrooted.file_exists("./other.txt").unwrap());
         assert!(chrooted.file_exists("/other.txt").unwrap());
-        
+
         // Read with relative path
         let content = chrooted.read_file("c/file.txt").unwrap();
         assert_eq!(content, b"content");
-        
+
         // Read with normalized absolute path
         let content2 = chrooted.read_file("/c/file.txt").unwrap();
         assert_eq!(content2, b"content");
