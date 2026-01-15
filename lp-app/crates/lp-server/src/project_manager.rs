@@ -168,6 +168,11 @@ impl ProjectManager {
         self.name_to_handle.get(name).copied()
     }
 
+    /// Get the projects base directory
+    pub fn projects_base_dir(&self) -> &str {
+        &self.projects_base_dir
+    }
+
     /// List all loaded projects
     ///
     /// Returns a list of loaded projects with their handles and paths.

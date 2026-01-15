@@ -4,10 +4,11 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use crate::project_manager::ProjectManager;
-use alloc::{format, rc::Rc, string::ToString, vec::Vec};
+use alloc::{format, rc::Rc, string::String, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
-    server::{FsRequest, FsResponse, ServerRequest, ServerResponse},
+    project::api::SerializableProjectResponse,
+    server::{AvailableProject, FsRequest, FsResponse, ServerResponse},
     ClientMessage, ServerMessage,
 };
 use lp_shared::fs::LpFs;
@@ -15,9 +16,9 @@ use lp_shared::output::OutputProvider;
 
 /// Handle a client message and generate a server response
 pub fn handle_client_message(
-    _project_manager: &mut ProjectManager,
+    project_manager: &mut ProjectManager,
     base_fs: &mut dyn LpFs,
-    _output_provider: &Rc<RefCell<dyn OutputProvider>>,
+    output_provider: &Rc<RefCell<dyn OutputProvider>>,
     client_msg: ClientMessage,
 ) -> Result<ServerMessage, ServerError> {
     let ClientMessage { id, msg } = client_msg;
@@ -26,15 +27,20 @@ pub fn handle_client_message(
         lp_model::ClientRequest::Filesystem(fs_request) => {
             ServerResponse::Filesystem(handle_fs_request(base_fs, fs_request)?)
         }
-        // Project management requests - will be implemented in Phase 4
-        lp_model::ClientRequest::LoadProject { .. }
-        | lp_model::ClientRequest::UnloadProject { .. }
-        | lp_model::ClientRequest::ProjectRequest { .. }
-        | lp_model::ClientRequest::ListAvailableProjects
-        | lp_model::ClientRequest::ListLoadedProjects => {
-            return Err(ServerError::Core(
-                "Project management requests are not yet implemented".to_string(),
-            ));
+        lp_model::ClientRequest::LoadProject { path } => {
+            handle_load_project(project_manager, base_fs, output_provider, path)?
+        }
+        lp_model::ClientRequest::UnloadProject { handle } => {
+            handle_unload_project(project_manager, handle)?
+        }
+        lp_model::ClientRequest::ProjectRequest { handle, request } => {
+            handle_project_request(project_manager, handle, request)?
+        }
+        lp_model::ClientRequest::ListAvailableProjects => {
+            handle_list_available_projects(project_manager, base_fs)?
+        }
+        lp_model::ClientRequest::ListLoadedProjects => {
+            handle_list_loaded_projects(project_manager)?
         }
     };
 
@@ -114,22 +120,78 @@ fn handle_fs_request(
     }
 }
 
-/// Handle a project management request
-///
-/// TODO: Implement project management handlers
-/// This will handle ServerRequest variants like LoadProject, UnloadProject, etc.
-///
-/// Currently returns an error indicating project management is not yet implemented.
-/// This function is not called in the current implementation (only filesystem requests
-/// are handled), but exists for future use.
-pub fn handle_project_request(
-    _project_manager: &mut ProjectManager,
-    _output_provider: &Rc<RefCell<dyn OutputProvider>>,
-    _request: ServerRequest,
+/// Handle a LoadProject request
+fn handle_load_project(
+    project_manager: &mut ProjectManager,
+    base_fs: &mut dyn LpFs,
+    output_provider: &Rc<RefCell<dyn OutputProvider>>,
+    path: String,
 ) -> Result<ServerResponse, ServerError> {
-    // TODO: Implement project management handlers
-    // For now, return an error instead of panicking
-    Err(ServerError::Core(
-        "Project management requests are not yet implemented".to_string(),
-    ))
+    let handle = project_manager.load_project(path, base_fs, output_provider.clone())?;
+    Ok(ServerResponse::LoadProject { handle })
+}
+
+/// Handle an UnloadProject request
+fn handle_unload_project(
+    project_manager: &mut ProjectManager,
+    handle: lp_model::project::ProjectHandle,
+) -> Result<ServerResponse, ServerError> {
+    project_manager.unload_project(handle)?;
+    Ok(ServerResponse::UnloadProject)
+}
+
+/// Handle a ProjectRequest (project-specific request)
+fn handle_project_request(
+    project_manager: &mut ProjectManager,
+    handle: lp_model::project::ProjectHandle,
+    request: lp_model::project::api::ProjectRequest,
+) -> Result<ServerResponse, ServerError> {
+    let project = project_manager
+        .get_project_mut(handle)
+        .ok_or_else(|| ServerError::ProjectNotFound(format!("handle {}", handle.id())))?;
+
+    match request {
+        lp_model::project::api::ProjectRequest::GetChanges {
+            since_frame,
+            detail_specifier,
+        } => {
+            let response = project
+                .runtime_mut()
+                .get_changes(since_frame, &detail_specifier)
+                .map_err(|e| ServerError::Core(format!("Failed to get changes: {}", e)))?;
+
+            let serializable_response = response
+                .to_serializable()
+                .map_err(|e| ServerError::Core(format!("Failed to serialize response: {}", e)))?;
+
+            Ok(ServerResponse::ProjectRequest {
+                response: serializable_response,
+            })
+        }
+    }
+}
+
+/// Handle a ListAvailableProjects request
+fn handle_list_available_projects(
+    project_manager: &ProjectManager,
+    base_fs: &dyn LpFs,
+) -> Result<ServerResponse, ServerError> {
+    let names = project_manager.list_available_projects(base_fs)?;
+    let projects = names
+        .into_iter()
+        .map(|name| {
+            // Build full path
+            let path = format!("{}/{}", project_manager.projects_base_dir(), name);
+            AvailableProject { path }
+        })
+        .collect();
+    Ok(ServerResponse::ListAvailableProjects { projects })
+}
+
+/// Handle a ListLoadedProjects request
+fn handle_list_loaded_projects(
+    project_manager: &ProjectManager,
+) -> Result<ServerResponse, ServerError> {
+    let projects = project_manager.list_loaded_projects();
+    Ok(ServerResponse::ListLoadedProjects { projects })
 }
