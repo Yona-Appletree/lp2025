@@ -192,7 +192,7 @@ fn test_node_deletion() {
 
     // Delete node.json
     let shader_config_path = "/src/shader-1.shader/node.json";
-    fs.get_mut().delete_file(shader_config_path).unwrap();
+    fs.get_mut().delete_file_mut(shader_config_path).unwrap();
 
     // Get filesystem changes
     let changes = fs.get_changes();

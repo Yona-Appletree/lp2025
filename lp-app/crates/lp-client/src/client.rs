@@ -3,10 +3,15 @@
 extern crate alloc;
 
 use crate::error::ClientError;
-use alloc::{collections::BTreeMap, format, string::{String, ToString}, vec::Vec};
+use alloc::{
+    collections::BTreeMap,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use lp_model::{
-    server::{FsRequest, FsResponse, ServerResponse},
     ClientMessage, ClientRequest, Message, ServerMessage,
+    server::{FsRequest, FsResponse, ServerResponse},
 };
 
 /// Pending request waiting for a response
@@ -61,7 +66,7 @@ impl LpClient {
     ///
     /// # let mut client = LpClient::new();
     /// let incoming = vec![/* server messages */];
-    /// let outgoing = client.tick(incoming)?;
+    /// let outgoing = client.tick(incoming).unwrap();
     /// ```
     pub fn tick(&mut self, incoming: Vec<Message>) -> Result<Vec<Message>, ClientError> {
         for message in incoming {
@@ -90,11 +95,7 @@ impl LpClient {
     ///
     /// Returns the request message that should be sent and the request ID
     /// for tracking the response.
-    fn create_request(
-        &mut self,
-        request: ClientRequest,
-        request_type: &str,
-    ) -> (Message, u64) {
+    fn create_request(&mut self, request: ClientRequest, request_type: &str) -> (Message, u64) {
         let request_id = self.next_request_id;
         self.next_request_id = self.next_request_id.wrapping_add(1);
 
@@ -211,9 +212,7 @@ impl LpClient {
     ///
     /// Returns the request message and request ID for tracking the response.
     pub fn fs_delete_file(&mut self, path: String) -> (Message, u64) {
-        let request = ClientRequest::Filesystem(FsRequest::DeleteFile {
-            path: path.clone(),
-        });
+        let request = ClientRequest::Filesystem(FsRequest::DeleteFile { path: path.clone() });
         self.create_request(request, "fs_delete_file")
     }
 
@@ -243,9 +242,7 @@ impl LpClient {
     ///
     /// Returns the request message and request ID for tracking the response.
     pub fn fs_delete_dir(&mut self, path: String) -> (Message, u64) {
-        let request = ClientRequest::Filesystem(FsRequest::DeleteDir {
-            path: path.clone(),
-        });
+        let request = ClientRequest::Filesystem(FsRequest::DeleteDir { path: path.clone() });
         self.create_request(request, "fs_delete_dir")
     }
 

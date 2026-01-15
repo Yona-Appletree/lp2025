@@ -37,10 +37,11 @@ impl LpServer {
     /// # Example
     ///
     /// ```rust,no_run
+    /// extern crate alloc;
     /// use lp_server::LpServer;
     /// use lp_shared::fs::LpFsStd;
     /// use lp_shared::output::MemoryOutputProvider;
-    /// use alloc::rc::Rc;
+    /// use alloc::{boxed::Box, rc::Rc, string::ToString};
     /// use core::cell::RefCell;
     ///
     /// let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
@@ -78,12 +79,19 @@ impl LpServer {
     /// # Example
     ///
     /// ```rust,no_run
+    /// extern crate alloc;
     /// use lp_model::Message;
     /// use lp_server::LpServer;
+    /// use lp_shared::fs::LpFsMemory;
+    /// use lp_shared::output::MemoryOutputProvider;
+    /// use alloc::{boxed::Box, rc::Rc, vec::Vec};
+    /// use core::cell::RefCell;
     ///
-    /// # let mut server = todo!();
+    /// let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
+    /// let base_fs = Box::new(LpFsMemory::new());
+    /// let mut server = LpServer::new(output_provider, base_fs, "projects/".to_string());
     /// let incoming = vec![/* messages */];
-    /// let responses = server.tick(16, incoming)?;
+    /// let responses = server.tick(16, incoming).unwrap();
     /// ```
     pub fn tick(
         &mut self,

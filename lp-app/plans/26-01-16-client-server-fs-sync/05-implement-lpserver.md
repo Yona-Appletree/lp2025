@@ -7,6 +7,7 @@ Create `LpServer` struct with tick-based API that processes messages and handles
 ## Tasks
 
 1. Create `lp-server/src/server.rs`:
+
    - Define `LpServer` struct:
      ```rust
      pub struct LpServer {
@@ -33,6 +34,7 @@ Create `LpServer` struct with tick-based API that processes messages and handles
      ```
 
 2. Create `lp-server/src/handlers.rs`:
+
    - Implement `handle_fs_request()`:
      - Match `FsRequest` variants
      - Call appropriate `LpFs` methods on `base_fs`
@@ -48,19 +50,23 @@ Create `LpServer` struct with tick-based API that processes messages and handles
      - Wrap response in `ServerMessage` with matching ID
 
 3. Update `tick()` implementation:
+
    - Process each incoming message
    - Collect responses
    - Return `Vec<Message>` with `Server` variants
 
 4. Update `lp-server/src/project.rs`:
+
    - Change `Project::new()` signature to take `Rc<RefCell<dyn OutputProvider>>`
    - Remove creation of `MemoryOutputProvider` inside `Project::new()`
 
 5. Update `lp-server/src/lib.rs`:
+
    - Export `server` module
    - Export `LpServer` struct
 
 6. Update `ProjectManager`:
+
    - Ensure it can work with `LpServer`'s `base_fs`
    - `projects_base_dir` should be relative to server root (e.g., "projects/")
 
