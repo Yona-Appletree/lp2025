@@ -1,12 +1,12 @@
 use crate::error::Error;
-use crate::nodes::NodeRuntime;
+use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
-use alloc::{format, string::ToString, vec::Vec};
+use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use lp_model::{
     nodes::texture::{TextureConfig, TextureState},
     NodeHandle,
 };
-use lp_shared::Texture;
+use lp_shared::{fs::fs_event::FsChange, Texture};
 
 /// Texture node runtime
 pub struct TextureRuntime {
@@ -87,6 +87,51 @@ impl NodeRuntime for TextureRuntime {
 
     fn as_any_mut(&mut self) -> &mut dyn core::any::Any {
         self
+    }
+
+    fn update_config(
+        &mut self,
+        new_config: Box<dyn NodeConfig>,
+        _ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Downcast to TextureConfig
+        let texture_config = new_config
+            .as_any()
+            .downcast_ref::<TextureConfig>()
+            .ok_or_else(|| Error::InvalidConfig {
+                node_path: format!("texture-{}", self.node_handle.as_i32()),
+                reason: "Config is not a TextureConfig".to_string(),
+            })?;
+
+        let old_config = self.config.as_ref();
+        let needs_resize = old_config
+            .map(|old| old.width != texture_config.width || old.height != texture_config.height)
+            .unwrap_or(true);
+
+        self.config = Some(texture_config.clone());
+
+        // If dimensions changed, resize texture
+        if needs_resize {
+            let format = "RGBA8".to_string();
+            let texture = Texture::new(texture_config.width, texture_config.height, format)
+                .map_err(|e| Error::InvalidConfig {
+                    node_path: format!("texture-{}", self.node_handle.as_i32()),
+                    reason: format!("Failed to resize texture: {}", e),
+                })?;
+            self.texture = Some(texture);
+        }
+
+        Ok(())
+    }
+
+    fn handle_fs_change(
+        &mut self,
+        _change: &FsChange,
+        _ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Textures don't currently support loading from files
+        // This is a no-op for now
+        Ok(())
     }
 }
 

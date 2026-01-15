@@ -27,6 +27,10 @@ impl NodeConfig for ShaderConfig {
     fn kind(&self) -> NodeKind {
         NodeKind::Shader
     }
+    
+    fn as_any(&self) -> &dyn core::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]

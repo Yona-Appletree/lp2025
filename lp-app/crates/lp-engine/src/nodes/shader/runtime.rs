@@ -1,12 +1,13 @@
 use crate::error::Error;
-use crate::nodes::NodeRuntime;
+use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, RenderContext, TextureHandle};
-use alloc::{boxed::Box, format, string::String};
+use alloc::{boxed::Box, format, string::{String, ToString}};
 use lp_glsl_compiler::{glsl_jit, DecimalFormat, GlslExecutable, GlslOptions, RunMode};
 use lp_model::{
     nodes::shader::{ShaderConfig, ShaderState},
     NodeHandle,
 };
+use lp_shared::fs::fs_event::FsChange;
 
 /// Shader node runtime
 pub struct ShaderRuntime {
@@ -51,6 +52,11 @@ impl ShaderRuntime {
     /// Check if this shader targets the given texture handle
     pub fn targets_texture(&self, texture_handle: TextureHandle) -> bool {
         self.texture_handle.map_or(false, |h| h == texture_handle)
+    }
+
+    /// Get the texture handle this shader targets
+    pub fn texture_handle(&self) -> Option<TextureHandle> {
+        self.texture_handle
     }
 
     /// Get the shader config (for state extraction)
@@ -196,6 +202,138 @@ impl NodeRuntime for ShaderRuntime {
 
     fn as_any_mut(&mut self) -> &mut dyn core::any::Any {
         self
+    }
+
+    fn update_config(
+        &mut self,
+        new_config: Box<dyn NodeConfig>,
+        ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Downcast to ShaderConfig
+        let shader_config = new_config
+            .as_any()
+            .downcast_ref::<ShaderConfig>()
+            .ok_or_else(|| Error::InvalidConfig {
+                node_path: format!("shader-{}", self.node_handle.as_i32()),
+                reason: "Config is not a ShaderConfig".to_string(),
+            })?;
+
+        let old_config = self.config.clone();
+        let new_config_clone = shader_config.clone();
+        self.config = Some(new_config_clone.clone());
+        self.render_order = shader_config.render_order;
+
+        // If texture_spec changed, re-resolve texture handle
+        let texture_changed = old_config
+            .as_ref()
+            .map(|old| old.texture_spec != shader_config.texture_spec)
+            .unwrap_or(true);
+
+        if texture_changed {
+            let texture_handle = ctx.resolve_texture(&shader_config.texture_spec).map_err(|e| {
+                self.compilation_error = Some(format!("Failed to resolve texture: {}", e));
+                e
+            })?;
+            self.texture_handle = Some(texture_handle);
+        }
+
+        // If glsl_path changed, reload and recompile
+        let glsl_path_changed = old_config
+            .as_ref()
+            .map(|old| old.glsl_path != shader_config.glsl_path)
+            .unwrap_or(true);
+
+        if glsl_path_changed {
+            // Reload and recompile shader (clone config to avoid borrow issues)
+            let config_for_reload = new_config_clone.clone();
+            self.reload_shader(&config_for_reload, ctx)?;
+        }
+
+        Ok(())
+    }
+
+    fn handle_fs_change(
+        &mut self,
+        change: &FsChange,
+        ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        let glsl_path = self.config.as_ref().map(|c| c.glsl_path.clone()).ok_or_else(|| Error::InvalidConfig {
+            node_path: format!("shader-{}", self.node_handle.as_i32()),
+            reason: "Config not set".to_string(),
+        })?;
+
+        // Check if this change affects the shader's GLSL file
+        if change.path == glsl_path {
+            match change.change_type {
+                lp_shared::fs::fs_event::ChangeType::Create
+                | lp_shared::fs::fs_event::ChangeType::Modify => {
+                    // Reload and recompile shader (clone config to avoid borrow issues)
+                    let config = self.config.clone().ok_or_else(|| Error::InvalidConfig {
+                        node_path: format!("shader-{}", self.node_handle.as_i32()),
+                        reason: "Config not set".to_string(),
+                    })?;
+                    self.reload_shader(&config, ctx)?;
+                }
+                lp_shared::fs::fs_event::ChangeType::Delete => {
+                    // Clear shader executable
+                    self.executable = None;
+                    self.glsl_source = None;
+                    self.compilation_error = Some("GLSL file deleted".to_string());
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl ShaderRuntime {
+    /// Reload and recompile shader from filesystem
+    fn reload_shader(
+        &mut self,
+        config: &ShaderConfig,
+        ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Load GLSL source from filesystem
+        let fs = ctx.get_node_fs();
+        let glsl_path = &config.glsl_path;
+        let source_bytes = fs.read_file(glsl_path).map_err(|e| Error::Io {
+            path: glsl_path.clone(),
+            details: format!("Failed to read GLSL file: {:?}", e),
+        })?;
+
+        let glsl_source =
+            alloc::string::String::from_utf8(source_bytes).map_err(|e| Error::Parse {
+                file: glsl_path.clone(),
+                error: format!("Invalid UTF-8 in GLSL file: {}", e),
+            })?;
+
+        // Store source for state extraction
+        self.glsl_source = Some(glsl_source.clone());
+
+        // Compile GLSL shader
+        let options = GlslOptions {
+            run_mode: RunMode::HostJit,
+            decimal_format: DecimalFormat::Fixed32,
+        };
+
+        match glsl_jit(&glsl_source, options) {
+            Ok(executable) => {
+                let executable_with_bounds: Box<dyn GlslExecutable + Send + Sync> =
+                    unsafe { core::mem::transmute(executable) };
+                self.executable = Some(executable_with_bounds);
+                self.compilation_error = None;
+                Ok(())
+            }
+            Err(e) => {
+                self.compilation_error = Some(format!("{}", e));
+                self.executable = None;
+                Err(Error::InvalidConfig {
+                    node_path: format!("shader-{}", self.node_handle.as_i32()),
+                    reason: format!("GLSL compilation failed: {}", e),
+                })
+            }
+        }
     }
 }
 

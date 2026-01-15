@@ -1,9 +1,10 @@
 use crate::error::Error;
 use crate::nodes::fixture::sampling_kernel::SamplingKernel;
-use crate::nodes::NodeRuntime;
+use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, OutputHandle, RenderContext, TextureHandle};
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 use lp_model::nodes::fixture::{ColorOrder, FixtureConfig};
+use lp_shared::fs::fs_event::FsChange;
 
 // Simplified mapping point (will be replaced with structured type later)
 #[derive(Debug, Clone)]
@@ -201,6 +202,75 @@ impl NodeRuntime for FixtureRuntime {
 
     fn as_any_mut(&mut self) -> &mut dyn core::any::Any {
         self
+    }
+
+    fn update_config(
+        &mut self,
+        new_config: Box<dyn NodeConfig>,
+        ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Downcast to FixtureConfig
+        let fixture_config = new_config
+            .as_any()
+            .downcast_ref::<FixtureConfig>()
+            .ok_or_else(|| Error::InvalidConfig {
+                node_path: String::from("fixture"),
+                reason: String::from("Config is not a FixtureConfig"),
+            })?;
+
+        let old_config = self.config.as_ref();
+        let texture_changed = old_config
+            .map(|old| old.texture_spec != fixture_config.texture_spec)
+            .unwrap_or(true);
+        let output_changed = old_config
+            .map(|old| old.output_spec != fixture_config.output_spec)
+            .unwrap_or(true);
+
+        self.config = Some(fixture_config.clone());
+        self.color_order = fixture_config.color_order;
+        self.transform = fixture_config.transform;
+
+        // Re-resolve handles if they changed
+        if texture_changed {
+            let texture_handle = ctx.resolve_texture(&fixture_config.texture_spec)?;
+            self.texture_handle = Some(texture_handle);
+        }
+
+        if output_changed {
+            let output_handle = ctx.resolve_output(&fixture_config.output_spec)?;
+            self.output_handle = Some(output_handle);
+        }
+
+        // Parse mapping (simplified for now)
+        if fixture_config.mapping == "linear" || fixture_config.mapping.is_empty() {
+            self.mapping = vec![MappingPoint {
+                channel: 0,
+                center: [0.0, 0.0],
+                radius: 0.1,
+            }];
+        } else {
+            self.mapping = Vec::new();
+        }
+
+        // Update sampling kernel
+        if let Some(first_mapping) = self.mapping.first() {
+            let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
+            self.kernel = SamplingKernel::new(normalized_radius);
+        } else {
+            self.kernel = SamplingKernel::new(0.1);
+        }
+
+        Ok(())
+    }
+
+    fn handle_fs_change(
+        &mut self,
+        _change: &FsChange,
+        _ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Fixtures don't currently support external mapping files
+        // This is a no-op for now
+        Ok(())
     }
 }
 

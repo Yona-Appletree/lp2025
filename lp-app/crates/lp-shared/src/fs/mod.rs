@@ -7,7 +7,7 @@ pub mod lp_fs_mem;
 pub mod lp_fs_std;
 
 pub use lp_fs::LpFs;
-pub use lp_fs_mem::LpFsMemory;
+pub use lp_fs_mem::{LpFsMemory, LpFsMemoryShared};
 
 #[cfg(feature = "std")]
 pub use lp_fs_std::LpFsStd;

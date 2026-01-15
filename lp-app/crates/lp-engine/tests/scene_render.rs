@@ -5,20 +5,14 @@ use lp_shared::fs::LpFsMemory;
 use std::sync::Arc;
 
 #[test]
-fn test_end_to_end_shader_time_based() {
+fn test_scene_render() {
     let mut fs = LpFsMemory::new();
     let mut builder = ProjectBuilder::new(&mut fs);
 
-    // Add texture
+    // Add nodes
     let texture_path = builder.texture_basic();
-
-    // Add shader
     builder.shader_basic(&texture_path);
-
-    // Add output
     let output_path = builder.output_basic();
-
-    // Add fixture
     builder.fixture_basic(&output_path, &texture_path);
 
     // Build project

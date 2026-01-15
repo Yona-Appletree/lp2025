@@ -1,10 +1,12 @@
 use crate::error::Error;
-use crate::nodes::NodeRuntime;
+use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::output::{OutputChannelHandle, OutputFormat};
 use crate::runtime::contexts::{NodeInitContext, RenderContext};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use lp_model::nodes::output::OutputConfig;
+use alloc::boxed::Box;
+use lp_shared::fs::fs_event::FsChange;
 
 /// Output node runtime
 pub struct OutputRuntime {
@@ -105,6 +107,62 @@ impl NodeRuntime for OutputRuntime {
 
     fn as_any_mut(&mut self) -> &mut dyn core::any::Any {
         self
+    }
+
+    fn update_config(
+        &mut self,
+        new_config: Box<dyn NodeConfig>,
+        ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Downcast to OutputConfig
+        let output_config = new_config
+            .as_any()
+            .downcast_ref::<OutputConfig>()
+            .ok_or_else(|| Error::InvalidConfig {
+                node_path: String::from("output"),
+                reason: "Config is not an OutputConfig".to_string(),
+            })?;
+
+        // Check if pin changed
+        let old_pin = self.pin;
+        match output_config {
+            OutputConfig::GpioStrip { pin } => {
+                if *pin != old_pin {
+                    // Pin changed - need to reinitialize
+                    // Close old channel if exists
+                    if self.channel_handle.is_some() {
+                        // Note: We don't have access to provider here to close
+                        // The old channel will be cleaned up when provider is destroyed
+                        self.channel_handle = None;
+                    }
+
+                    self.pin = *pin;
+                    self.config = Some(output_config.clone());
+
+                    // Reinitialize with new pin
+                    let byte_count = 3u32; // Default for now
+                    let format = OutputFormat::Ws2811;
+                    let handle = ctx.output_provider().open(self.pin, byte_count, format)?;
+                    self.channel_handle = Some(handle);
+                    self.channel_data.resize(byte_count as usize, 0);
+                } else {
+                    // Just update config
+                    self.config = Some(output_config.clone());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_fs_change(
+        &mut self,
+        _change: &FsChange,
+        _ctx: &dyn NodeInitContext,
+    ) -> Result<(), Error> {
+        // Outputs don't currently support loading from files
+        // This is a no-op for now
+        Ok(())
     }
 }
 

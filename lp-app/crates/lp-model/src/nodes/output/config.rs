@@ -15,6 +15,10 @@ impl NodeConfig for OutputConfig {
     fn kind(&self) -> NodeKind {
         NodeKind::Output
     }
+    
+    fn as_any(&self) -> &dyn core::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]

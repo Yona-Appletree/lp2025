@@ -1,18 +1,22 @@
 //! In-memory filesystem implementation for testing
 
 use crate::error::FsError;
-use crate::fs::LpFs;
+use crate::fs::{fs_event::ChangeType, fs_event::FsChange, LpFs};
 use alloc::{
     format,
+    rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
+use core::cell::RefCell;
 use hashbrown::HashMap;
 
 /// In-memory filesystem implementation for testing
 pub struct LpFsMemory {
     /// File storage: path -> contents
     files: HashMap<String, Vec<u8>>,
+    /// Tracked filesystem changes
+    changes: Vec<FsChange>,
 }
 
 impl LpFsMemory {
@@ -20,7 +24,23 @@ impl LpFsMemory {
     pub fn new() -> Self {
         Self {
             files: HashMap::new(),
+            changes: Vec::new(),
         }
+    }
+
+    /// Get all filesystem changes since last reset
+    pub fn get_changes(&self) -> &[FsChange] {
+        &self.changes
+    }
+
+    /// Reset the change tracking (clear all tracked changes)
+    pub fn reset_changes(&mut self) {
+        self.changes.clear();
+    }
+
+    /// Record a filesystem change
+    fn record_change(&mut self, path: String, change_type: ChangeType) {
+        self.changes.push(FsChange { path, change_type });
     }
 
     /// Normalize a path string
@@ -63,7 +83,17 @@ impl LpFsMemory {
     pub fn write_file_mut(&mut self, path: &str, data: &[u8]) -> Result<(), FsError> {
         self.validate_path(path)?;
         let normalized = Self::normalize_path(path);
-        self.files.insert(normalized, data.to_vec());
+        let existed = self.files.contains_key(&normalized);
+        self.files.insert(normalized.clone(), data.to_vec());
+        
+        // Record change
+        let change_type = if existed {
+            ChangeType::Modify
+        } else {
+            ChangeType::Create
+        };
+        self.record_change(normalized, change_type);
+        
         Ok(())
     }
 
@@ -74,6 +104,10 @@ impl LpFsMemory {
         if self.files.remove(&normalized).is_none() {
             return Err(FsError::NotFound(path.to_string()));
         }
+        
+        // Record change
+        self.record_change(normalized, ChangeType::Delete);
+        
         Ok(())
     }
 
@@ -492,5 +526,71 @@ mod tests {
         assert!(entries.contains(&"/src/file1.txt".to_string()));
         assert!(entries.contains(&"/src/file2.txt".to_string()));
         assert!(!entries.contains(&"/projects/test/src/file1.txt".to_string()));
+    }
+}
+
+/// Wrapper around LpFsMemory that allows shared mutable access
+///
+/// This is useful for tests where you need to modify the filesystem
+/// while it's also being used by the runtime. Uses Rc<RefCell<>> for
+/// single-threaded shared ownership.
+#[derive(Clone)]
+pub struct LpFsMemoryShared {
+    inner: Rc<RefCell<LpFsMemory>>,
+}
+
+impl LpFsMemoryShared {
+    /// Create a new shared filesystem wrapper
+    pub fn new(fs: LpFsMemory) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(fs)),
+        }
+    }
+
+    /// Get mutable access to the underlying filesystem
+    pub fn get_mut(&self) -> core::cell::RefMut<'_, LpFsMemory> {
+        self.inner.borrow_mut()
+    }
+
+    /// Get immutable access to the underlying filesystem
+    pub fn get(&self) -> core::cell::Ref<'_, LpFsMemory> {
+        self.inner.borrow()
+    }
+
+    /// Get all filesystem changes since last reset
+    pub fn get_changes(&self) -> Vec<FsChange> {
+        self.inner.borrow().get_changes().to_vec()
+    }
+
+    /// Reset the change tracking (clear all tracked changes)
+    pub fn reset_changes(&mut self) {
+        self.inner.borrow_mut().reset_changes();
+    }
+}
+
+impl LpFs for LpFsMemoryShared {
+    fn read_file(&self, path: &str) -> Result<Vec<u8>, FsError> {
+        self.inner.borrow().read_file(path)
+    }
+
+    fn write_file(&self, path: &str, data: &[u8]) -> Result<(), FsError> {
+        // For shared access, we need mutable borrow
+        // This will panic if already borrowed mutably elsewhere
+        // In practice, tests should be careful about borrow order
+        let mut fs = self.inner.borrow_mut();
+        fs.write_file_mut(path, data)
+    }
+
+    fn file_exists(&self, path: &str) -> Result<bool, FsError> {
+        self.inner.borrow().file_exists(path)
+    }
+
+    fn list_dir(&self, path: &str) -> Result<Vec<String>, FsError> {
+        self.inner.borrow().list_dir(path)
+    }
+
+    fn chroot(&self, subdir: &str) -> Result<alloc::boxed::Box<dyn LpFs>, FsError> {
+        // Chroot creates a new view, so we can borrow immutably
+        self.inner.borrow().chroot(subdir)
     }
 }

@@ -9,13 +9,13 @@ use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use lp_model::{
+    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
     project::api::{
         ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, NodeStatus as ApiNodeStatus,
         ProjectResponse,
     },
-    FrameId, LpPath, NodeConfig, NodeHandle, NodeKind,
 };
-use lp_shared::fs::LpFs;
+use lp_shared::fs::{LpFs, fs_event::FsChange};
 #[cfg(feature = "std")]
 use serde_json;
 
@@ -492,6 +492,243 @@ impl ProjectRuntime {
         }
 
         Ok(())
+    }
+
+    /// Handle filesystem changes
+    ///
+    /// Processes filesystem change events and updates affected nodes.
+    /// Should be called before tick() when filesystem changes occur.
+    pub fn handle_fs_changes(&mut self, changes: &[FsChange]) -> Result<(), Error> {
+        // Process deletions first
+        for change in changes {
+            if matches!(
+                change.change_type,
+                lp_shared::fs::fs_event::ChangeType::Delete
+            ) {
+                self.handle_delete_change(change)?;
+            }
+        }
+
+        // Process creates (new node directories)
+        for change in changes {
+            if matches!(
+                change.change_type,
+                lp_shared::fs::fs_event::ChangeType::Create
+            ) {
+                self.handle_create_change(change)?;
+            }
+        }
+
+        // Process modifies (existing files)
+        for change in changes {
+            if matches!(
+                change.change_type,
+                lp_shared::fs::fs_event::ChangeType::Modify
+            ) {
+                self.handle_modify_change(change)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle a delete change
+    fn handle_delete_change(&mut self, change: &FsChange) -> Result<(), Error> {
+        // Check if node.json was deleted
+        if change.path.ends_with("/node.json") {
+            // Extract node path from file path
+            if let Some(node_path) = self.extract_node_path_from_file_path(&change.path) {
+                if let Ok(handle) = self.handle_for_path(&node_path) {
+                    // Destroy runtime if it exists
+                    if let Some(entry) = self.nodes.get_mut(&handle) {
+                        if let Some(mut runtime) = entry.runtime.take() {
+                            runtime.destroy()?;
+                        }
+                    }
+                    // Remove node
+                    self.nodes.remove(&handle);
+                }
+            }
+        } else if self.is_node_directory_path(&change.path) {
+            // Node directory was deleted
+            if let Some(node_path) = self.extract_node_path_from_file_path(&change.path) {
+                if let Ok(handle) = self.handle_for_path(&node_path) {
+                    // Destroy runtime if it exists
+                    if let Some(entry) = self.nodes.get_mut(&handle) {
+                        if let Some(mut runtime) = entry.runtime.take() {
+                            runtime.destroy()?;
+                        }
+                    }
+                    // Remove node
+                    self.nodes.remove(&handle);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle a create change
+    fn handle_create_change(&mut self, change: &FsChange) -> Result<(), Error> {
+        // Check if this is a new node directory
+        if self.is_node_directory_path(&change.path) {
+            let node_path = LpPath::from(change.path.as_str());
+            // Check if node already exists
+            if self.handle_for_path(change.path.as_str()).is_err() {
+                // Load the new node
+                self.load_node_by_path(&node_path)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle a modify change
+    fn handle_modify_change(&mut self, change: &FsChange) -> Result<(), Error> {
+        // Find which node this file belongs to - collect handle and path first
+        let mut target_handle: Option<NodeHandle> = None;
+        let mut target_path: Option<LpPath> = None;
+
+        for (handle, entry) in &self.nodes {
+            if self.file_belongs_to_node(&change.path, &entry.path) {
+                target_handle = Some(*handle);
+                target_path = Some(entry.path.clone());
+                break;
+            }
+        }
+
+        if let (Some(handle), Some(path)) = (target_handle, target_path) {
+            // Check if it's node.json
+            if change.path.ends_with("/node.json") {
+                // Reload config
+                let (_, config_for_update) =
+                    crate::project::loader::load_node(self.fs.as_ref(), &path)?;
+                let (_, new_config) = crate::project::loader::load_node(self.fs.as_ref(), &path)?;
+
+                // Update node entry config
+                let has_runtime = {
+                    if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                        node_entry.config = new_config;
+                        node_entry.config_ver = self.frame_id;
+                        node_entry.runtime.is_some()
+                    } else {
+                        false
+                    }
+                };
+
+                // Call update_config on runtime if it exists
+                if has_runtime {
+                    // Extract runtime first to avoid borrow conflicts
+                    let mut runtime_opt = None;
+                    if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                        runtime_opt = node_entry.runtime.take();
+                    }
+
+                    if let Some(mut runtime) = runtime_opt {
+                        let ctx = InitContext::new(self, &path)?;
+                        runtime.update_config(config_for_update, &ctx)?;
+                        // Put runtime back
+                        if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                            node_entry.runtime = Some(runtime);
+                        }
+                    }
+                }
+            } else {
+                // Other file change - call handle_fs_change on the node runtime
+                // Convert full path to relative path (node directory is chrooted in InitContext)
+                let node_path_str = path.as_str();
+                let relative_path = if change.path.starts_with(node_path_str) {
+                    // Strip node path prefix and leading slash
+                    let suffix = &change.path[node_path_str.len()..];
+                    if suffix.starts_with('/') {
+                        &suffix[1..]
+                    } else {
+                        suffix
+                    }
+                } else {
+                    // Fallback: use full path if it doesn't match (shouldn't happen)
+                    &change.path
+                };
+
+                // Create FsChange with relative path
+                let relative_change = FsChange {
+                    path: relative_path.to_string(),
+                    change_type: change.change_type,
+                };
+
+                let mut runtime_opt = None;
+                if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                    runtime_opt = node_entry.runtime.take();
+                }
+
+                if let Some(mut runtime) = runtime_opt {
+                    let ctx = InitContext::new(self, &path)?;
+                    runtime.handle_fs_change(&relative_change, &ctx)?;
+                    // Drop context before mutating nodes
+                    drop(ctx);
+
+                    // Put runtime back
+                    if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                        node_entry.runtime = Some(runtime);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if a file path belongs to a node directory
+    fn file_belongs_to_node(&self, file_path: &str, node_path: &LpPath) -> bool {
+        let node_path_str = node_path.as_str();
+        file_path.starts_with(node_path_str) && file_path.len() > node_path_str.len()
+    }
+
+    /// Extract node path from a file path
+    ///
+    /// Given a file path like "/src/my-shader.shader/node.json" or "/src/my-shader.shader/main.glsl",
+    /// returns the node path "/src/my-shader.shader".
+    fn extract_node_path_from_file_path(&self, file_path: &str) -> Option<String> {
+        // Find the last slash before the filename
+        if let Some(last_slash) = file_path.rfind('/') {
+            if last_slash > 0 {
+                return Some(file_path[..last_slash].to_string());
+            }
+        }
+        None
+    }
+
+    /// Check if a path is a node directory (ends with .shader, .texture, etc.)
+    fn is_node_directory_path(&self, path: &str) -> bool {
+        path.ends_with(".shader")
+            || path.ends_with(".texture")
+            || path.ends_with(".output")
+            || path.ends_with(".fixture")
+    }
+
+    /// Load a single node by path
+    fn load_node_by_path(&mut self, path: &LpPath) -> Result<NodeHandle, Error> {
+        match crate::project::loader::load_node(self.fs.as_ref(), path) {
+            Ok((path, config)) => {
+                let handle = NodeHandle::new(self.next_handle);
+                self.next_handle += 1;
+
+                let kind = config.kind();
+                let entry = NodeEntry {
+                    path,
+                    kind,
+                    config,
+                    config_ver: self.frame_id,
+                    status: NodeStatus::Created,
+                    runtime: None,
+                    state_ver: FrameId::default(),
+                };
+
+                self.nodes.insert(handle, entry);
+                Ok(handle)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// Resolve a path to a node handle
