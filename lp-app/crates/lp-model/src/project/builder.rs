@@ -7,12 +7,17 @@ use crate::nodes::{
 };
 use crate::path::LpPath;
 use alloc::{format, string::String};
-use lp_shared::fs::LpFs;
+// TODO: ProjectBuilder needs lp-shared::fs::LpFs, but lp-model can't depend on lp-shared
+// This will be fixed in a follow-up - for now this module won't compile when used
+// use lp_shared::fs::LpFs;
 use serde_json;
 
 /// Builder for creating test projects
+// TODO: Temporarily disabled - needs lp-shared::fs::LpFs which creates circular dependency
+// This will be fixed in a follow-up
+#[cfg(feature = "lp-shared")]
 pub struct ProjectBuilder<'a> {
-    fs: &'a mut dyn LpFs,
+    // fs: &'a mut dyn LpFs,
     uid: String,
     name: String,
     texture_id: u32,

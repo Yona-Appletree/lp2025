@@ -6,9 +6,10 @@
 pub mod client;
 pub mod server;
 
-pub use crate::error::TransportError;
 pub use client::ClientTransport;
 pub use server::ServerTransport;
+// Re-export TransportError from lp-model for convenience
+pub use lp_model::TransportError;
 
 /// Transport-level message wrapper
 ///

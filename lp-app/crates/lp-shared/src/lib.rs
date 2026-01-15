@@ -15,5 +15,7 @@ pub mod util; // Temporarily enabled for Texture
 pub mod output;
 pub mod transport;
 
-pub use error::{FsError, OutputError, TextureError, TransportError};
+pub use error::{FsError, OutputError, TextureError};
+// Re-export TransportError from lp-model for convenience
+pub use lp_model::TransportError;
 pub use util::texture::Texture;
