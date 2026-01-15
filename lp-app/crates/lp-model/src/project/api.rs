@@ -1,10 +1,18 @@
 use crate::nodes::{NodeConfig, NodeHandle, NodeKind};
+use crate::nodes::{
+    fixture::FixtureConfig,
+    output::OutputConfig,
+    shader::ShaderConfig,
+    texture::TextureConfig,
+};
 use crate::path::LpPath;
 use crate::project::FrameId;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
 
 /// Node specifier for API requests
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -53,7 +61,7 @@ pub enum ProjectResponse {
 }
 
 /// Node change notification
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NodeChange {
     /// New node created
     Created {
@@ -81,7 +89,7 @@ pub enum NodeChange {
 }
 
 /// Node status
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NodeStatus {
     /// Created but not yet initialized
     Created,
@@ -118,12 +126,158 @@ pub struct NodeDetail {
 }
 
 /// Node state - external state (shared with clients)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NodeState {
     Texture(crate::nodes::texture::TextureState),
     Shader(crate::nodes::shader::ShaderState),
     Output(crate::nodes::output::OutputState),
     Fixture(crate::nodes::fixture::FixtureState),
+}
+
+/// Serializable wrapper for NodeDetail
+///
+/// This enum allows NodeDetail (which contains Box<dyn NodeConfig>) to be serialized
+/// by matching on NodeKind and serializing concrete config types.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SerializableNodeDetail {
+    /// Texture node detail
+    Texture {
+        path: LpPath,
+        config: TextureConfig,
+        state: NodeState,
+        status: NodeStatus,
+    },
+    /// Shader node detail
+    Shader {
+        path: LpPath,
+        config: ShaderConfig,
+        state: NodeState,
+        status: NodeStatus,
+    },
+    /// Output node detail
+    Output {
+        path: LpPath,
+        config: OutputConfig,
+        state: NodeState,
+        status: NodeStatus,
+    },
+    /// Fixture node detail
+    Fixture {
+        path: LpPath,
+        config: FixtureConfig,
+        state: NodeState,
+        status: NodeStatus,
+    },
+}
+
+/// Serializable wrapper for ProjectResponse
+///
+/// This enum allows ProjectResponse (which contains NodeDetail) to be serialized
+/// by using SerializableNodeDetail instead of NodeDetail.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SerializableProjectResponse {
+    /// Changes response
+    GetChanges {
+        /// Current frame ID
+        current_frame: FrameId,
+        /// All current node handles (for pruning removed nodes)
+        node_handles: Vec<NodeHandle>,
+        /// Changed nodes since since_frame
+        node_changes: Vec<NodeChange>,
+        /// Full detail for requested nodes (serializable)
+        node_details: BTreeMap<NodeHandle, SerializableNodeDetail>,
+    },
+}
+
+impl NodeDetail {
+    /// Convert NodeDetail to SerializableNodeDetail
+    ///
+    /// Downcasts the Box<dyn NodeConfig> to the concrete config type based on NodeKind.
+    pub fn to_serializable(&self) -> Result<SerializableNodeDetail, String> {
+        let kind = self.config.kind();
+        match kind {
+            NodeKind::Texture => {
+                let config = self
+                    .config
+                    .as_any()
+                    .downcast_ref::<TextureConfig>()
+                    .ok_or_else(|| format!("Failed to downcast to TextureConfig"))?;
+                Ok(SerializableNodeDetail::Texture {
+                    path: self.path.clone(),
+                    config: config.clone(),
+                    state: self.state.clone(),
+                    status: self.status.clone(),
+                })
+            }
+            NodeKind::Shader => {
+                let config = self
+                    .config
+                    .as_any()
+                    .downcast_ref::<ShaderConfig>()
+                    .ok_or_else(|| format!("Failed to downcast to ShaderConfig"))?;
+                Ok(SerializableNodeDetail::Shader {
+                    path: self.path.clone(),
+                    config: config.clone(),
+                    state: self.state.clone(),
+                    status: self.status.clone(),
+                })
+            }
+            NodeKind::Output => {
+                let config = self
+                    .config
+                    .as_any()
+                    .downcast_ref::<OutputConfig>()
+                    .ok_or_else(|| format!("Failed to downcast to OutputConfig"))?;
+                Ok(SerializableNodeDetail::Output {
+                    path: self.path.clone(),
+                    config: config.clone(),
+                    state: self.state.clone(),
+                    status: self.status.clone(),
+                })
+            }
+            NodeKind::Fixture => {
+                let config = self
+                    .config
+                    .as_any()
+                    .downcast_ref::<FixtureConfig>()
+                    .ok_or_else(|| format!("Failed to downcast to FixtureConfig"))?;
+                Ok(SerializableNodeDetail::Fixture {
+                    path: self.path.clone(),
+                    config: config.clone(),
+                    state: self.state.clone(),
+                    status: self.status.clone(),
+                })
+            }
+        }
+    }
+}
+
+impl ProjectResponse {
+    /// Convert ProjectResponse to SerializableProjectResponse
+    ///
+    /// Converts all NodeDetail entries to SerializableNodeDetail.
+    pub fn to_serializable(&self) -> Result<SerializableProjectResponse, String> {
+        match self {
+            ProjectResponse::GetChanges {
+                current_frame,
+                node_handles,
+                node_changes,
+                node_details,
+            } => {
+                let mut serializable_details = BTreeMap::new();
+                for (handle, detail) in node_details {
+                    let serializable_detail = detail.to_serializable()?;
+                    serializable_details.insert(*handle, serializable_detail);
+                }
+                Ok(SerializableProjectResponse::GetChanges {
+                    current_frame: *current_frame,
+                    node_handles: node_handles.clone(),
+                    node_changes: node_changes.clone(),
+                    node_details: serializable_details,
+                })
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +341,184 @@ mod tests {
                 assert_eq!(tex_state.texture_data.len(), 4);
             }
             _ => panic!("Expected Texture state"),
+        }
+    }
+
+    #[test]
+    fn test_node_detail_to_serializable_texture() {
+        use crate::nodes::texture::TextureConfig;
+        let detail = NodeDetail {
+            path: LpPath::from("/src/texture.texture"),
+            config: Box::new(TextureConfig {
+                width: 100,
+                height: 200,
+            }),
+            state: NodeState::Texture(crate::nodes::texture::TextureState {
+                texture_data: vec![0, 1, 2, 3],
+            }),
+            status: NodeStatus::Ok,
+        };
+        let serializable = detail.to_serializable().unwrap();
+        match serializable {
+            SerializableNodeDetail::Texture {
+                path,
+                config,
+                state,
+                status,
+            } => {
+                assert_eq!(path.as_str(), "/src/texture.texture");
+                assert_eq!(config.width, 100);
+                assert_eq!(config.height, 200);
+                assert!(matches!(state, NodeState::Texture(_)));
+                assert_eq!(status, NodeStatus::Ok);
+            }
+            _ => panic!("Expected Texture variant"),
+        }
+    }
+
+    #[test]
+    fn test_node_detail_to_serializable_shader() {
+        use crate::nodes::shader::ShaderConfig;
+        let detail = NodeDetail {
+            path: LpPath::from("/src/shader.shader"),
+            config: Box::new(ShaderConfig::default()),
+            state: NodeState::Shader(crate::nodes::shader::ShaderState {
+                glsl_code: String::new(),
+                error: None,
+            }),
+            status: NodeStatus::Ok,
+        };
+        let serializable = detail.to_serializable().unwrap();
+        match serializable {
+            SerializableNodeDetail::Shader {
+                path,
+                config: _,
+                state,
+                status,
+            } => {
+                assert_eq!(path.as_str(), "/src/shader.shader");
+                assert!(matches!(state, NodeState::Shader(_)));
+                assert_eq!(status, NodeStatus::Ok);
+            }
+            _ => panic!("Expected Shader variant"),
+        }
+    }
+
+    #[test]
+    fn test_project_response_to_serializable() {
+        use crate::nodes::texture::TextureConfig;
+        let mut node_details = BTreeMap::new();
+        node_details.insert(
+            NodeHandle::new(1),
+            NodeDetail {
+                path: LpPath::from("/src/texture.texture"),
+                config: Box::new(TextureConfig {
+                    width: 100,
+                    height: 200,
+                }),
+                state: NodeState::Texture(crate::nodes::texture::TextureState {
+                    texture_data: vec![0, 1, 2, 3],
+                }),
+                status: NodeStatus::Ok,
+            },
+        );
+
+        let response = ProjectResponse::GetChanges {
+            current_frame: FrameId::default(),
+            node_handles: vec![NodeHandle::new(1)],
+            node_changes: vec![],
+            node_details,
+        };
+
+        let serializable = response.to_serializable().unwrap();
+        match serializable {
+            SerializableProjectResponse::GetChanges {
+                current_frame,
+                node_handles,
+                node_changes,
+                node_details,
+            } => {
+                assert_eq!(current_frame, FrameId::default());
+                assert_eq!(node_handles.len(), 1);
+                assert_eq!(node_changes.len(), 0);
+                assert_eq!(node_details.len(), 1);
+                assert!(node_details.contains_key(&NodeHandle::new(1)));
+            }
+        }
+    }
+
+    #[test]
+    fn test_serializable_node_detail_serialization() {
+        use crate::nodes::texture::TextureConfig;
+        let detail = SerializableNodeDetail::Texture {
+            path: LpPath::from("/src/texture.texture"),
+            config: TextureConfig {
+                width: 100,
+                height: 200,
+            },
+            state: NodeState::Texture(crate::nodes::texture::TextureState {
+                texture_data: vec![0, 1, 2, 3],
+            }),
+            status: NodeStatus::Ok,
+        };
+        let json = serde_json::to_string(&detail).unwrap();
+        let deserialized: SerializableNodeDetail = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            SerializableNodeDetail::Texture {
+                path,
+                config,
+                state: _,
+                status,
+            } => {
+                assert_eq!(path.as_str(), "/src/texture.texture");
+                assert_eq!(config.width, 100);
+                assert_eq!(config.height, 200);
+                assert_eq!(status, NodeStatus::Ok);
+            }
+            _ => panic!("Expected Texture variant"),
+        }
+    }
+
+    #[test]
+    fn test_serializable_project_response_serialization() {
+        use crate::nodes::texture::TextureConfig;
+        let mut node_details = BTreeMap::new();
+        node_details.insert(
+            NodeHandle::new(1),
+            SerializableNodeDetail::Texture {
+                path: LpPath::from("/src/texture.texture"),
+                config: TextureConfig {
+                    width: 100,
+                    height: 200,
+                },
+                state: NodeState::Texture(crate::nodes::texture::TextureState {
+                    texture_data: vec![0, 1, 2, 3],
+                }),
+                status: NodeStatus::Ok,
+            },
+        );
+
+        let response = SerializableProjectResponse::GetChanges {
+            current_frame: FrameId::default(),
+            node_handles: vec![NodeHandle::new(1)],
+            node_changes: vec![],
+            node_details,
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        let deserialized: SerializableProjectResponse = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            SerializableProjectResponse::GetChanges {
+                current_frame,
+                node_handles,
+                node_changes,
+                node_details,
+            } => {
+                assert_eq!(current_frame, FrameId::default());
+                assert_eq!(node_handles.len(), 1);
+                assert_eq!(node_changes.len(), 0);
+                assert_eq!(node_details.len(), 1);
+            }
         }
     }
 }

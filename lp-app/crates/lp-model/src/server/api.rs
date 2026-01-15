@@ -1,4 +1,4 @@
-use crate::project::{ProjectHandle, ProjectRequest};
+use crate::project::{api::SerializableProjectResponse, ProjectHandle, ProjectRequest};
 use crate::server::fs_api::{FsRequest, FsResponse};
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -39,18 +39,11 @@ pub enum ServerResponse {
     UnloadProject,
     /// Response to ProjectRequest
     ///
-    /// TODO: ProjectResponse serialization is disabled because ProjectResponse contains
-    /// `NodeDetail` which includes `Box<dyn NodeConfig>` (a trait object) that cannot be
-    /// serialized directly with serde.
-    ///
-    /// Options for future implementation:
-    /// 1. Create a serializable wrapper type that converts trait objects to concrete types
-    /// 2. Implement custom Serialize/Deserialize for ProjectResponse
-    /// 3. Refactor NodeDetail to use an enum instead of trait objects
-    ///
-    /// See: `lp-model/src/project/api.rs` for ProjectResponse definition
-    /// See: `lp-model/src/project/api.rs::NodeDetail` for the problematic type
-    // ProjectRequest { response: ProjectResponse },
+    /// Uses SerializableProjectResponse which wraps NodeDetail in SerializableNodeDetail
+    /// to enable serialization of trait objects.
+    ProjectRequest {
+        response: SerializableProjectResponse,
+    },
     /// Response to ListAvailableProjects
     ListAvailableProjects { projects: Vec<AvailableProject> },
     /// Response to ListLoadedProjects

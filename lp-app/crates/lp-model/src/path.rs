@@ -1,10 +1,11 @@
 use alloc::string::{String, ToString};
+use serde::{Deserialize, Serialize};
 
 /// Light Player path - absolute paths from project root
 ///
 /// Currently supports absolute paths only. Designed to support relative paths
 /// later when nodes become nestable.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LpPath(pub String);
 
 impl LpPath {

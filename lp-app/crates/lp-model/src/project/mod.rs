@@ -6,7 +6,7 @@ pub mod handle;
 
 pub use api::{
     ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, NodeStatus, ProjectRequest,
-    ProjectResponse,
+    ProjectResponse, SerializableNodeDetail, SerializableProjectResponse,
 };
 pub use builder::ProjectBuilder;
 pub use config::ProjectConfig;
