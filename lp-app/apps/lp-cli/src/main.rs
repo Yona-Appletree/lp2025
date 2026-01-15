@@ -27,8 +27,8 @@ enum Cli {
     },
     /// Connect to server and sync local project
     Dev {
-        /// Host specifier (e.g., ws://localhost:2812/)
-        host: String,
+        /// Host specifier (e.g., ws://localhost:2812/). If not provided, uses in-memory server.
+        host: Option<String>,
         /// Project directory (defaults to current directory)
         dir: Option<std::path::PathBuf>,
         /// Push local project to server (default: true)
