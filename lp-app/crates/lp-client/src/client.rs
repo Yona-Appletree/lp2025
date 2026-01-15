@@ -10,8 +10,15 @@ use alloc::{
     vec::Vec,
 };
 use lp_model::{
+    project::{
+        api::{ApiNodeSpecifier, SerializableProjectResponse},
+        handle::ProjectHandle,
+        FrameId,
+    },
+    server::{
+        AvailableProject, FsRequest, FsResponse, LoadedProject, ServerResponse,
+    },
     ClientMessage, ClientRequest, Message, ServerMessage,
-    server::{FsRequest, FsResponse, ServerResponse},
 };
 
 /// Pending request waiting for a response
@@ -301,6 +308,127 @@ impl LpClient {
             }
             _ => Err(ClientError::Protocol {
                 message: "Unexpected response type for fs_list_dir".to_string(),
+            }),
+        }
+    }
+
+    /// Load a project on the server
+    ///
+    /// Returns the request message and request ID for tracking the response.
+    pub fn project_load(&mut self, path: String) -> (Message, u64) {
+        let request = ClientRequest::LoadProject { path };
+        self.create_request(request, "project_load")
+    }
+
+    /// Extract load project response from a server response
+    pub fn extract_load_project_response(
+        &mut self,
+        _request_id: u64,
+        response: ServerResponse,
+    ) -> Result<ProjectHandle, ClientError> {
+        match response {
+            ServerResponse::LoadProject { handle } => Ok(handle),
+            _ => Err(ClientError::Protocol {
+                message: "Unexpected response type for project_load".to_string(),
+            }),
+        }
+    }
+
+    /// Unload a project on the server
+    ///
+    /// Returns the request message and request ID for tracking the response.
+    pub fn project_unload(&mut self, handle: ProjectHandle) -> (Message, u64) {
+        let request = ClientRequest::UnloadProject { handle };
+        self.create_request(request, "project_unload")
+    }
+
+    /// Extract unload project response from a server response
+    pub fn extract_unload_project_response(
+        &mut self,
+        _request_id: u64,
+        response: ServerResponse,
+    ) -> Result<(), ClientError> {
+        match response {
+            ServerResponse::UnloadProject => Ok(()),
+            _ => Err(ClientError::Protocol {
+                message: "Unexpected response type for project_unload".to_string(),
+            }),
+        }
+    }
+
+    /// Send a GetChanges request to a project
+    ///
+    /// Returns the request message and request ID for tracking the response.
+    pub fn project_get_changes(
+        &mut self,
+        handle: ProjectHandle,
+        since_frame: FrameId,
+        detail_specifier: ApiNodeSpecifier,
+    ) -> (Message, u64) {
+        let request = ClientRequest::ProjectRequest {
+            handle,
+            request: lp_model::project::api::ProjectRequest::GetChanges {
+                since_frame,
+                detail_specifier,
+            },
+        };
+        self.create_request(request, "project_get_changes")
+    }
+
+    /// Extract get changes response from a server response
+    pub fn extract_get_changes_response(
+        &mut self,
+        _request_id: u64,
+        response: ServerResponse,
+    ) -> Result<SerializableProjectResponse, ClientError> {
+        match response {
+            ServerResponse::ProjectRequest { response } => Ok(response),
+            _ => Err(ClientError::Protocol {
+                message: "Unexpected response type for project_get_changes".to_string(),
+            }),
+        }
+    }
+
+    /// List available projects on the server filesystem
+    ///
+    /// Returns the request message and request ID for tracking the response.
+    pub fn project_list_available(&mut self) -> (Message, u64) {
+        let request = ClientRequest::ListAvailableProjects;
+        self.create_request(request, "project_list_available")
+    }
+
+    /// Extract list available projects response from a server response
+    pub fn extract_list_available_projects_response(
+        &mut self,
+        _request_id: u64,
+        response: ServerResponse,
+    ) -> Result<Vec<AvailableProject>, ClientError> {
+        match response {
+            ServerResponse::ListAvailableProjects { projects } => Ok(projects),
+            _ => Err(ClientError::Protocol {
+                message: "Unexpected response type for project_list_available".to_string(),
+            }),
+        }
+    }
+
+    /// List loaded projects on the server
+    ///
+    /// Returns the request message and request ID for tracking the response.
+    pub fn project_list_loaded(&mut self) -> (Message, u64) {
+        let request = ClientRequest::ListLoadedProjects;
+        self.create_request(request, "project_list_loaded")
+    }
+
+    /// Extract list loaded projects response from a server response
+    pub fn extract_list_loaded_projects_response(
+        &mut self,
+        _request_id: u64,
+        response: ServerResponse,
+    ) -> Result<Vec<LoadedProject>, ClientError> {
+        match response {
+            ServerResponse::ListLoadedProjects { projects } => Ok(projects),
+            _ => Err(ClientError::Protocol {
+                message: "Unexpected response type for project_list_loaded".to_string(),
             }),
         }
     }
