@@ -45,8 +45,6 @@ pub struct DebugUiState {
     frame_count: u64,
     /// FPS history (last 60 frames)
     fps_history: Vec<f32>,
-    /// Whether window should close
-    should_close: bool,
 }
 
 impl DebugUiState {
@@ -71,7 +69,6 @@ impl DebugUiState {
             last_frame_time: None,
             frame_count: 0,
             fps_history: Vec::new(),
-            should_close: false,
         }
     }
 
