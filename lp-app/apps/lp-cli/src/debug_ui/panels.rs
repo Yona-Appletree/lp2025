@@ -303,58 +303,59 @@ pub fn render_fixture_panel(
         if let Some(lp_model::project::api::NodeState::Texture(texture_state)) =
             &texture_entry.state
         {
+            // Display texture with mapping overlay
+            if !texture_state.texture_data.is_empty()
+                && texture_state.width > 0
+                && texture_state.height > 0
+            {
+                let color_image = texture_data_to_color_image(
+                    &texture_state.texture_data,
+                    texture_state.width,
+                    texture_state.height,
+                    &texture_state.format,
+                );
+
+                // Create texture handle
+                let texture_name = format!("fixture_texture_{:?}", entry.path);
+                let texture_handle: TextureHandle =
+                    ui.ctx()
+                        .load_texture(texture_name, color_image, Default::default());
+
+                // Scale to fit available width
+                let available_width = ui.available_width();
+                let scale = (available_width / texture_state.width as f32).min(8.0);
+                let display_width = texture_state.width as f32 * scale;
+                let display_height = texture_state.height as f32 * scale;
+
                 // Display texture with mapping overlay
-                if !texture_state.texture_data.is_empty()
-                    && texture_state.width > 0
-                    && texture_state.height > 0
-                {
-                    let color_image = texture_data_to_color_image(
-                        &texture_state.texture_data,
-                        texture_state.width,
-                        texture_state.height,
-                        &texture_state.format,
-                    );
+                let (rect, _response) = ui.allocate_exact_size(
+                    egui::Vec2::new(display_width, display_height),
+                    egui::Sense::hover(),
+                );
 
-                    // Create texture handle
-                    let texture_name = format!("fixture_texture_{:?}", entry.path);
-                    let texture_handle: TextureHandle =
-                        ui.ctx()
-                            .load_texture(texture_name, color_image, Default::default());
+                // Draw texture
+                ui.painter().image(
+                    texture_handle.id(),
+                    rect,
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
 
-                    // Scale to fit available width
-                    let available_width = ui.available_width();
-                    let scale = (available_width / texture_state.width as f32).min(8.0);
-                    let display_width = texture_state.width as f32 * scale;
-                    let display_height = texture_state.height as f32 * scale;
-
-                    // Display texture with mapping overlay
-                    let (rect, _response) = ui.allocate_exact_size(
-                        egui::Vec2::new(display_width, display_height),
-                        egui::Sense::hover(),
-                    );
-
-                    // Draw texture
-                    ui.painter().image(
-                        texture_handle.id(),
-                        rect,
-                        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                        Color32::WHITE,
-                    );
-
-                    // Draw mapping overlay
-                    draw_mapping_overlay(
-                        ui.painter(),
-                        rect,
-                        texture_state.width,
-                        texture_state.height,
-                        fixture_handle,
-                        &state.mapping_cells,
-                        true, // Show labels
-                    );
-                } else {
-                    ui.label("No texture data available for fixture");
-                }
+                // Draw mapping overlay
+                draw_mapping_overlay(
+                    ui.painter(),
+                    rect,
+                    texture_state.width,
+                    texture_state.height,
+                    fixture_handle,
+                    &state.mapping_cells,
+                    true, // Show labels
+                );
+            } else {
+                ui.label("No texture data available for fixture");
             }
+        } else {
+            ui.label("Texture node does not have state (not tracked for detail)");
         }
     } else {
         if state.texture_handle.is_none() {
