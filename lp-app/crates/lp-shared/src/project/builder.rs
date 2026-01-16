@@ -1,14 +1,14 @@
 //! Project builder for creating test projects with a fluent API
 
 use crate::fs::LpFs;
-use lp_model::nodes::fixture::ColorOrder;
-use lp_model::nodes::{
-    fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig, texture::TextureConfig,
-    NodeSpecifier,
-};
-use lp_model::path::LpPath;
 use alloc::{format, rc::Rc, string::String};
 use core::cell::RefCell;
+use lp_model::nodes::fixture::ColorOrder;
+use lp_model::nodes::{
+    NodeSpecifier, fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig,
+    texture::TextureConfig,
+};
+use lp_model::path::LpPath;
 use serde_json;
 
 /// Builder for creating test projects
@@ -91,11 +91,7 @@ impl ProjectBuilder {
     }
 
     /// Helper to write files
-    fn write_file_helper(
-        &self,
-        path: &str,
-        data: &[u8],
-    ) -> Result<(), crate::error::FsError> {
+    fn write_file_helper(&self, path: &str, data: &[u8]) -> Result<(), crate::error::FsError> {
         // LpFsMemory now uses interior mutability, so write_file() works with &self
         self.fs.borrow().write_file(path, data)
     }

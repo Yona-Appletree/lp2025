@@ -5,6 +5,11 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
+use lp_model::nodes::fixture::ColorOrder;
+use lp_model::nodes::{
+    fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig, texture::TextureConfig,
+    NodeSpecifier,
+};
 use lp_model::project::config::ProjectConfig;
 use lp_shared::fs::LpFs;
 
@@ -137,22 +142,29 @@ pub fn create_project_structure(dir: &Path, name: Option<&str>, uid: Option<&str
 /// The filesystem should already be chrooted to the project directory (paths like "/project.json" are relative to project root).
 pub fn create_default_template(fs: &dyn LpFs) -> Result<()> {
     // Create texture node
-    fs.write_file(
-        "/src/texture.texture/node.json",
-        br#"{"$type":"Memory","size":[64,64],"format":"RGB8"}"#,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
+    let texture_config = TextureConfig {
+        width: 64,
+        height: 64,
+    };
+    let texture_json = serde_json::to_string_pretty(&texture_config)
+        .context("Failed to serialize texture config")?;
+    fs.write_file("/src/main.texture/node.json", texture_json.as_bytes())
+        .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
 
     // Create shader node
-    fs.write_file(
-        "/src/shader.shader/node.json",
-        br#"{"$type":"Single","texture_id":"/src/texture.texture"}"#,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
+    let shader_config = ShaderConfig {
+        glsl_path: String::from("main.glsl"),
+        texture_spec: NodeSpecifier::from("/src/main.texture"),
+        render_order: 0,
+    };
+    let shader_json = serde_json::to_string_pretty(&shader_config)
+        .context("Failed to serialize shader config")?;
+    fs.write_file("/src/rainbow.shader/node.json", shader_json.as_bytes())
+        .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
 
     // Create shader GLSL
     fs.write_file(
-        "/src/shader.shader/main.glsl",
+        "/src/rainbow.shader/main.glsl",
         br#"// HSV to RGB conversion function
 vec3 hsv_to_rgb(float h, float s, float v) {
     // h in [0, 1], s in [0, 1], v in [0, 1]
@@ -216,18 +228,30 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {}", e))?;
 
     // Create output node
-    fs.write_file(
-        "/src/output.output/node.json",
-        br#"{"$type":"gpio_strip","chip":"ws2812","gpio_pin":4,"count":128}"#,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
+    let output_config = OutputConfig::GpioStrip { pin: 4 };
+    let output_json = serde_json::to_string_pretty(&output_config)
+        .context("Failed to serialize output config")?;
+    fs.write_file("/src/strip.output/node.json", output_json.as_bytes())
+        .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
 
     // Create fixture node
-    fs.write_file(
-        "/src/fixture.fixture/node.json",
-        br#"{"$type":"circle-list","output_id":"/src/output.output","texture_id":"/src/texture.texture","channel_order":"rgb","mapping":[{"channel":0,"center":[0.03125,0.0625],"radius":0.05},{"channel":1,"center":[0.09375,0.0625],"radius":0.05},{"channel":2,"center":[0.15625,0.0625],"radius":0.05},{"channel":3,"center":[0.21875,0.0625],"radius":0.05},{"channel":4,"center":[0.28125,0.0625],"radius":0.05},{"channel":5,"center":[0.34375,0.0625],"radius":0.05},{"channel":6,"center":[0.40625,0.0625],"radius":0.05},{"channel":7,"center":[0.46875,0.0625],"radius":0.05},{"channel":8,"center":[0.53125,0.0625],"radius":0.05},{"channel":9,"center":[0.59375,0.0625],"radius":0.05},{"channel":10,"center":[0.65625,0.0625],"radius":0.05},{"channel":11,"center":[0.71875,0.0625],"radius":0.05}]}"#,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
+    let fixture_config = FixtureConfig {
+        output_spec: NodeSpecifier::from("/src/strip.output"),
+        texture_spec: NodeSpecifier::from("/src/main.texture"),
+        mapping: String::from("linear"),
+        lamp_type: String::from("rgb"),
+        color_order: ColorOrder::Rgb,
+        transform: [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ],
+    };
+    let fixture_json = serde_json::to_string_pretty(&fixture_config)
+        .context("Failed to serialize fixture config")?;
+    fs.write_file("/src/fixture.fixture/node.json", fixture_json.as_bytes())
+        .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
 
     Ok(())
 }
@@ -326,11 +350,11 @@ mod tests {
         create_default_template_mut(&mut fs).unwrap();
 
         // Verify all nodes exist
-        assert!(fs.file_exists("/src/texture.texture/node.json").unwrap());
-        assert!(fs.file_exists("/src/shader.shader/node.json").unwrap());
-        assert!(fs.file_exists("/src/shader.shader/main.glsl").unwrap());
-        assert!(fs.file_exists("/src/output.output/node.json").unwrap());
-        assert!(fs.file_exists("/src/fixture.fixture/node.json").unwrap());
+        assert!(fs.file_exists("/src/main.texture/node.json").unwrap());
+        assert!(fs.file_exists("/src/rainbow.shader/node.json").unwrap());
+        assert!(fs.file_exists("/src/rainbow.shader/main.glsl").unwrap());
+        assert!(fs.file_exists("/src/strip.output/node.json").unwrap());
+        assert!(fs.file_exists("/src/strip.fixture/node.json").unwrap());
     }
 
     #[test]
@@ -340,19 +364,19 @@ mod tests {
         create_default_template_mut(&mut fs).unwrap();
 
         // Verify texture node content
-        let texture_json = fs.read_file("/src/texture.texture/node.json").unwrap();
-        let texture_str = std::str::from_utf8(&texture_json).unwrap();
-        assert!(texture_str.contains("\"$type\":\"Memory\""));
-        assert!(texture_str.contains("\"size\":[64,64]"));
+        let texture_json = fs.read_file("/src/main.texture/node.json").unwrap();
+        let texture_config: TextureConfig = serde_json::from_slice(&texture_json).unwrap();
+        assert_eq!(texture_config.width, 64);
+        assert_eq!(texture_config.height, 64);
 
         // Verify shader node content
-        let shader_json = fs.read_file("/src/shader.shader/node.json").unwrap();
-        let shader_str = std::str::from_utf8(&shader_json).unwrap();
-        assert!(shader_str.contains("\"$type\":\"Single\""));
-        assert!(shader_str.contains("\"texture_id\":\"/src/texture.texture\""));
+        let shader_json = fs.read_file("/src/rainbow.shader/node.json").unwrap();
+        let shader_config: ShaderConfig = serde_json::from_slice(&shader_json).unwrap();
+        assert_eq!(shader_config.glsl_path, "main.glsl");
+        assert_eq!(shader_config.texture_spec.as_str(), "/src/main.texture");
 
         // Verify GLSL exists
-        let glsl = fs.read_file("/src/shader.shader/main.glsl").unwrap();
+        let glsl = fs.read_file("/src/rainbow.shader/main.glsl").unwrap();
         let glsl_str = std::str::from_utf8(&glsl).unwrap();
         assert!(glsl_str.contains("hsv_to_rgb"));
         assert!(glsl_str.contains("vec4 main"));
@@ -361,22 +385,29 @@ mod tests {
     // Helper function for tests that use mutable filesystem
     fn create_default_template_mut(fs: &mut LpFsMemory) -> Result<()> {
         // Create texture node
-        fs.write_file_mut(
-            "/src/texture.texture/node.json",
-            br#"{"$type":"Memory","size":[64,64],"format":"RGB8"}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
+        let texture_config = TextureConfig {
+            width: 64,
+            height: 64,
+        };
+        let texture_json = serde_json::to_string_pretty(&texture_config)
+            .context("Failed to serialize texture config")?;
+        fs.write_file_mut("/src/main.texture/node.json", texture_json.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
 
         // Create shader node
-        fs.write_file_mut(
-            "/src/shader.shader/node.json",
-            br#"{"$type":"Single","texture_id":"/src/texture.texture"}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
+        let shader_config = ShaderConfig {
+            glsl_path: String::from("main.glsl"),
+            texture_spec: NodeSpecifier::from("/src/main.texture"),
+            render_order: 0,
+        };
+        let shader_json = serde_json::to_string_pretty(&shader_config)
+            .context("Failed to serialize shader config")?;
+        fs.write_file_mut("/src/rainbow.shader/node.json", shader_json.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
 
         // Create shader GLSL
         fs.write_file_mut(
-            "/src/shader.shader/main.glsl",
+            "/src/rainbow.shader/main.glsl",
             br#"// HSV to RGB conversion function
 vec3 hsv_to_rgb(float h, float s, float v) {
     // h in [0, 1], s in [0, 1], v in [0, 1]
@@ -440,18 +471,30 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {}", e))?;
 
         // Create output node
-        fs.write_file_mut(
-            "/src/output.output/node.json",
-            br#"{"$type":"gpio_strip","chip":"ws2812","gpio_pin":4,"count":128}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
+        let output_config = OutputConfig::GpioStrip { pin: 4 };
+        let output_json = serde_json::to_string_pretty(&output_config)
+            .context("Failed to serialize output config")?;
+        fs.write_file_mut("/src/strip.output/node.json", output_json.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
 
         // Create fixture node
-        fs.write_file_mut(
-            "/src/fixture.fixture/node.json",
-            br#"{"$type":"circle-list","output_id":"/src/output.output","texture_id":"/src/texture.texture","channel_order":"rgb","mapping":[{"channel":0,"center":[0.03125,0.0625],"radius":0.05},{"channel":1,"center":[0.09375,0.0625],"radius":0.05},{"channel":2,"center":[0.15625,0.0625],"radius":0.05},{"channel":3,"center":[0.21875,0.0625],"radius":0.05},{"channel":4,"center":[0.28125,0.0625],"radius":0.05},{"channel":5,"center":[0.34375,0.0625],"radius":0.05},{"channel":6,"center":[0.40625,0.0625],"radius":0.05},{"channel":7,"center":[0.46875,0.0625],"radius":0.05},{"channel":8,"center":[0.53125,0.0625],"radius":0.05},{"channel":9,"center":[0.59375,0.0625],"radius":0.05},{"channel":10,"center":[0.65625,0.0625],"radius":0.05},{"channel":11,"center":[0.71875,0.0625],"radius":0.05}]}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
+        let fixture_config = FixtureConfig {
+            output_spec: NodeSpecifier::from("/src/strip.output"),
+            texture_spec: NodeSpecifier::from("/src/main.texture"),
+            mapping: String::from("linear"),
+            lamp_type: String::from("rgb"),
+            color_order: ColorOrder::Rgb,
+            transform: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        };
+        let fixture_json = serde_json::to_string_pretty(&fixture_config)
+            .context("Failed to serialize fixture config")?;
+        fs.write_file_mut("/src/strip.fixture/node.json", fixture_json.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
 
         Ok(())
     }

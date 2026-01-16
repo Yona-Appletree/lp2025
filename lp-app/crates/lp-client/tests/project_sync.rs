@@ -12,12 +12,12 @@ use alloc::{boxed::Box, rc::Rc, string::String};
 use core::cell::RefCell;
 use lp_client::{ClientError, LocalTransport, LpClient};
 use lp_model::{
+    Message,
     project::{
+        FrameId,
         api::{ApiNodeSpecifier, SerializableProjectResponse},
         handle::ProjectHandle,
-        FrameId,
     },
-    Message,
 };
 use lp_server::LpServer;
 use lp_shared::fs::{LpFs, LpFsMemory};
@@ -394,7 +394,10 @@ fn create_test_project_on_client(fs: &mut LpFsMemory) -> String {
     builder.fixture_basic(&output_path, &texture_path);
     builder.build();
     // Extract back (we know there's only one reference since we just created it)
-    *fs = Rc::try_unwrap(fs_rc).ok().map(|rc| rc.into_inner()).unwrap_or_else(|| LpFsMemory::new());
+    *fs = Rc::try_unwrap(fs_rc)
+        .ok()
+        .map(|rc| rc.into_inner())
+        .unwrap_or_else(|| LpFsMemory::new());
     String::from("test")
 }
 
@@ -422,12 +425,11 @@ fn sync_project_to_server(
     for entry in entries {
         if entry.ends_with(".json") || entry.ends_with(".glsl") {
             // Read file from client filesystem directly
-            let content =
-                client_fs
-                    .read_file(&entry)
-                    .map_err(|e| ClientError::Other {
-                        message: format!("Failed to read client file {}: {}", entry, e),
-                    })?;
+            let content = client_fs
+                .read_file(&entry)
+                .map_err(|e| ClientError::Other {
+                    message: format!("Failed to read client file {}: {}", entry, e),
+                })?;
 
             // Write file to server (add projects/{name}/ prefix)
             let server_path = if entry.starts_with('/') {
