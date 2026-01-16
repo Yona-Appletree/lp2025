@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_close_stops_server() {
-        let transport = LocalServerTransport::new().unwrap();
+        let mut transport = LocalServerTransport::new().unwrap();
         // Close should wait for server thread
         transport.close().unwrap();
         // If we get here, close succeeded
