@@ -1,12 +1,15 @@
 //! Main UI state and egui App implementation
 
-use crate::commands::dev::async_client::AsyncLpClient;
+use crate::commands::dev::async_client::{
+    AsyncLpClient, serializable_response_to_project_response,
+};
 use crate::debug_ui::panels;
 use eframe::egui;
 use lp_engine_client::project::ClientProjectView;
 use lp_model::{NodeHandle, project::handle::ProjectHandle};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
+use tokio::sync::oneshot;
 
 /// Debug UI application state
 pub struct DebugUiState {
@@ -14,20 +17,27 @@ pub struct DebugUiState {
     project_view: Arc<Mutex<ClientProjectView>>,
     /// Project handle
     project_handle: ProjectHandle,
-    /// Async client for syncing
-    /// Note: Sync will be handled via a channel-based approach
-    /// For now, we store it but don't use it directly
-    _async_client: AsyncLpClient,
+    /// Async client for syncing (shared via Arc<Mutex<>>)
+    async_client: Arc<tokio::sync::Mutex<AsyncLpClient>>,
     /// Nodes we're tracking detail for
     tracked_nodes: BTreeSet<NodeHandle>,
     /// "All detail" checkbox state
     all_detail: bool,
     /// Whether a sync is currently in progress
     sync_in_progress: bool,
+    /// Pending sync result receiver (if sync is in progress)
+    /// Contains SerializableProjectResponse which can be sent across threads
+    pending_sync: Option<
+        oneshot::Receiver<
+            Result<lp_model::project::api::SerializableProjectResponse, anyhow::Error>,
+        >,
+    >,
     /// GLSL code cache (keyed by node handle)
     glsl_cache: BTreeMap<NodeHandle, String>,
     /// Currently selected node handle (for detail display)
     selected_node: Option<NodeHandle>,
+    /// Tokio runtime handle for spawning async tasks
+    runtime_handle: tokio::runtime::Handle,
 }
 
 impl DebugUiState {
@@ -36,7 +46,7 @@ impl DebugUiState {
         project_view: Arc<Mutex<ClientProjectView>>,
         project_handle: ProjectHandle,
         async_client: AsyncLpClient,
-        _runtime_handle: tokio::runtime::Handle,
+        runtime_handle: tokio::runtime::Handle,
     ) -> Self {
         // TODO: Set up sync mechanism
         // The challenge is that ClientProjectView is not Send, so we can't easily
@@ -49,30 +59,105 @@ impl DebugUiState {
         Self {
             project_view,
             project_handle,
-            _async_client: async_client,
+            async_client: Arc::new(tokio::sync::Mutex::new(async_client)),
             tracked_nodes: BTreeSet::new(),
             all_detail: false,
             sync_in_progress: false,
+            pending_sync: None,
             glsl_cache: BTreeMap::new(),
             selected_node: None,
+            runtime_handle,
         }
     }
 
     /// Handle sync logic
     ///
     /// Checks if sync is in progress, starts new sync if not, and handles completion.
-    /// TODO: Implement proper async sync handling
+    /// Uses a channel-based approach to avoid holding locks across await points.
     fn handle_sync(&mut self) {
-        // Update view's detail_tracking to match tracked_nodes
-        {
-            let mut view = self.project_view.lock().unwrap();
-            view.detail_tracking.clear();
-            view.detail_tracking
-                .extend(self.tracked_nodes.iter().copied());
+        // Check if previous sync completed
+        if let Some(mut receiver) = self.pending_sync.take() {
+            match receiver.try_recv() {
+                Ok(Ok(serializable_response)) => {
+                    // Sync completed successfully - convert and apply changes in UI thread
+                    match serializable_response_to_project_response(serializable_response) {
+                        Ok(project_response) => {
+                            let mut view = self.project_view.lock().unwrap();
+                            match view.apply_changes(&project_response) {
+                                Ok(()) => {
+                                    self.sync_in_progress = false;
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to apply changes: {}", e);
+                                    self.sync_in_progress = false;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to convert response: {}", e);
+                            self.sync_in_progress = false;
+                        }
+                    }
+                }
+                Ok(Err(e)) => {
+                    // Sync failed
+                    eprintln!("Sync error: {}", e);
+                    self.sync_in_progress = false;
+                }
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
+                    // Still in progress, put receiver back
+                    self.pending_sync = Some(receiver);
+                }
+                Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
+                    // Channel closed (shouldn't happen)
+                    self.sync_in_progress = false;
+                }
+            }
         }
 
-        // TODO: Implement actual sync
-        // For now, this is a placeholder
+        // Start new sync if not in progress
+        if !self.sync_in_progress {
+            // Update view's detail_tracking to match tracked_nodes and get sync parameters
+            let (since_frame, detail_specifier) = {
+                let mut view = self.project_view.lock().unwrap();
+                view.detail_tracking.clear();
+                view.detail_tracking
+                    .extend(self.tracked_nodes.iter().copied());
+                let since_frame = view.frame_id;
+                let detail_specifier = view.detail_specifier();
+                (since_frame, detail_specifier)
+            };
+
+            // Spawn async task to do sync (without holding view lock)
+            let client = Arc::clone(&self.async_client);
+            let handle = self.project_handle;
+            let runtime_handle = self.runtime_handle.clone();
+
+            let (tx, rx) = oneshot::channel();
+            self.pending_sync = Some(rx);
+            self.sync_in_progress = true;
+
+            runtime_handle.spawn(async move {
+                // Do async sync call (no view lock held)
+                let result = {
+                    let mut client_guard = client.lock().await;
+                    client_guard
+                        .project_sync_internal(handle, since_frame, detail_specifier)
+                        .await
+                };
+
+                // Send result back to UI thread (SerializableProjectResponse is Send)
+                match result {
+                    Ok(serializable_response) => {
+                        // Send the serializable response back - UI thread will convert and apply it
+                        let _ = tx.send(Ok(serializable_response));
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e));
+                    }
+                }
+            });
+        }
     }
 }
 

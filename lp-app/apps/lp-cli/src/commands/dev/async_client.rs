@@ -221,29 +221,31 @@ impl AsyncLpClient {
             .map_err(|e| anyhow::anyhow!("Server error loading project {}: {}", path, e))
     }
 
-    /// Sync project view with server
+    /// Sync project view with server (internal, returns serializable response)
     ///
-    /// Sends GetChanges request and updates the ClientProjectView.
+    /// Sends GetChanges request and returns SerializableProjectResponse.
     /// Returns when sync completes or timeout occurs.
+    ///
+    /// Note: This method does NOT hold a lock on `view` across await points.
+    /// Caller should lock view, read needed data, unlock, call this method,
+    /// then lock again to apply changes.
     ///
     /// # Arguments
     ///
     /// * `handle` - Project handle
-    /// * `view` - Client project view to update
+    /// * `since_frame` - Frame ID to sync from
+    /// * `detail_specifier` - Specifier for which nodes to get detail for
     ///
     /// # Returns
     ///
-    /// * `Ok(())` - If sync succeeded
+    /// * `Ok(SerializableProjectResponse)` - The serializable project response if sync succeeded
     /// * `Err` - If sync failed or timeout occurred
-    pub async fn project_sync(
+    pub async fn project_sync_internal(
         &mut self,
         handle: ProjectHandle,
-        view: &mut ClientProjectView,
-    ) -> Result<()> {
-        // Get since_frame and detail_specifier from view
-        let since_frame = view.frame_id;
-        let detail_specifier = view.detail_specifier();
-
+        since_frame: lp_model::FrameId,
+        detail_specifier: lp_model::project::api::ApiNodeSpecifier,
+    ) -> Result<lp_model::project::api::SerializableProjectResponse> {
         // Create get changes request
         let (get_changes_msg, get_changes_id) =
             self.client
@@ -269,21 +271,13 @@ impl AsyncLpClient {
             .await
             .with_context(|| "Failed to get project changes")?;
 
-        // Extract response
+        // Extract response (already SerializableProjectResponse)
         let serializable_response = self
             .client
             .extract_get_changes_response(get_changes_id, response)
             .map_err(|e| anyhow::anyhow!("Server error getting changes: {}", e))?;
 
-        // Convert SerializableProjectResponse to ProjectResponse
-        let project_response = serializable_response_to_project_response(serializable_response)
-            .map_err(|e| anyhow::anyhow!("Failed to convert response: {}", e))?;
-
-        // Apply changes to view
-        view.apply_changes(&project_response)
-            .map_err(|e| anyhow::anyhow!("Failed to apply changes to view: {}", e))?;
-
-        Ok(())
+        Ok(serializable_response)
     }
 }
 
@@ -291,7 +285,7 @@ impl AsyncLpClient {
 ///
 /// This conversion is needed because ClientProjectView::apply_changes expects ProjectResponse,
 /// but the client receives SerializableProjectResponse over the wire.
-fn serializable_response_to_project_response(
+pub(crate) fn serializable_response_to_project_response(
     serializable: lp_model::project::api::SerializableProjectResponse,
 ) -> Result<ProjectResponse, String> {
     match serializable {
