@@ -259,10 +259,5 @@ impl eframe::App for DebugUiState {
                         panels::render_all_nodes_panel(ui, &view);
                     });
             });
-
-        // Central panel (can be used for other info or left empty)
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Select nodes in the left panel to view their details in the right panel");
-        });
     }
 }

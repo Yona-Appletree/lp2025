@@ -260,9 +260,12 @@ pub fn render_texture_panel(ui: &mut egui::Ui, entry: &ClientNodeEntry, state: &
             ui.ctx()
                 .load_texture(texture_name, color_image, Default::default());
 
-        // Scale to fit available width, max 8x native size
+        // Scale to fit available width, max 8x native size, but limit height
         let available_width = ui.available_width();
-        let scale = (available_width / state.width as f32).min(8.0);
+        let max_height = 400.0; // Limit texture height to prevent huge images
+        let scale = (available_width / state.width as f32)
+            .min(max_height / state.height as f32)
+            .min(8.0);
         let display_width = state.width as f32 * scale;
         let display_height = state.height as f32 * scale;
 
@@ -292,18 +295,16 @@ pub fn render_shader_panel(ui: &mut egui::Ui, entry: &ClientNodeEntry, state: &S
     ui.separator();
 
     // Display GLSL code
+    // Don't use nested ScrollArea - we're already in a scroll area
     ui.label("GLSL Code:");
-    egui::ScrollArea::vertical()
-        .max_height(400.0)
-        .show(ui, |ui| {
-            // Create a mutable copy for display (read-only)
-            let mut glsl_display = state.glsl_code.clone();
-            ui.add(
-                egui::TextEdit::multiline(&mut glsl_display)
-                    .font(egui::TextStyle::Monospace)
-                    .desired_width(f32::INFINITY),
-            );
-        });
+    // Create a mutable copy for display (read-only)
+    let mut glsl_display = state.glsl_code.clone();
+    ui.add(
+        egui::TextEdit::multiline(&mut glsl_display)
+            .font(egui::TextStyle::Monospace)
+            .desired_width(f32::INFINITY)
+            .desired_rows(20), // Limit height instead of using ScrollArea
+    );
 }
 
 /// Render fixture panel
@@ -355,9 +356,12 @@ pub fn render_fixture_panel(
                     ui.ctx()
                         .load_texture(texture_name, color_image, Default::default());
 
-                // Scale to fit available width
+                // Scale to fit available width, but limit height
                 let available_width = ui.available_width();
-                let scale = (available_width / texture_state.width as f32).min(8.0);
+                let max_height = 400.0; // Limit texture height
+                let scale = (available_width / texture_state.width as f32)
+                    .min(max_height / texture_state.height as f32)
+                    .min(8.0);
                 let display_width = texture_state.width as f32 * scale;
                 let display_height = texture_state.height as f32 * scale;
 
