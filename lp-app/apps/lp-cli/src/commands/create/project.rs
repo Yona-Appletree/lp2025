@@ -7,8 +7,8 @@ use std::path::Path;
 
 use lp_model::nodes::fixture::ColorOrder;
 use lp_model::nodes::{
-    fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig, texture::TextureConfig,
-    NodeSpecifier,
+    NodeSpecifier, fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig,
+    texture::TextureConfig,
 };
 use lp_model::project::config::ProjectConfig;
 use lp_shared::fs::LpFs;

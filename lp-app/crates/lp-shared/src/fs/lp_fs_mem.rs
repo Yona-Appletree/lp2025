@@ -40,7 +40,9 @@ impl LpFsMemory {
 
     /// Record a filesystem change
     fn record_change(&self, path: String, change_type: ChangeType) {
-        self.changes.borrow_mut().push(FsChange { path, change_type });
+        self.changes
+            .borrow_mut()
+            .push(FsChange { path, change_type });
     }
 
     /// Normalize a path string
@@ -251,12 +253,12 @@ impl LpFs for LpFsMemory {
         self.validate_path(path)?;
         let normalized = Self::normalize_path(path);
         let files = self.files.borrow();
-        
+
         // Check if it exists as a file
         if files.contains_key(&normalized) {
             return Ok(false);
         }
-        
+
         // Check if any file path starts with normalized + "/" (indicating it's a directory)
         let dir_prefix = format!("{}/", normalized);
         for file_path in files.keys() {
@@ -264,7 +266,7 @@ impl LpFs for LpFsMemory {
                 return Ok(true);
             }
         }
-        
+
         // Path doesn't exist
         Err(FsError::NotFound(path.to_string()))
     }
@@ -401,7 +403,10 @@ impl LpFs for LpFsMemory {
         Ok(())
     }
 
-    fn chroot(&self, subdir: &str) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
+    fn chroot(
+        &self,
+        subdir: &str,
+    ) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
         // Normalize the subdirectory path
         let normalized_subdir = Self::normalize_path(subdir);
 
@@ -450,7 +455,9 @@ impl LpFs for LpFsMemory {
             fn write_file(&self, path: &str, data: &[u8]) -> Result<(), FsError> {
                 let normalized = LpFsMemory::normalize_path(path);
                 self.validate_path(&normalized)?;
-                self.files.borrow_mut().insert(normalized.clone(), data.to_vec());
+                self.files
+                    .borrow_mut()
+                    .insert(normalized.clone(), data.to_vec());
                 self.changes.borrow_mut().push(FsChange {
                     path: normalized,
                     change_type: ChangeType::Modify,
@@ -469,13 +476,13 @@ impl LpFs for LpFsMemory {
                 // Normalize path first (handles relative paths by prepending /)
                 let normalized = LpFsMemory::normalize_path(path);
                 self.validate_path(&normalized)?;
-                
+
                 let files = self.files.borrow();
                 // Check if it exists as a file
                 if files.contains_key(&normalized) {
                     return Ok(false);
                 }
-                
+
                 // Check if any file path starts with normalized + "/" (indicating it's a directory)
                 let dir_prefix = format!("{}/", normalized);
                 for file_path in files.keys() {
@@ -483,7 +490,7 @@ impl LpFs for LpFsMemory {
                         return Ok(true);
                     }
                 }
-                
+
                 // Path doesn't exist
                 Err(FsError::NotFound(path.to_string()))
             }
@@ -535,15 +542,17 @@ impl LpFs for LpFsMemory {
             fn delete_file(&self, path: &str) -> Result<(), FsError> {
                 let normalized = LpFsMemory::normalize_path(path);
                 self.validate_path(&normalized)?;
-                
+
                 if normalized == "/" {
-                    return Err(FsError::InvalidPath("Cannot delete root directory".to_string()));
+                    return Err(FsError::InvalidPath(
+                        "Cannot delete root directory".to_string(),
+                    ));
                 }
-                
+
                 if !self.files.borrow().contains_key(&normalized) {
                     return Err(FsError::NotFound(path.to_string()));
                 }
-                
+
                 self.files.borrow_mut().remove(&normalized);
                 self.changes.borrow_mut().push(FsChange {
                     path: normalized,
@@ -555,17 +564,19 @@ impl LpFs for LpFsMemory {
             fn delete_dir(&self, path: &str) -> Result<(), FsError> {
                 let normalized = LpFsMemory::normalize_path(path);
                 self.validate_path(&normalized)?;
-                
+
                 if normalized == "/" {
-                    return Err(FsError::InvalidPath("Cannot delete root directory".to_string()));
+                    return Err(FsError::InvalidPath(
+                        "Cannot delete root directory".to_string(),
+                    ));
                 }
-                
+
                 let prefix = if normalized.ends_with('/') {
                     normalized.clone()
                 } else {
                     format!("{}/", normalized)
                 };
-                
+
                 let mut files_to_remove = Vec::new();
                 {
                     let files = self.files.borrow();
@@ -575,11 +586,11 @@ impl LpFs for LpFsMemory {
                         }
                     }
                 }
-                
+
                 if files_to_remove.is_empty() {
                     return Err(FsError::NotFound(path.to_string()));
                 }
-                
+
                 let mut files = self.files.borrow_mut();
                 let mut changes = self.changes.borrow_mut();
                 for file_path in files_to_remove {
@@ -589,11 +600,14 @@ impl LpFs for LpFsMemory {
                         change_type: ChangeType::Delete,
                     });
                 }
-                
+
                 Ok(())
             }
 
-            fn chroot(&self, subdir: &str) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
+            fn chroot(
+                &self,
+                subdir: &str,
+            ) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
                 // Recursive chroot - normalize path
                 let normalized_subdir = LpFsMemory::normalize_path(subdir);
 
@@ -761,7 +775,12 @@ mod tests {
         let chrooted = fs.chroot("/projects/test").unwrap();
         assert!(chrooted.borrow().file_exists("/project.json").unwrap());
         assert!(chrooted.borrow().file_exists("/src/file.txt").unwrap());
-        assert!(!chrooted.borrow().file_exists("/projects/other/file.txt").unwrap());
+        assert!(
+            !chrooted
+                .borrow()
+                .file_exists("/projects/other/file.txt")
+                .unwrap()
+        );
     }
 
     #[test]
@@ -906,4 +925,3 @@ mod tests {
         assert!(!entries.contains(&"/projects/test/src/file1.txt".to_string()));
     }
 }
-

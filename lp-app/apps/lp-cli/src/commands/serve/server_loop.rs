@@ -3,7 +3,7 @@
 //! Handles the main server loop that processes messages and routes responses.
 
 use anyhow::Result;
-use lp_model::Message;
+use lp_model::{Message, TransportError};
 use lp_server::LpServer;
 use lp_shared::transport::ServerTransport;
 
@@ -34,7 +34,11 @@ pub fn run_server_loop<T: ServerTransport>(mut server: LpServer, mut transport: 
                     break;
                 }
                 Err(e) => {
-                    // Transport error - log and continue
+                    // Connection lost is expected when client disconnects - exit gracefully
+                    if matches!(e, TransportError::ConnectionLost) {
+                        return Ok(());
+                    }
+                    // Other transport errors - log and continue
                     eprintln!("Transport error: {}", e);
                     break;
                 }

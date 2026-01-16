@@ -6,13 +6,16 @@ use anyhow::Result;
 
 use super::args::DevArgs;
 use super::async_client::AsyncLpClient;
-use super::push::{load_project, push_project, validate_local_project, push_project_async, load_project_async};
+use super::push::{
+    load_project, load_project_async, push_project, push_project_async, validate_local_project,
+};
 use crate::messages;
 use crate::server::{create_server, run_server_loop_async};
 use crate::transport::HostSpecifier;
 use crate::transport::WebSocketClientTransport;
 use crate::transport::local::create_local_transport_pair;
 use lp_client::LpClient;
+use lp_model::TransportError;
 use lp_shared::fs::LpFsStd;
 use lp_shared::transport::ClientTransport;
 use std::time::Duration;
@@ -34,9 +37,7 @@ pub fn handle_dev(args: DevArgs) -> Result<()> {
             let host_spec = HostSpecifier::parse(host_str)
                 .map_err(|e| anyhow::anyhow!("Invalid host specifier '{}': {}", host_str, e))?;
             match host_spec {
-                HostSpecifier::Local => {
-                    handle_dev_local(args, project_uid, project_name, true)
-                }
+                HostSpecifier::Local => handle_dev_local(args, project_uid, project_name, true),
                 HostSpecifier::WebSocket { url } => {
                     handle_dev_websocket(args, project_uid, project_name, &url, true)
                 }
@@ -72,8 +73,8 @@ fn handle_dev_local(
         let runtime = Runtime::new().expect("Failed to create tokio runtime for server");
         runtime.block_on(async {
             // Create in-memory server (inside thread since LpServer is not Send)
-            let (server, _base_fs) = create_server(None, true, None)
-                .expect("Failed to create server");
+            let (server, _base_fs) =
+                create_server(None, true, None).expect("Failed to create server");
 
             // Create LocalSet for spawn_local (needed because LpServer is not Send)
             let local_set = tokio::task::LocalSet::new();
@@ -104,9 +105,7 @@ fn handle_dev_local(
             // Push project files using async client
             push_project_async(&mut async_client, &local_fs, &project_uid)
                 .await
-                .map_err(|e| {
-                    anyhow::anyhow!("Failed to push project '{}': {}", project_name, e)
-                })?;
+                .map_err(|e| anyhow::anyhow!("Failed to push project '{}': {}", project_name, e))?;
 
             println!("Project files pushed successfully");
         }
@@ -115,9 +114,7 @@ fn handle_dev_local(
         println!("Loading project on server...");
         let handle = load_project_async(&mut async_client, &project_uid)
             .await
-            .map_err(|e| {
-                anyhow::anyhow!("Failed to load project '{}': {}", project_name, e)
-            })?;
+            .map_err(|e| anyhow::anyhow!("Failed to load project '{}': {}", project_name, e))?;
 
         messages::print_success(
             &format!(
@@ -143,11 +140,13 @@ fn handle_dev_local(
 
         Ok(())
     });
-    
+
     result?;
 
     // Wait for server thread to finish (it should run until transport disconnects)
-    server_handle.join().map_err(|_| anyhow::anyhow!("Server thread panicked"))?;
+    server_handle
+        .join()
+        .map_err(|_| anyhow::anyhow!("Server thread panicked"))?;
 
     Ok(())
 }
@@ -187,7 +186,11 @@ async fn run_client_loop(client: &mut LpClient, transport: &mut dyn ClientTransp
                     break;
                 }
                 Err(e) => {
-                    // Transport error - log and return
+                    // Connection lost is expected during shutdown - exit gracefully
+                    if matches!(e, TransportError::ConnectionLost) {
+                        return Ok(());
+                    }
+                    // Other transport errors are unexpected - log and return
                     eprintln!("Transport error: {}", e);
                     return Err(anyhow::anyhow!("Transport error: {}", e));
                 }

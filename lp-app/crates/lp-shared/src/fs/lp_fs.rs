@@ -81,5 +81,6 @@ pub trait LpFs {
     /// in the original filesystem.
     ///
     /// Returns `Rc<RefCell<dyn LpFs>>` to allow sharing and mutation of the filesystem view.
-    fn chroot(&self, subdir: &str) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError>;
+    fn chroot(&self, subdir: &str)
+    -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError>;
 }

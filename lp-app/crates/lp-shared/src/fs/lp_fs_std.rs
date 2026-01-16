@@ -347,7 +347,10 @@ impl LpFs for LpFsStd {
         })
     }
 
-    fn chroot(&self, subdir: &str) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
+    fn chroot(
+        &self,
+        subdir: &str,
+    ) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
         // Normalize the subdirectory path
         let normalized = Self::normalize_path(subdir);
         // Remove leading slash for joining with root_path

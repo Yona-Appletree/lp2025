@@ -54,12 +54,10 @@ fn main() -> Result<()> {
         Cli::Serve { dir, init, memory } => {
             serve::handle_serve(serve::ServeArgs { dir, init, memory })
         }
-        Cli::Dev { dir, push } => {
-            dev::handle_dev(dev::DevArgs {
-                dir,
-                push_host: push,
-            })
-        }
+        Cli::Dev { dir, push } => dev::handle_dev(dev::DevArgs {
+            dir,
+            push_host: push,
+        }),
         Cli::Create { dir, name, uid } => {
             create::handle_create(create::CreateArgs { dir, name, uid })
         }

@@ -8,7 +8,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::commands::serve::init::{create_filesystem, initialize_server};
-use lp_model::Message;
+use lp_model::{Message, TransportError};
 use lp_server::LpServer;
 use lp_shared::fs::LpFs;
 use lp_shared::output::MemoryOutputProvider;
@@ -101,7 +101,11 @@ pub async fn run_server_loop_async<T: ServerTransport>(
                     break;
                 }
                 Err(e) => {
-                    // Transport error - log and continue
+                    // Connection lost is expected when client disconnects - exit gracefully
+                    if matches!(e, TransportError::ConnectionLost) {
+                        return Ok(());
+                    }
+                    // Other transport errors - log and continue
                     eprintln!("Transport error: {}", e);
                     break;
                 }

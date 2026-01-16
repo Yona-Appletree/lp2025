@@ -336,6 +336,9 @@ mod tests {
     fn test_node_state() {
         let state = NodeState::Texture(crate::nodes::texture::TextureState {
             texture_data: vec![0, 1, 2, 3],
+            width: 2,
+            height: 2,
+            format: "RGBA8".to_string(),
         });
         match state {
             NodeState::Texture(tex_state) => {
@@ -356,6 +359,9 @@ mod tests {
             }),
             state: NodeState::Texture(crate::nodes::texture::TextureState {
                 texture_data: vec![0, 1, 2, 3],
+                width: 2,
+                height: 2,
+                format: "RGBA8".to_string(),
             }),
             status: NodeStatus::Ok,
         };
@@ -419,6 +425,9 @@ mod tests {
                 }),
                 state: NodeState::Texture(crate::nodes::texture::TextureState {
                     texture_data: vec![0, 1, 2, 3],
+                    width: 2,
+                    height: 2,
+                    format: "RGBA8".to_string(),
                 }),
                 status: NodeStatus::Ok,
             },
@@ -463,6 +472,9 @@ mod tests {
             },
             state: NodeState::Texture(crate::nodes::texture::TextureState {
                 texture_data: vec![0, 1, 2, 3],
+                width: 2,
+                height: 2,
+                format: "RGBA8".to_string(),
             }),
             status: NodeStatus::Ok,
         };
@@ -498,6 +510,9 @@ mod tests {
                 },
                 state: NodeState::Texture(crate::nodes::texture::TextureState {
                     texture_data: vec![0, 1, 2, 3],
+                    width: 2,
+                    height: 2,
+                    format: "RGBA8".to_string(),
                 }),
                 status: NodeStatus::Ok,
             },

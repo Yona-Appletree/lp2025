@@ -41,10 +41,25 @@ impl TextureRuntime {
         if let Some(tex) = &self.texture {
             TextureState {
                 texture_data: tex.data().to_vec(),
+                width: tex.width(),
+                height: tex.height(),
+                format: tex.format().to_string(),
             }
-        } else {
+        } else if let Some(config) = &self.config {
+            // Fallback to config if texture not initialized
             TextureState {
                 texture_data: Vec::new(),
+                width: config.width,
+                height: config.height,
+                format: "RGBA8".to_string(), // Default format
+            }
+        } else {
+            // No texture or config available
+            TextureState {
+                texture_data: Vec::new(),
+                width: 0,
+                height: 0,
+                format: "RGBA8".to_string(),
             }
         }
     }

@@ -197,10 +197,14 @@ impl ProjectRuntime {
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
                     let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data = self.fs.borrow().read_file(&node_json_path).map_err(|e| Error::Io {
-                        path: node_json_path.clone(),
-                        details: format!("Failed to read: {:?}", e),
-                    })?;
+                    let data =
+                        self.fs
+                            .borrow()
+                            .read_file(&node_json_path)
+                            .map_err(|e| Error::Io {
+                                path: node_json_path.clone(),
+                                details: format!("Failed to read: {:?}", e),
+                            })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::texture::TextureConfig>(&data)
                             .map_err(|e| Error::Parse {
@@ -218,10 +222,14 @@ impl ProjectRuntime {
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
                     let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data = self.fs.borrow().read_file(&node_json_path).map_err(|e| Error::Io {
-                        path: node_json_path.clone(),
-                        details: format!("Failed to read: {:?}", e),
-                    })?;
+                    let data =
+                        self.fs
+                            .borrow()
+                            .read_file(&node_json_path)
+                            .map_err(|e| Error::Io {
+                                path: node_json_path.clone(),
+                                details: format!("Failed to read: {:?}", e),
+                            })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::fixture::FixtureConfig>(&data)
                             .map_err(|e| Error::Parse {
@@ -239,10 +247,14 @@ impl ProjectRuntime {
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
                     let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data = self.fs.borrow().read_file(&node_json_path).map_err(|e| Error::Io {
-                        path: node_json_path.clone(),
-                        details: format!("Failed to read: {:?}", e),
-                    })?;
+                    let data =
+                        self.fs
+                            .borrow()
+                            .read_file(&node_json_path)
+                            .map_err(|e| Error::Io {
+                                path: node_json_path.clone(),
+                                details: format!("Failed to read: {:?}", e),
+                            })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::shader::ShaderConfig>(&data)
                             .map_err(|e| Error::Parse {
@@ -260,10 +272,14 @@ impl ProjectRuntime {
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
                     let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data = self.fs.borrow().read_file(&node_json_path).map_err(|e| Error::Io {
-                        path: node_json_path.clone(),
-                        details: format!("Failed to read: {:?}", e),
-                    })?;
+                    let data =
+                        self.fs
+                            .borrow()
+                            .read_file(&node_json_path)
+                            .map_err(|e| Error::Io {
+                                path: node_json_path.clone(),
+                                details: format!("Failed to read: {:?}", e),
+                            })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::output::OutputConfig>(&data)
                             .map_err(|e| Error::Parse {
@@ -818,11 +834,17 @@ impl ProjectRuntime {
                                 // Fallback to empty state
                                 NodeState::Texture(lp_model::nodes::texture::TextureState {
                                     texture_data: Vec::new(),
+                                    width: 0,
+                                    height: 0,
+                                    format: "RGBA8".to_string(),
                                 })
                             }
                         } else {
                             NodeState::Texture(lp_model::nodes::texture::TextureState {
                                 texture_data: Vec::new(),
+                                width: 0,
+                                height: 0,
+                                format: "RGBA8".to_string(),
                             })
                         }
                     }
@@ -1024,10 +1046,14 @@ struct InitContext<'a> {
 impl<'a> InitContext<'a> {
     pub fn new(runtime: &'a ProjectRuntime, node_path: &'a LpPath) -> Result<Self, Error> {
         let node_dir = node_path.as_str();
-        let node_fs = runtime.fs.borrow().chroot(node_dir).map_err(|e| Error::Io {
-            path: node_dir.to_string(),
-            details: format!("Failed to chroot: {:?}", e),
-        })?;
+        let node_fs = runtime
+            .fs
+            .borrow()
+            .chroot(node_dir)
+            .map_err(|e| Error::Io {
+                path: node_dir.to_string(),
+                details: format!("Failed to chroot: {:?}", e),
+            })?;
 
         Ok(Self {
             runtime,
