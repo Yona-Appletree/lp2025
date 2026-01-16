@@ -1,8 +1,6 @@
 //! Main UI state and egui App implementation
 
-use crate::commands::dev::async_client::{
-    AsyncLpClient, serializable_response_to_project_response,
-};
+use crate::client::{serializable_response_to_project_response, AsyncLpClient};
 use crate::debug_ui::panels;
 use eframe::egui;
 use lp_engine_client::project::ClientProjectView;
