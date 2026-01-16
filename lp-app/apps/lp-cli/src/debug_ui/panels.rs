@@ -293,20 +293,16 @@ pub fn render_fixture_panel(
 
     ui.separator();
 
-    // Find referenced texture node
-    // TODO: Extract texture reference from fixture config
-    // For now, we'll need to find a texture node to display
-    // This is a placeholder - we'll need to get the texture reference from config
-    let texture_entry = view
-        .nodes
-        .values()
-        .find(|e| matches!(e.kind, NodeKind::Texture));
+    // Find referenced texture node using resolved handle from state
+    let texture_entry = state
+        .texture_handle
+        .and_then(|handle| view.nodes.get(&handle))
+        .filter(|e| matches!(e.kind, NodeKind::Texture));
 
     if let Some(texture_entry) = texture_entry {
-        if let Some(NodeKind::Texture) = Some(texture_entry.kind.clone()) {
-            if let Some(lp_model::project::api::NodeState::Texture(texture_state)) =
-                &texture_entry.state
-            {
+        if let Some(lp_model::project::api::NodeState::Texture(texture_state)) =
+            &texture_entry.state
+        {
                 // Display texture with mapping overlay
                 if !texture_state.texture_data.is_empty()
                     && texture_state.width > 0
@@ -361,7 +357,11 @@ pub fn render_fixture_panel(
             }
         }
     } else {
-        ui.label("No texture node found for fixture overlay");
+        if state.texture_handle.is_none() {
+            ui.label("Fixture not initialized - no texture handle available");
+        } else {
+            ui.label("Texture node not found in view (may not be tracked for detail)");
+        }
     }
 }
 
