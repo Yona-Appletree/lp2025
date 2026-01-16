@@ -61,6 +61,16 @@ impl FixtureRuntime {
     pub fn get_transform(&self) -> [[f32; 4]; 4] {
         self.transform
     }
+
+    /// Get texture handle (for state extraction)
+    pub fn get_texture_handle(&self) -> Option<TextureHandle> {
+        self.texture_handle
+    }
+
+    /// Get output handle (for state extraction)
+    pub fn get_output_handle(&self) -> Option<OutputHandle> {
+        self.output_handle
+    }
 }
 
 impl NodeRuntime for FixtureRuntime {

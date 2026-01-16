@@ -944,21 +944,35 @@ impl ProjectRuntime {
                                         })
                                         .collect();
 
+                                // Extract handles from runtime
+                                let texture_handle = fixture_runtime
+                                    .get_texture_handle()
+                                    .map(|h| h.as_node_handle());
+                                let output_handle = fixture_runtime
+                                    .get_output_handle()
+                                    .map(|h| h.as_node_handle());
+
                                 NodeState::Fixture(lp_model::nodes::fixture::FixtureState {
                                     lamp_colors: Vec::new(), // TODO: Extract from runtime if needed
                                     mapping_cells,
+                                    texture_handle,
+                                    output_handle,
                                 })
                             } else {
                                 // Fallback to empty state
                                 NodeState::Fixture(lp_model::nodes::fixture::FixtureState {
                                     lamp_colors: Vec::new(),
                                     mapping_cells: Vec::new(),
+                                    texture_handle: None,
+                                    output_handle: None,
                                 })
                             }
                         } else {
                             NodeState::Fixture(lp_model::nodes::fixture::FixtureState {
                                 lamp_colors: Vec::new(),
                                 mapping_cells: Vec::new(),
+                                texture_handle: None,
+                                output_handle: None,
                             })
                         }
                     }
