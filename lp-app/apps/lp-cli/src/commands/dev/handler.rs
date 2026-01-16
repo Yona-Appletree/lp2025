@@ -149,8 +149,8 @@ fn handle_dev_local(
 
     // If not headless, spawn UI
     if !args.headless {
-        // Create ClientProjectView
-        let project_view = Arc::new(Mutex::new(ClientProjectView::new()));
+        // Create ClientProjectView (use std::sync::Mutex for sync UI context)
+        let project_view = Arc::new(std::sync::Mutex::new(ClientProjectView::new()));
 
         // Get runtime handle for UI
         let runtime_handle = runtime.handle().clone();
