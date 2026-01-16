@@ -1,13 +1,13 @@
 use anyhow::Result;
 use clap::Parser;
 
+mod client;
 mod commands;
 mod config;
 mod debug_ui;
 mod error;
 mod messages;
 mod server;
-mod transport;
 
 use commands::{create, dev, serve};
 

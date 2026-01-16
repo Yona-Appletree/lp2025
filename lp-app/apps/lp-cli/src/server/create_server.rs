@@ -1,19 +1,9 @@
-//! Shared server creation logic
-//!
-//! Provides functions for creating LpServer instances that can be used by
-//! both `serve` and `dev` commands.
-
-use anyhow::Result;
-use std::path::Path;
-use std::time::Duration;
-
 use crate::commands::serve::init::{create_filesystem, initialize_server};
-use lp_model::{Message, TransportError};
 use lp_server::LpServer;
 use lp_shared::fs::LpFs;
 use lp_shared::output::MemoryOutputProvider;
-use lp_shared::transport::ServerTransport;
 use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 
 /// Create a server instance with filesystem
@@ -35,7 +25,7 @@ pub fn create_server(
     dir: Option<&Path>,
     memory: bool,
     init: Option<bool>,
-) -> Result<(LpServer, Box<dyn LpFs>)> {
+) -> anyhow::Result<(LpServer, Box<dyn LpFs>)> {
     // Create filesystem
     let base_fs = create_filesystem(dir, memory)?;
 
@@ -66,85 +56,15 @@ pub fn create_server(
     Ok((server, returned_fs))
 }
 
-/// Run the server main loop asynchronously
-///
-/// Processes incoming messages from clients and routes responses back.
-/// This is the async version that works with tokio runtime.
-///
-/// # Arguments
-///
-/// * `server` - The LpServer instance
-/// * `transport` - The server transport (handles connections)
-///
-/// # Returns
-///
-/// * `Ok(())` if the loop completes successfully
-/// * `Err` if there's an unrecoverable error
-pub async fn run_server_loop_async<T: ServerTransport>(
-    mut server: LpServer,
-    mut transport: T,
-) -> Result<()> {
-    // Main server loop
-    loop {
-        // Collect incoming messages from all connections
-        let mut incoming_messages = Vec::new();
-
-        // Poll transport for messages (non-blocking)
-        loop {
-            match transport.receive() {
-                Ok(Some(client_msg)) => {
-                    // Wrap in Message envelope
-                    incoming_messages.push(Message::Client(client_msg));
-                }
-                Ok(None) => {
-                    // No more messages available
-                    break;
-                }
-                Err(e) => {
-                    // Connection lost is expected when client disconnects - exit gracefully
-                    if matches!(e, TransportError::ConnectionLost) {
-                        return Ok(());
-                    }
-                    // Other transport errors - log and continue
-                    eprintln!("Transport error: {}", e);
-                    break;
-                }
-            }
-        }
-
-        // Process messages if any
-        if !incoming_messages.is_empty() {
-            match server.tick(16, incoming_messages) {
-                Ok(responses) => {
-                    // Send responses back via transport
-                    for response in responses {
-                        if let Message::Server(server_msg) = response {
-                            if let Err(e) = transport.send(server_msg) {
-                                eprintln!("Failed to send response: {}", e);
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Server error: {}", e);
-                    // Continue running despite errors
-                }
-            }
-        }
-
-        // Async sleep to avoid busy-waiting
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::create_server;
     use tempfile::TempDir;
 
     #[test]
     fn test_create_server_memory() {
-        let (server, fs) = create_server(None, true, None).unwrap();
+        let (server, fs) = create_server::create_server(None, true, None).unwrap();
         // Verify server and filesystem were created
         assert!(fs.read_file("/test").is_err()); // File doesn't exist, which is expected
         // Server should be created successfully
@@ -156,7 +76,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let dir = temp_dir.path();
 
-        let (server, fs) = create_server(Some(dir), false, Some(true)).unwrap();
+        let (server, fs) = create_server::create_server(Some(dir), false, Some(true)).unwrap();
         // Verify server.json was created
         assert!(crate::config::server::server_config_exists(dir));
         // Verify filesystem works
@@ -170,10 +90,10 @@ mod tests {
         let dir = temp_dir.path();
 
         // Create server.json first
-        create_server(Some(dir), false, Some(true)).unwrap();
+        create_server::create_server(Some(dir), false, Some(true)).unwrap();
 
         // Should work with existing config
-        let (server, _fs) = create_server(Some(dir), false, Some(false)).unwrap();
+        let (server, _fs) = create_server::create_server(Some(dir), false, Some(false)).unwrap();
         drop(server);
     }
 
@@ -183,7 +103,7 @@ mod tests {
         let dir = temp_dir.path();
 
         // Should error when config doesn't exist and init is false
-        let result = create_server(Some(dir), false, Some(false));
+        let result = create_server::create_server(Some(dir), false, Some(false));
         assert!(result.is_err());
         if let Err(e) = result {
             let err_msg = format!("{}", e);
@@ -193,15 +113,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_server_loop_async_compiles() {
-        use crate::transport::local::create_local_transport_pair;
+        use crate::client::local::create_local_transport_pair;
+        use crate::server::{create_server, run_server_loop_async};
 
         // Create server and transport pair
-        let (server, _fs) = create_server(None, true, None).unwrap();
+        let (server, _fs) = create_server::create_server(None, true, None).unwrap();
         let (_client_transport, server_transport) = create_local_transport_pair();
 
         // Verify the function can be called (it will run forever, so we don't await it)
         // The actual integration test will be in Phase 5
-        let _future = run_server_loop_async(server, server_transport);
+        let _future = run_server_loop_async::run_server_loop_async(server, server_transport);
         // Function compiles and can be created - that's what we're testing here
     }
 }

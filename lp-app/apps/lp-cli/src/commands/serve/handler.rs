@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use super::args::ServeArgs;
 use super::server_loop::run_server_loop;
 use crate::server::create_server;
-use crate::transport::WebSocketServerTransport;
+use crate::server::transport_ws::WebSocketServerTransport;
 
 /// Handle the serve command
 ///
@@ -18,7 +18,8 @@ pub fn handle_serve(args: ServeArgs) -> Result<()> {
     let server_dir = args.dir.unwrap_or_else(|| PathBuf::from("."));
 
     // Create server using shared function
-    let (server, _base_fs) = create_server(Some(&server_dir), args.memory, Some(args.init))?;
+    let (server, _base_fs) =
+        create_server::create_server(Some(&server_dir), args.memory, Some(args.init))?;
 
     // Create websocket server transport on port 2812
     let transport = WebSocketServerTransport::new(2812)
