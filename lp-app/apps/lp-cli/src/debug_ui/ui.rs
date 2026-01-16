@@ -48,14 +48,6 @@ impl DebugUiState {
         async_client: AsyncLpClient,
         runtime_handle: tokio::runtime::Handle,
     ) -> Self {
-        // TODO: Set up sync mechanism
-        // The challenge is that ClientProjectView is not Send, so we can't easily
-        // spawn a task that holds a lock on it. We'll need to use a LocalSet
-        // or restructure the sync to not hold the lock across await.
-        //
-        // For Phase 6, we'll implement basic structure. The actual sync mechanism
-        // will be refined in later phases once we have the UI working.
-
         Self {
             project_view,
             project_handle,
