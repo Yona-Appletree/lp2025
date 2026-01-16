@@ -110,8 +110,8 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
 fn draw_mapping_overlay(
     painter: &Painter,
     texture_rect: egui::Rect,
-    texture_width: u32,
-    texture_height: u32,
+    _texture_width: u32,
+    _texture_height: u32,
     fixture_handle: &NodeHandle,
     mapping_cells: &[MappingCell],
     show_labels: bool,
@@ -333,7 +333,7 @@ pub fn render_fixture_panel(
                     let display_height = texture_state.height as f32 * scale;
 
                     // Display texture with mapping overlay
-                    let (rect, response) = ui.allocate_exact_size(
+                    let (rect, _response) = ui.allocate_exact_size(
                         egui::Vec2::new(display_width, display_height),
                         egui::Sense::hover(),
                     );
