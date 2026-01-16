@@ -10,7 +10,6 @@ use lp_model::{
         shader::ShaderState,
         texture::TextureState,
     },
-    project::api::NodeStatus,
 };
 
 /// Convert texture data to egui ColorImage
