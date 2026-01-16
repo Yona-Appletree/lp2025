@@ -5,11 +5,12 @@
 use anyhow::{Context, Result};
 use lp_model::project::ProjectConfig;
 use lp_shared::fs::{LpFs, LpFsStd};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::signal;
 
 use crate::client::{
-    async_transport::AsyncClientTransport, client_connect, specifier::HostSpecifier, AsyncLpClient,
+    AsyncLpClient, async_transport::AsyncClientTransport, client_connect, specifier::HostSpecifier,
 };
 use crate::commands::dev::{fs_loop, pull_project_async, push_project_async};
 use crate::debug_ui::DebugUiState;
@@ -41,8 +42,12 @@ fn validate_local_project(project_dir: &PathBuf) -> Result<(String, String)> {
         )
     })?;
 
-    let config: ProjectConfig = serde_json::from_slice(&data)
-        .with_context(|| format!("Failed to parse project.json from: {}", project_dir.display()))?;
+    let config: ProjectConfig = serde_json::from_slice(&data).with_context(|| {
+        format!(
+            "Failed to parse project.json from: {}",
+            project_dir.display()
+        )
+    })?;
 
     Ok((config.uid.clone(), config.name.clone()))
 }
@@ -70,9 +75,7 @@ pub fn handle_dev(args: DevArgs) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
 
     // Run async handler
-    runtime.block_on(async {
-        handle_dev_async(args, project_uid, host_spec).await
-    })
+    runtime.block_on(async { handle_dev_async(args, project_uid, host_spec).await })
 }
 
 /// Async handler for dev command
@@ -82,8 +85,7 @@ async fn handle_dev_async(
     host_spec: HostSpecifier,
 ) -> Result<()> {
     // Connect to server
-    let transport = client_connect(host_spec)
-        .context("Failed to connect to server")?;
+    let transport = client_connect(host_spec).context("Failed to connect to server")?;
 
     // Create AsyncClientTransport (takes ownership of transport)
     let async_transport = Arc::new(AsyncClientTransport::new(transport));
@@ -122,7 +124,8 @@ async fn handle_dev_async(
         let project_dir = args.dir.clone();
         let project_uid = project_uid.clone();
         // Create a new filesystem instance for the fs_loop (LpFsStd doesn't implement Clone)
-        let local_fs_for_loop: Arc<dyn LpFs + Send + Sync> = Arc::new(LpFsStd::new(args.dir.clone()));
+        let local_fs_for_loop: Arc<dyn LpFs + Send + Sync> =
+            Arc::new(LpFsStd::new(args.dir.clone()));
         tokio::spawn(async move {
             if let Err(e) = fs_loop(transport, project_dir, project_uid, local_fs_for_loop).await {
                 eprintln!("fs_loop error: {}", e);
@@ -141,10 +144,10 @@ async fn handle_dev_async(
         let project_view = Arc::new(std::sync::Mutex::new(
             lp_engine_client::project::ClientProjectView::new(),
         ));
-        
+
         // Create a new AsyncLpClient for the UI (shares the same transport)
         let ui_client = AsyncLpClient::new(Arc::clone(&async_transport));
-        
+
         let ui_state = DebugUiState::new(
             project_view,
             project_handle,
