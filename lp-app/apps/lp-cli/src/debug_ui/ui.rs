@@ -7,7 +7,7 @@ use crate::debug_ui::panels;
 use eframe::egui;
 use lp_engine_client::project::ClientProjectView;
 use lp_model::{NodeHandle, project::handle::ProjectHandle};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::sync::oneshot;
@@ -35,10 +35,6 @@ pub struct DebugUiState {
     >,
     /// Track if tracked_nodes changed since last sync (to trigger immediate sync)
     tracked_nodes_changed: bool,
-    /// GLSL code cache (keyed by node handle)
-    glsl_cache: BTreeMap<NodeHandle, String>,
-    /// Currently selected node handle (for detail display)
-    selected_node: Option<NodeHandle>,
     /// Tokio runtime handle for spawning async tasks
     runtime_handle: tokio::runtime::Handle,
     /// Last frame time for FPS calculation
@@ -66,8 +62,6 @@ impl DebugUiState {
             sync_in_progress: false,
             pending_sync: None,
             tracked_nodes_changed: false,
-            glsl_cache: BTreeMap::new(),
-            selected_node: None,
             runtime_handle,
             last_frame_time: None,
             frame_count: 0,
@@ -232,32 +226,21 @@ impl eframe::App for DebugUiState {
             );
         });
 
-        // Side panel for nodes list
-        egui::SidePanel::left("nodes_panel")
-            .resizable(true)
-            .default_width(300.0)
-            .show(ctx, |ui| {
-                let nodes_changed = panels::render_nodes_panel(
-                    ui,
-                    &view,
-                    &mut self.tracked_nodes,
-                    &mut self.all_detail,
-                );
-                if nodes_changed {
-                    self.tracked_nodes_changed = true;
-                }
-            });
-
         // Right panel for all node details (scrollable)
-        egui::SidePanel::right("details_panel")
-            .resizable(true)
-            .default_width(500.0)
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        panels::render_all_nodes_panel(ui, &view);
-                    });
-            });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    let nodes_changed = panels::render_all_nodes_panel(
+                        ui,
+                        &view,
+                        &mut self.tracked_nodes,
+                        &mut self.all_detail,
+                    );
+                    if nodes_changed {
+                        self.tracked_nodes_changed = true;
+                    }
+                });
+        });
     }
 }
