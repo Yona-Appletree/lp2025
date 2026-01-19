@@ -58,7 +58,6 @@ pub fn create_server(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::server::create_server;
     use tempfile::TempDir;
 

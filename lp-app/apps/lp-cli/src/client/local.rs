@@ -160,26 +160,16 @@ impl ServerTransport for AsyncLocalServerTransport {
             return Err(TransportError::ConnectionLost);
         }
 
-        // Use tokio::task::block_in_place to bridge async to sync
-        // This is safe because we're in an async context (run_server_loop_async)
-        tokio::task::block_in_place(|| {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                handle.block_on(async {
-                    self.server_rx
-                        .recv()
-                        .await
-                        .ok_or(TransportError::ConnectionLost)
-                        .map(Some)
-                })
-            } else {
-                // No runtime available - try non-blocking receive
-                match self.server_rx.try_recv() {
-                    Ok(msg) => Ok(Some(msg)),
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => Ok(None),
-                    Err(_) => Err(TransportError::ConnectionLost),
-                }
+        // Use non-blocking try_recv() since ServerTransport::receive() is sync and non-blocking
+        match self.server_rx.try_recv() {
+            Ok(msg) => Ok(Some(msg)),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => Ok(None),
+            Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                // Channel disconnected - mark as closed and return error
+                self.closed = true;
+                Err(TransportError::ConnectionLost)
             }
-        })
+        }
     }
 
     fn close(&mut self) -> Result<(), TransportError> {
@@ -240,7 +230,7 @@ mod tests {
         // Send response from server
         let server_msg = ServerMessage {
             id: 1,
-            msg: ServerMessage::ListAvailableProjects { projects: vec![] },
+            msg: lp_model::server::ServerMsgBody::ListAvailableProjects { projects: vec![] },
         };
         server_transport.send(server_msg).unwrap();
 

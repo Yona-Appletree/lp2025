@@ -159,7 +159,7 @@ impl DebugUiState {
             runtime_handle.spawn(async move {
                 // Do async sync call (no view lock held)
                 let result = {
-                    let mut client_guard = client.lock().await;
+                    let client_guard = client.lock().await;
                     client_guard
                         .project_sync_internal(handle, Some(since_frame), detail_specifier)
                         .await

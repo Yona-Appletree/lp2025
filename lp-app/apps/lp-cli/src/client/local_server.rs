@@ -21,7 +21,7 @@ pub struct LocalServerTransport {
     /// Handle to the server thread (None after close())
     server_handle: Option<JoinHandle<()>>,
     /// Client transport for communicating with the server
-    client_transport: AsyncLocalClientTransport,
+    client_transport: Option<AsyncLocalClientTransport>,
     /// Whether the transport has been closed
     closed: Arc<AtomicBool>,
 }
@@ -82,7 +82,7 @@ impl LocalServerTransport {
 
         Ok(Self {
             server_handle: Some(server_handle),
-            client_transport,
+            client_transport: Some(client_transport),
             closed,
         })
     }
@@ -107,14 +107,28 @@ impl LocalServerTransport {
         self.closed.store(true, Ordering::Relaxed);
 
         // Close the client transport (signals server to shut down)
-        // We can't await in sync context, but dropping will close the channels
-        // The async close will happen when the transport is dropped
+        // Dropping the client_transport will close its channels, which signals the server
+        // to stop (server's receive() will return ConnectionLost)
+        drop(self.client_transport.take());
 
-        // Wait for server thread to finish
+        // Wait for server thread to finish (with timeout to avoid hanging)
         if let Some(handle) = self.server_handle.take() {
-            handle
-                .join()
-                .map_err(|_| anyhow::anyhow!("Server thread panicked"))?;
+            // Use a timeout to avoid hanging forever if server doesn't stop
+            let start = std::time::Instant::now();
+            loop {
+                if handle.is_finished() {
+                    handle
+                        .join()
+                        .map_err(|_| anyhow::anyhow!("Server thread panicked"))?;
+                    break;
+                }
+                if start.elapsed() > std::time::Duration::from_secs(1) {
+                    // Timeout - server didn't stop, abort the thread
+                    eprintln!("Warning: Server thread did not stop within timeout, aborting");
+                    return Err(anyhow::anyhow!("Server thread did not stop within timeout"));
+                }
+                std::thread::yield_now();
+            }
         }
 
         Ok(())
@@ -124,11 +138,17 @@ impl LocalServerTransport {
 #[async_trait::async_trait]
 impl ClientTransport for LocalServerTransport {
     async fn send(&mut self, msg: lp_model::ClientMessage) -> Result<(), TransportError> {
-        self.client_transport.send(msg).await
+        match &mut self.client_transport {
+            Some(transport) => transport.send(msg).await,
+            None => Err(TransportError::ConnectionLost),
+        }
     }
 
     async fn receive(&mut self) -> Result<lp_model::ServerMessage, TransportError> {
-        self.client_transport.receive().await
+        match &mut self.client_transport {
+            Some(transport) => transport.receive().await,
+            None => Err(TransportError::ConnectionLost),
+        }
     }
 
     async fn close(&mut self) -> Result<(), TransportError> {
@@ -141,13 +161,26 @@ impl ClientTransport for LocalServerTransport {
         self.closed.store(true, Ordering::Relaxed);
 
         // Close the client transport (signals server to shut down)
-        let _ = self.client_transport.close().await;
+        if let Some(mut transport) = self.client_transport.take() {
+            let _ = transport.close().await;
+        }
 
-        // Wait for server thread to finish
+        // Wait for server thread to finish (with timeout)
         if let Some(handle) = self.server_handle.take() {
-            handle
-                .join()
-                .map_err(|_| TransportError::Other("Server thread panicked".to_string()))?;
+            // Use tokio::time::timeout in async context
+            let start = std::time::Instant::now();
+            loop {
+                if handle.is_finished() {
+                    handle
+                        .join()
+                        .map_err(|_| TransportError::Other("Server thread panicked".to_string()))?;
+                    break;
+                }
+                if start.elapsed() > std::time::Duration::from_secs(1) {
+                    return Err(TransportError::Other("Server thread did not stop within timeout".to_string()));
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            }
         }
 
         Ok(())
@@ -177,13 +210,18 @@ mod tests {
     async fn test_local_server_transport_creation() {
         let mut transport = LocalServerTransport::new().unwrap();
         // Verify it was created
+        // Give server time to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         // Cleanup
-        transport.close().await.unwrap();
+        transport.close().unwrap();
     }
 
     #[tokio::test]
     async fn test_client_transport_works() {
         let mut transport = LocalServerTransport::new().unwrap();
+
+        // Give server time to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         // Test that we can send and receive
         let msg = ClientMessage {
@@ -195,14 +233,16 @@ mod tests {
         let _ = transport.send(msg).await;
 
         // Close the transport
-        transport.close().await.unwrap();
+        transport.close().unwrap();
     }
 
     #[tokio::test]
     async fn test_close_stops_server() {
         let mut transport = LocalServerTransport::new().unwrap();
+        // Give server time to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         // Close should wait for server thread
-        transport.close().await.unwrap();
+        transport.close().unwrap();
         // If we get here, close succeeded
     }
 }
