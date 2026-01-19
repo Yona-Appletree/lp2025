@@ -3,4 +3,4 @@
 //! This module re-exports AsyncLpClient and related functions from the client module
 //! for backwards compatibility with existing code.
 
-pub use crate::client::{AsyncLpClient, serializable_response_to_project_response};
+pub use crate::client::{LpClient, serializable_response_to_project_response};

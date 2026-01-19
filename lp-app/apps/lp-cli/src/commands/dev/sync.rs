@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use lp_shared::fs::{fs_event::ChangeType, fs_event::FsChange, LpFs};
 use std::sync::Arc;
 
-use crate::client::AsyncLpClient;
+use crate::client::LpClient;
 
 /// Sync a file change to the server
 ///
@@ -24,7 +24,7 @@ use crate::client::AsyncLpClient;
 /// * `Ok(())` if the change was synced successfully
 /// * `Err` if syncing failed
 pub async fn sync_file_change(
-    client: &Arc<AsyncLpClient>,
+    client: &Arc<LpClient>,
     change: &FsChange,
     project_uid: &str,
     _project_dir: &std::path::Path,

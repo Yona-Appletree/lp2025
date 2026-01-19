@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tokio::signal;
 
 use crate::client::{
-    AsyncLpClient, async_transport::AsyncClientTransport, client_connect, specifier::HostSpecifier,
+    LpClient, client_connect, specifier::HostSpecifier,
 };
 use crate::commands::dev::{fs_loop, pull_project_async, push_project_async};
 use crate::debug_ui::DebugUiState;
@@ -87,11 +87,11 @@ async fn handle_dev_async(
     // Connect to server
     let transport = client_connect(host_spec).context("Failed to connect to server")?;
 
-    // Create AsyncClientTransport (takes ownership of transport)
-    let async_transport = Arc::new(AsyncClientTransport::new(transport));
+    // Wrap transport in Arc<Mutex> for sharing
+    let shared_transport = Arc::new(tokio::sync::Mutex::new(transport));
 
-    // Create AsyncLpClient with shared transport
-    let client = Arc::new(AsyncLpClient::new(Arc::clone(&async_transport)));
+    // Create LpClient with shared transport
+    let client = Arc::new(LpClient::new_shared(Arc::clone(&shared_transport)));
 
     // Create local filesystem
     let local_fs: Arc<dyn LpFs> = Arc::new(LpFsStd::new(args.dir.clone()));
@@ -120,7 +120,7 @@ async fn handle_dev_async(
 
     // Spawn fs_loop task
     let fs_loop_handle = {
-        let transport = Arc::clone(&async_transport);
+        let transport = Arc::clone(&shared_transport);
         let project_dir = args.dir.clone();
         let project_uid = project_uid.clone();
         // Create a new filesystem instance for the fs_loop (LpFsStd doesn't implement Clone)
@@ -145,8 +145,8 @@ async fn handle_dev_async(
             lp_engine_client::project::ClientProjectView::new(),
         ));
 
-        // Create a new AsyncLpClient for the UI (shares the same transport)
-        let ui_client = AsyncLpClient::new(Arc::clone(&async_transport));
+        // Create a new LpClient for the UI (shares the same transport)
+        let ui_client = LpClient::new_shared(Arc::clone(&shared_transport));
 
         let ui_state = DebugUiState::new(
             project_view,
@@ -167,7 +167,7 @@ async fn handle_dev_async(
     }
 
     // Close transport explicitly
-    // Note: We can't easily close AsyncClientTransport here since it's in an Arc
+    // Note: We can't easily close transport here since it's in an Arc
     // The transport will be closed when all references are dropped
     // Abort the fs_loop task
     fs_loop_handle.abort();

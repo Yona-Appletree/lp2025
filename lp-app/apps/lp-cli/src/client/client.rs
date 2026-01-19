@@ -45,6 +45,22 @@ impl LpClient {
         }
     }
 
+    /// Create a new LpClient with a shared transport
+    ///
+    /// # Arguments
+    ///
+    /// * `transport` - Shared transport (Arc<Mutex<Box<dyn ClientTransport>>>)
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - The client
+    pub fn new_shared(transport: Arc<tokio::sync::Mutex<Box<dyn ClientTransport>>>) -> Self {
+        Self {
+            transport,
+            next_request_id: Arc::new(AtomicU64::new(1)),
+        }
+    }
+
     /// Send a request and wait for the response
     ///
     /// Helper method that generates a request ID, sends the request, and waits for the response.

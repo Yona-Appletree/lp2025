@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
-use crate::client::{async_transport::AsyncClientTransport, AsyncLpClient};
+use crate::client::LpClient;
 use crate::commands::dev::sync::sync_file_change;
 
 /// Debounce duration for file changes (500ms)
@@ -24,7 +24,7 @@ const DEBOUNCE_DURATION: Duration = Duration::from_millis(500);
 ///
 /// # Arguments
 ///
-/// * `transport` - Async client transport (shared across tasks)
+/// * `transport` - Shared client transport (Arc<Mutex<Box<dyn ClientTransport>>>)
 /// * `project_dir` - Local project directory path
 /// * `project_uid` - Project UID for server-side path
 /// * `local_fs` - Local filesystem for reading files (wrapped in Arc for sharing)
@@ -34,13 +34,13 @@ const DEBOUNCE_DURATION: Duration = Duration::from_millis(500);
 /// * `Ok(())` if the loop completed successfully
 /// * `Err` if an unrecoverable error occurred
 pub async fn fs_loop(
-    transport: Arc<AsyncClientTransport>,
+    transport: Arc<tokio::sync::Mutex<Box<dyn crate::client::transport::ClientTransport>>>,
     project_dir: PathBuf,
     project_uid: String,
     local_fs: Arc<dyn LpFs + Send + Sync>,
 ) -> Result<()> {
-    // Create AsyncLpClient with shared transport
-    let client = Arc::new(AsyncLpClient::new(transport));
+    // Create LpClient with shared transport
+    let client = Arc::new(LpClient::new_shared(transport));
 
     // Debouncing state
     let mut pending_changes: HashMap<String, FsChange> = HashMap::new();

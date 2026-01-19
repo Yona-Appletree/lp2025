@@ -1,6 +1,6 @@
 //! Main UI state and egui App implementation
 
-use crate::client::{AsyncLpClient, serializable_response_to_project_response};
+use crate::client::{LpClient, serializable_response_to_project_response};
 use crate::debug_ui::panels;
 use eframe::egui;
 use lp_engine_client::project::ClientProjectView;
@@ -17,7 +17,7 @@ pub struct DebugUiState {
     /// Project handle
     project_handle: ProjectHandle,
     /// Async client for syncing (shared via Arc<Mutex<>>)
-    async_client: Arc<tokio::sync::Mutex<AsyncLpClient>>,
+    async_client: Arc<tokio::sync::Mutex<LpClient>>,
     /// Nodes we're tracking detail for
     tracked_nodes: BTreeSet<NodeHandle>,
     /// "All detail" checkbox state
@@ -50,7 +50,7 @@ impl DebugUiState {
     pub fn new(
         project_view: Arc<Mutex<ClientProjectView>>,
         project_handle: ProjectHandle,
-        async_client: AsyncLpClient,
+        async_client: LpClient,
         runtime_handle: tokio::runtime::Handle,
     ) -> Self {
         Self {

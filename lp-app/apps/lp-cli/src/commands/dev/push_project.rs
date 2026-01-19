@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 use lp_shared::fs::LpFs;
 
-use crate::client::AsyncLpClient;
+use crate::client::LpClient;
 
 /// Push project files from local filesystem to server
 ///
@@ -23,7 +23,7 @@ use crate::client::AsyncLpClient;
 /// * `Ok(())` if all files were pushed successfully
 /// * `Err` if any file operation failed
 pub async fn push_project_async(
-    client: &AsyncLpClient,
+    client: &LpClient,
     local_fs: &dyn LpFs,
     project_uid: &str,
 ) -> Result<()> {
