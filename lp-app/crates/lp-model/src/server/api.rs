@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "requestType", rename_all = "camelCase")]
-pub enum ServerRequest {
+pub enum ClientMsgBody {
     /// Filesystem operation request
     Filesystem(FsRequest),
     /// Load a project
@@ -26,11 +26,13 @@ pub enum ServerRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "responseType", rename_all = "camelCase")]
-pub enum ServerResponse {
+pub enum ServerMsgBody {
     /// Filesystem operation response
     Filesystem(FsResponse),
     /// Response to LoadProject
-    LoadProject { handle: ProjectHandle },
+    LoadProject {
+        handle: ProjectHandle,
+    },
     /// Response to UnloadProject
     UnloadProject,
     /// Response to ProjectRequest
@@ -41,9 +43,26 @@ pub enum ServerResponse {
         response: SerializableProjectResponse,
     },
     /// Response to ListAvailableProjects
-    ListAvailableProjects { projects: Vec<AvailableProject> },
+    ListAvailableProjects {
+        projects: Vec<AvailableProject>,
+    },
     /// Response to ListLoadedProjects
-    ListLoadedProjects { projects: Vec<LoadedProject> },
+    ListLoadedProjects {
+        projects: Vec<LoadedProject>,
+    },
+
+    Log {
+        level: LogLevel,
+        message: String,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

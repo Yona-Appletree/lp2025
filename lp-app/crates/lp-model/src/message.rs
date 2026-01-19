@@ -3,7 +3,7 @@
 //! Defines the message envelope and request/response types for client-server communication.
 
 use crate::project::{api::ProjectRequest, handle::ProjectHandle};
-use crate::server::{FsRequest, ServerResponse};
+use crate::server::{FsRequest, ServerMsgBody as ServerMessagePayload};
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +42,7 @@ pub struct ServerMessage {
     /// Request ID matching the original client request
     pub id: u64,
     /// The response payload
-    pub msg: ServerResponse,
+    pub msg: ServerMessagePayload,
 }
 
 /// Client request types
@@ -100,9 +100,10 @@ mod tests {
 
     #[test]
     fn test_server_message_serialization() {
+        use crate::server::ServerMsgBody as ServerMessagePayload;
         let server_msg = ServerMessage {
             id: 1,
-            msg: ServerResponse::Filesystem(FsResponse::Read {
+            msg: ServerMessagePayload::Filesystem(FsResponse::Read {
                 path: "/project.json".to_string(),
                 data: Some(b"{}".to_vec()),
                 error: None,
@@ -116,7 +117,7 @@ mod tests {
             Message::Server(ServerMessage { id, msg }) => {
                 assert_eq!(id, 1);
                 match msg {
-                    ServerResponse::Filesystem(FsResponse::Read { path, data, error }) => {
+                    ServerMessagePayload::Filesystem(FsResponse::Read { path, data, error }) => {
                         assert_eq!(path, "/project.json");
                         assert_eq!(data, Some(b"{}".to_vec()));
                         assert_eq!(error, None);

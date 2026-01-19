@@ -14,6 +14,6 @@ pub use nodes::{NodeConfig, NodeHandle, NodeKind, NodeSpecifier};
 pub use path::LpPath;
 pub use project::{FrameId, ProjectConfig};
 pub use server::{
-    AvailableProject, FsRequest, FsResponse, LoadedProject, ServerRequest, ServerResponse,
+    AvailableProject, FsRequest, FsResponse, LoadedProject,
 };
 pub use transport_error::TransportError;

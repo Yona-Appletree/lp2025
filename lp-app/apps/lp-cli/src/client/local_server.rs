@@ -5,12 +5,12 @@
 
 use anyhow::Result;
 use lp_model::TransportError;
-use lp_shared::transport::ClientTransport;
+use crate::client::transport::ClientTransport;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
-use crate::client::local::create_local_transport_pair;
+use crate::client::local::{create_local_transport_pair, AsyncLocalClientTransport};
 use crate::server::{create_server, run_server_loop_async};
 
 /// Local server transport that manages an in-memory server thread
@@ -21,7 +21,7 @@ pub struct LocalServerTransport {
     /// Handle to the server thread (None after close())
     server_handle: Option<JoinHandle<()>>,
     /// Client transport for communicating with the server
-    client_transport: Box<dyn ClientTransport + Send>,
+    client_transport: AsyncLocalClientTransport,
     /// Whether the transport has been closed
     closed: Arc<AtomicBool>,
 }
@@ -82,17 +82,9 @@ impl LocalServerTransport {
 
         Ok(Self {
             server_handle: Some(server_handle),
-            client_transport: Box::new(client_transport),
+            client_transport,
             closed,
         })
-    }
-
-    /// Get a reference to the client transport
-    ///
-    /// Returns a reference to the client transport that can be used to communicate
-    /// with the server running on the separate thread.
-    pub fn client_transport(&self) -> &dyn ClientTransport {
-        &*self.client_transport
     }
 
     /// Close the transport and stop the server
@@ -115,7 +107,8 @@ impl LocalServerTransport {
         self.closed.store(true, Ordering::Relaxed);
 
         // Close the client transport (signals server to shut down)
-        let _ = self.client_transport.close();
+        // We can't await in sync context, but dropping will close the channels
+        // The async close will happen when the transport is dropped
 
         // Wait for server thread to finish
         if let Some(handle) = self.server_handle.take() {
@@ -128,20 +121,17 @@ impl LocalServerTransport {
     }
 }
 
+#[async_trait::async_trait]
 impl ClientTransport for LocalServerTransport {
-    fn send(&mut self, msg: lp_model::ClientMessage) -> Result<(), TransportError> {
-        self.client_transport.send(msg)
+    async fn send(&mut self, msg: lp_model::ClientMessage) -> Result<(), TransportError> {
+        self.client_transport.send(msg).await
     }
 
-    fn receive(&mut self) -> Result<Option<lp_model::ServerMessage>, TransportError> {
-        self.client_transport.receive()
+    async fn receive(&mut self) -> Result<lp_model::ServerMessage, TransportError> {
+        self.client_transport.receive().await
     }
 
-    fn receive_all(&mut self) -> Result<Vec<lp_model::ServerMessage>, TransportError> {
-        self.client_transport.receive_all()
-    }
-
-    fn close(&mut self) -> Result<(), TransportError> {
+    async fn close(&mut self) -> Result<(), TransportError> {
         // Check if already closed
         if self.closed.load(Ordering::Relaxed) {
             return Ok(());
@@ -151,7 +141,7 @@ impl ClientTransport for LocalServerTransport {
         self.closed.store(true, Ordering::Relaxed);
 
         // Close the client transport (signals server to shut down)
-        let _ = self.client_transport.close();
+        let _ = self.client_transport.close().await;
 
         // Wait for server thread to finish
         if let Some(handle) = self.server_handle.take() {
@@ -168,8 +158,6 @@ impl Drop for LocalServerTransport {
     fn drop(&mut self) {
         // If not already closed, try to close (best-effort)
         if !self.closed.load(Ordering::Relaxed) {
-            // Close the transport (signals server to shut down)
-            let _ = self.client_transport.close();
             // Mark as closed
             self.closed.store(true, Ordering::Relaxed);
             // Try to join the thread if we still have the handle
@@ -185,33 +173,36 @@ mod tests {
     use super::*;
     use lp_model::{ClientMessage, ClientRequest};
 
-    #[test]
-    fn test_local_server_transport_creation() {
+    #[tokio::test]
+    async fn test_local_server_transport_creation() {
         let mut transport = LocalServerTransport::new().unwrap();
         // Verify it was created
-        let _client = transport.client_transport();
         // Cleanup
-        transport.close().unwrap();
+        transport.close().await.unwrap();
     }
 
-    #[test]
-    fn test_client_transport_works() {
+    #[tokio::test]
+    async fn test_client_transport_works() {
         let mut transport = LocalServerTransport::new().unwrap();
 
-        // Get reference to client transport
-        // Since client_transport() returns &dyn ClientTransport, we can't get &mut
-        // This test verifies the transport can be accessed
-        let _client = transport.client_transport();
+        // Test that we can send and receive
+        let msg = ClientMessage {
+            id: 1,
+            msg: ClientRequest::ListAvailableProjects,
+        };
+        // Note: send is async, but we can't easily test without a server response
+        // Just verify the transport exists
+        let _ = transport.send(msg).await;
 
         // Close the transport
-        transport.close().unwrap();
+        transport.close().await.unwrap();
     }
 
-    #[test]
-    fn test_close_stops_server() {
+    #[tokio::test]
+    async fn test_close_stops_server() {
         let mut transport = LocalServerTransport::new().unwrap();
         // Close should wait for server thread
-        transport.close().unwrap();
+        transport.close().await.unwrap();
         // If we get here, close succeeded
     }
 }

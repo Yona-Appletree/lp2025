@@ -4,11 +4,14 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 use lp_engine::{MemoryOutputProvider, ProjectRuntime};
 use lp_engine_client::ClientProjectView;
-use lp_shared::ProjectBuilder;
 use lp_shared::fs::LpFsMemory;
+use lp_shared::ProjectBuilder;
 
 #[test]
 fn test_scene_render() {
+    // ---------------------------------------------------------------------------------------------
+    // Arrange
+    //
     let fs = Rc::new(RefCell::new(LpFsMemory::new()));
     let mut builder = ProjectBuilder::new(fs.clone());
 
@@ -38,6 +41,9 @@ fn test_scene_render() {
 
     // Watch output for detail changes
     client_view.watch_detail(output_handle);
+
+    // ---------------------------------------------------------------------------------------------
+    // Act & Assert
 
     // Shader: vec4(mod(time, 1.0), 0.0, 0.0, 1.0) -> RGBA bytes [R, G, B, A]
     // Advancing time by 4ms gives an increment of (4/1000 * 255) = 1.02 ≈ 1

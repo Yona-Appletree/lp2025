@@ -4,7 +4,7 @@
 //! based on a `HostSpecifier`.
 
 use anyhow::{Result, bail};
-use lp_shared::transport::ClientTransport;
+use crate::client::transport::ClientTransport;
 
 use crate::client::local_server::LocalServerTransport;
 use crate::client::specifier::HostSpecifier;
@@ -36,7 +36,7 @@ use crate::client::transport_ws::WebSocketClientTransport;
 /// let spec = HostSpecifier::parse("ws://localhost:2812/")?;
 /// let transport = client_connect(spec)?;
 /// ```
-pub fn client_connect(spec: HostSpecifier) -> Result<Box<dyn ClientTransport + Send>> {
+pub fn client_connect(spec: HostSpecifier) -> Result<Box<dyn ClientTransport>> {
     match spec {
         HostSpecifier::Local => {
             // Create local server transport (now implements ClientTransport directly)
@@ -44,7 +44,11 @@ pub fn client_connect(spec: HostSpecifier) -> Result<Box<dyn ClientTransport + S
             Ok(Box::new(local_server))
         }
         HostSpecifier::WebSocket { url } => {
-            let transport = WebSocketClientTransport::new(&url)
+            // WebSocketClientTransport::new is async, but client_connect is sync
+            // We need to use tokio runtime to connect
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| anyhow::anyhow!("Failed to create tokio runtime: {}", e))?;
+            let transport = rt.block_on(WebSocketClientTransport::new(&url))
                 .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", url, e))?;
             Ok(Box::new(transport))
         }
@@ -58,15 +62,15 @@ pub fn client_connect(spec: HostSpecifier) -> Result<Box<dyn ClientTransport + S
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_client_connect_local() {
+    #[tokio::test]
+    async fn test_client_connect_local() {
         let spec = HostSpecifier::Local;
         let result = client_connect(spec);
         assert!(result.is_ok());
         let mut transport = result.unwrap();
         // Verify we can call methods on it
-        let _ = transport.receive(); // Should return Ok(None) when no messages
-        let _ = transport.close(); // Should close successfully
+        // Note: receive() is async and will wait, so we'll just test close
+        let _ = transport.close().await; // Should close successfully
     }
 
     #[test]

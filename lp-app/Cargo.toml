@@ -5,7 +5,6 @@ members = [
     "crates/lp-engine-client",
     "crates/lp-shared",
     "crates/lp-server",
-    "crates/lp-client",
     "apps/lp-cli",
     "crates/lp-model",
 ]

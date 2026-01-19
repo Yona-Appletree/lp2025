@@ -1,25 +1,19 @@
 //! WebSocket client transport
 //!
-//! Implements `ClientTransport` using synchronous `tungstenite` with internal buffering
-//! to match the polling interface.
-
-use std::collections::VecDeque;
+//! Implements `ClientTransport` using async `tokio-tungstenite`.
 
 use lp_model::{ClientMessage, ServerMessage, TransportError};
-use lp_shared::transport::ClientTransport;
-use std::net::TcpStream;
-use tungstenite::stream::MaybeTlsStream;
-use tungstenite::{WebSocket, connect};
+use crate::client::transport::ClientTransport;
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use futures_util::{SinkExt, StreamExt};
+use tokio::net::TcpStream;
 
 /// WebSocket client transport
 ///
-/// Uses synchronous `tungstenite` with internal buffering to provide a polling-based
-/// interface. Messages are buffered internally to allow non-blocking receive.
+/// Uses async `tokio-tungstenite` for WebSocket communication.
 pub struct WebSocketClientTransport {
-    /// WebSocket connection (None if disconnected)
-    socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
-    /// Buffer for incoming messages
-    incoming_buffer: VecDeque<ServerMessage>,
+    /// WebSocket stream (None if disconnected)
+    stream: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     /// Whether the transport is closed
     closed: bool,
 }
@@ -35,97 +29,30 @@ impl WebSocketClientTransport {
     ///
     /// * `Ok(Self)` if connection succeeded
     /// * `Err(TransportError)` if connection failed
-    pub fn new(url: &str) -> Result<Self, TransportError> {
-        // Connect via tungstenite (handles TCP connection internally)
-        let (socket, _) = connect(url).map_err(|e| {
+    pub async fn new(url: &str) -> Result<Self, TransportError> {
+        // Connect via tokio-tungstenite
+        let (stream, _) = connect_async(url).await.map_err(|e| {
             TransportError::Other(format!(
                 "Failed to establish WebSocket connection to '{}': {}",
                 url, e
             ))
         })?;
 
-        // Note: Setting non-blocking mode on the underlying stream is complex with tungstenite
-        // We'll handle WouldBlock errors in fill_buffer() instead
-        // The tungstenite library will return WouldBlock errors if the stream would block
-
         Ok(Self {
-            socket: Some(socket),
-            incoming_buffer: VecDeque::new(),
+            stream: Some(stream),
             closed: false,
         })
     }
-
-    /// Fill the incoming buffer from the websocket (non-blocking)
-    ///
-    /// Attempts to read messages from the websocket and adds them to the buffer.
-    /// Returns immediately if no messages are available.
-    fn fill_buffer(&mut self) -> Result<(), TransportError> {
-        let socket = match &mut self.socket {
-            Some(s) => s,
-            None => return Err(TransportError::ConnectionLost),
-        };
-
-        // Try to read messages (non-blocking due to non-blocking TCP stream)
-        loop {
-            match socket.read() {
-                Ok(tungstenite::Message::Text(text)) => {
-                    // Deserialize ServerMessage from JSON
-                    let msg: ServerMessage = serde_json::from_str(&text).map_err(|e| {
-                        TransportError::Deserialization(format!(
-                            "Failed to deserialize ServerMessage: {}",
-                            e
-                        ))
-                    })?;
-                    self.incoming_buffer.push_back(msg);
-                }
-                Ok(tungstenite::Message::Binary(data)) => {
-                    // Deserialize ServerMessage from binary JSON
-                    let msg: ServerMessage = serde_json::from_slice(&data).map_err(|e| {
-                        TransportError::Deserialization(format!(
-                            "Failed to deserialize ServerMessage: {}",
-                            e
-                        ))
-                    })?;
-                    self.incoming_buffer.push_back(msg);
-                }
-                Ok(tungstenite::Message::Close(_)) => {
-                    self.socket = None;
-                    return Err(TransportError::ConnectionLost);
-                }
-                Ok(tungstenite::Message::Ping(_)) => {
-                    // Auto-respond to pings
-                    if let Err(e) = socket.send(tungstenite::Message::Pong(vec![])) {
-                        self.socket = None;
-                        return Err(TransportError::Other(format!("Failed to send pong: {}", e)));
-                    }
-                }
-                Ok(tungstenite::Message::Pong(_)) => {
-                    // Ignore pongs
-                }
-                Ok(tungstenite::Message::Frame(_)) => {
-                    // Ignore raw frames
-                }
-                Err(tungstenite::Error::Io(ref e))
-                    if e.kind() == std::io::ErrorKind::WouldBlock =>
-                {
-                    // No data available, return
-                    break;
-                }
-                Err(e) => {
-                    // Other error, connection may be lost
-                    self.socket = None;
-                    return Err(TransportError::Other(format!("WebSocket error: {}", e)));
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
+#[async_trait::async_trait]
 impl ClientTransport for WebSocketClientTransport {
-    fn send(&mut self, msg: ClientMessage) -> Result<(), TransportError> {
-        let socket = match &mut self.socket {
+    async fn send(&mut self, msg: ClientMessage) -> Result<(), TransportError> {
+        if self.closed {
+            return Err(TransportError::ConnectionLost);
+        }
+
+        let stream = match &mut self.stream {
             Some(s) => s,
             None => return Err(TransportError::ConnectionLost),
         };
@@ -136,55 +63,89 @@ impl ClientTransport for WebSocketClientTransport {
         })?;
 
         // Send as text message
-        socket
-            .send(tungstenite::Message::Text(json))
+        stream
+            .send(tokio_tungstenite::tungstenite::Message::Text(json))
+            .await
             .map_err(|e| TransportError::Other(format!("Failed to send message: {}", e)))?;
 
         Ok(())
     }
 
-    fn receive(&mut self) -> Result<Option<ServerMessage>, TransportError> {
+    async fn receive(&mut self) -> Result<ServerMessage, TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
         }
 
-        // First, try to fill the buffer from the websocket
-        self.fill_buffer()?;
+        let stream = match &mut self.stream {
+            Some(s) => s,
+            None => return Err(TransportError::ConnectionLost),
+        };
 
-        // Return a message from the buffer if available
-        Ok(self.incoming_buffer.pop_front())
+        // Wait for next message from stream
+        loop {
+            match stream.next().await {
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) => {
+                    // Deserialize ServerMessage from JSON
+                    return serde_json::from_str(&text).map_err(|e| {
+                        TransportError::Deserialization(format!(
+                            "Failed to deserialize ServerMessage: {}",
+                            e
+                        ))
+                    });
+                }
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Binary(data))) => {
+                    // Deserialize ServerMessage from binary JSON
+                    return serde_json::from_slice(&data).map_err(|e| {
+                        TransportError::Deserialization(format!(
+                            "Failed to deserialize ServerMessage: {}",
+                            e
+                        ))
+                    });
+                }
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Close(_))) => {
+                    self.stream = None;
+                    return Err(TransportError::ConnectionLost);
+                }
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Ping(_))) => {
+                    // Auto-respond to pings (tokio-tungstenite handles this automatically)
+                    continue;
+                }
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Pong(_))) => {
+                    // Ignore pongs
+                    continue;
+                }
+                Some(Ok(tokio_tungstenite::tungstenite::Message::Frame(_))) => {
+                    // Ignore raw frames
+                    continue;
+                }
+                Some(Err(e)) => {
+                    // WebSocket error
+                    self.stream = None;
+                    return Err(TransportError::Other(format!("WebSocket error: {}", e)));
+                }
+                None => {
+                    // Stream ended
+                    self.stream = None;
+                    return Err(TransportError::ConnectionLost);
+                }
+            }
+        }
     }
 
-    fn receive_all(&mut self) -> Result<Vec<ServerMessage>, TransportError> {
-        if self.closed {
-            return Err(TransportError::ConnectionLost);
-        }
-
-        // Fill buffer once
-        self.fill_buffer()?;
-
-        // Drain all messages from buffer
-        let mut messages = Vec::new();
-        while let Some(msg) = self.incoming_buffer.pop_front() {
-            messages.push(msg);
-        }
-        Ok(messages)
-    }
-
-    fn close(&mut self) -> Result<(), TransportError> {
+    async fn close(&mut self) -> Result<(), TransportError> {
         if self.closed {
             return Ok(());
         }
 
         self.closed = true;
 
-        // Send close frame if socket is still open
-        if let Some(socket) = &mut self.socket {
-            let _ = socket.close(None);
+        // Send close frame if stream is still open
+        if let Some(stream) = &mut self.stream {
+            let _ = stream.close(None).await;
         }
 
-        // Clear socket
-        self.socket = None;
+        // Clear stream
+        self.stream = None;
         Ok(())
     }
 }
@@ -193,13 +154,6 @@ impl ClientTransport for WebSocketClientTransport {
 mod tests {
     use super::*;
     use lp_model::server::FsRequest;
-
-    #[test]
-    fn test_websocket_client_transport_creation() {
-        // This test would require a running websocket server
-        // For now, just verify the struct can be created conceptually
-        // Actual connection tests will be in integration tests
-    }
 
     #[test]
     fn test_serialization_format() {

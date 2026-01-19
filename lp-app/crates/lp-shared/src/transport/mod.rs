@@ -6,12 +6,8 @@
 //! Transports handle serialization/deserialization internally, working directly
 //! with `ClientMessage` and `ServerMessage` types from `lp-model`.
 
-pub mod client;
-pub mod local;
 pub mod server;
 
-pub use client::ClientTransport;
-pub use local::LocalTransport;
 // Re-export TransportError from lp-model for convenience
 pub use lp_model::TransportError;
 pub use server::ServerTransport;

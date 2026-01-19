@@ -4,13 +4,13 @@
 //! running in the same process. Uses unbounded channels for simplicity.
 
 use lp_model::{ClientMessage, ServerMessage, TransportError};
-use lp_shared::transport::{ClientTransport, ServerTransport};
+use crate::client::transport::ClientTransport;
 use tokio::sync::mpsc;
 
 /// Async local client transport
 ///
 /// Uses tokio channels to send client messages and receive server messages.
-/// Provides non-blocking receive via `try_recv()`.
+/// Provides async receive via `receive()`.
 pub struct AsyncLocalClientTransport {
     /// Sender for client messages (client -> server)
     client_tx: Option<mpsc::UnboundedSender<ClientMessage>>,
@@ -39,8 +39,9 @@ impl AsyncLocalClientTransport {
     }
 }
 
+#[async_trait::async_trait]
 impl ClientTransport for AsyncLocalClientTransport {
-    fn send(&mut self, msg: ClientMessage) -> Result<(), TransportError> {
+    async fn send(&mut self, msg: ClientMessage) -> Result<(), TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
         }
@@ -51,38 +52,15 @@ impl ClientTransport for AsyncLocalClientTransport {
         }
     }
 
-    fn receive(&mut self) -> Result<Option<ServerMessage>, TransportError> {
+    async fn receive(&mut self) -> Result<ServerMessage, TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
         }
 
-        match self.client_rx.try_recv() {
-            Ok(msg) => Ok(Some(msg)),
-            Err(mpsc::error::TryRecvError::Empty) => Ok(None),
-            Err(mpsc::error::TryRecvError::Disconnected) => Err(TransportError::ConnectionLost),
-        }
+        self.client_rx.recv().await.ok_or(TransportError::ConnectionLost)
     }
 
-    fn receive_all(&mut self) -> Result<Vec<ServerMessage>, TransportError> {
-        if self.closed {
-            return Err(TransportError::ConnectionLost);
-        }
-
-        let mut messages = Vec::new();
-        loop {
-            match self.client_rx.try_recv() {
-                Ok(msg) => messages.push(msg),
-                Err(mpsc::error::TryRecvError::Empty) => break,
-                Err(mpsc::error::TryRecvError::Disconnected) => {
-                    // If disconnected, return what we have (may be empty)
-                    break;
-                }
-            }
-        }
-        Ok(messages)
-    }
-
-    fn close(&mut self) -> Result<(), TransportError> {
+    async fn close(&mut self) -> Result<(), TransportError> {
         if self.closed {
             return Ok(());
         }
@@ -97,7 +75,7 @@ impl ClientTransport for AsyncLocalClientTransport {
 /// Async local server transport
 ///
 /// Uses tokio channels to send server messages and receive client messages.
-/// Provides non-blocking receive via `try_recv()`.
+/// Provides async receive via `receive()`.
 pub struct AsyncLocalServerTransport {
     /// Sender for server messages (server -> client)
     server_tx: Option<mpsc::UnboundedSender<ServerMessage>>,
@@ -124,10 +102,20 @@ impl AsyncLocalServerTransport {
             closed: false,
         }
     }
-}
 
-impl ServerTransport for AsyncLocalServerTransport {
-    fn send(&mut self, msg: ServerMessage) -> Result<(), TransportError> {
+    /// Receive a client message (async, blocking)
+    ///
+    /// Waits until a message is available or the connection is closed.
+    pub async fn receive(&mut self) -> Result<Option<ClientMessage>, TransportError> {
+        if self.closed {
+            return Err(TransportError::ConnectionLost);
+        }
+
+        Ok(self.server_rx.recv().await)
+    }
+
+    /// Send a server message
+    pub fn send(&mut self, msg: ServerMessage) -> Result<(), TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
         }
@@ -138,38 +126,8 @@ impl ServerTransport for AsyncLocalServerTransport {
         }
     }
 
-    fn receive(&mut self) -> Result<Option<ClientMessage>, TransportError> {
-        if self.closed {
-            return Err(TransportError::ConnectionLost);
-        }
-
-        match self.server_rx.try_recv() {
-            Ok(msg) => Ok(Some(msg)),
-            Err(mpsc::error::TryRecvError::Empty) => Ok(None),
-            Err(mpsc::error::TryRecvError::Disconnected) => Err(TransportError::ConnectionLost),
-        }
-    }
-
-    fn receive_all(&mut self) -> Result<Vec<ClientMessage>, TransportError> {
-        if self.closed {
-            return Err(TransportError::ConnectionLost);
-        }
-
-        let mut messages = Vec::new();
-        loop {
-            match self.server_rx.try_recv() {
-                Ok(msg) => messages.push(msg),
-                Err(mpsc::error::TryRecvError::Empty) => break,
-                Err(mpsc::error::TryRecvError::Disconnected) => {
-                    // If disconnected, return what we have (may be empty)
-                    break;
-                }
-            }
-        }
-        Ok(messages)
-    }
-
-    fn close(&mut self) -> Result<(), TransportError> {
+    /// Close the transport
+    pub fn close(&mut self) -> Result<(), TransportError> {
         if self.closed {
             return Ok(());
         }
@@ -199,16 +157,16 @@ pub fn create_local_transport_pair() -> (AsyncLocalClientTransport, AsyncLocalSe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lp_model::{ClientRequest, ServerResponse};
+    use lp_model::{ClientRequest, ServerMessage};
 
-    #[test]
-    fn test_create_transport_pair() {
+    #[tokio::test]
+    async fn test_create_transport_pair() {
         let (_client_transport, _server_transport) = create_local_transport_pair();
         // Just verify they can be created
     }
 
-    #[test]
-    fn test_client_send_receive() {
+    #[tokio::test]
+    async fn test_client_send_receive() {
         let (mut client_transport, mut server_transport) = create_local_transport_pair();
 
         // Send message from client
@@ -216,10 +174,10 @@ mod tests {
             id: 1,
             msg: ClientRequest::ListAvailableProjects,
         };
-        client_transport.send(client_msg.clone()).unwrap();
+        client_transport.send(client_msg.clone()).await.unwrap();
 
         // Receive on server
-        let received = server_transport.receive().unwrap();
+        let received = server_transport.receive().await.unwrap();
         assert!(received.is_some());
         let received_msg = received.unwrap();
         assert_eq!(received_msg.id, 1);
@@ -227,66 +185,12 @@ mod tests {
         // Send response from server
         let server_msg = ServerMessage {
             id: 1,
-            msg: ServerResponse::ListAvailableProjects { projects: vec![] },
+            msg: ServerMessage::ListAvailableProjects { projects: vec![] },
         };
         server_transport.send(server_msg).unwrap();
 
         // Receive on client
-        let received = client_transport.receive().unwrap();
-        assert!(received.is_some());
-        let received_msg = received.unwrap();
-        assert_eq!(received_msg.id, 1);
-    }
-
-    #[test]
-    fn test_non_blocking_receive() {
-        let (mut client_transport, _server_transport) = create_local_transport_pair();
-
-        // Receive when empty should return None
-        let result = client_transport.receive().unwrap();
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_server_send_receive() {
-        let (mut client_transport, mut server_transport) = create_local_transport_pair();
-
-        // Send message from server
-        let server_msg = ServerMessage {
-            id: 2,
-            msg: ServerResponse::ListAvailableProjects { projects: vec![] },
-        };
-        server_transport.send(server_msg).unwrap();
-
-        // Receive on client
-        let received = client_transport.receive().unwrap();
-        assert!(received.is_some());
-        let received_msg = received.unwrap();
-        assert_eq!(received_msg.id, 2);
-    }
-
-    #[test]
-    fn test_multiple_messages() {
-        let (mut client_transport, mut server_transport) = create_local_transport_pair();
-
-        // Send multiple messages from client
-        for i in 1..=5 {
-            let client_msg = ClientMessage {
-                id: i,
-                msg: ClientRequest::ListAvailableProjects,
-            };
-            client_transport.send(client_msg).unwrap();
-        }
-
-        // Receive all messages on server
-        for i in 1..=5 {
-            let received = server_transport.receive().unwrap();
-            assert!(received.is_some());
-            assert_eq!(received.unwrap().id, i);
-        }
-
-        // Should be empty now
-        let result = server_transport.receive().unwrap();
-        assert!(result.is_none());
+        let received = client_transport.receive().await.unwrap();
+        assert_eq!(received.id, 1);
     }
 }

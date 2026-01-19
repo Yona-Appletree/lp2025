@@ -7,8 +7,8 @@ use crate::project_manager::ProjectManager;
 use alloc::{format, rc::Rc, string::String, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
-    ClientMessage, ServerMessage,
-    server::{AvailableProject, FsRequest, FsResponse, ServerResponse},
+    server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload}, ClientMessage,
+    ServerMessage,
 };
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
@@ -24,7 +24,7 @@ pub fn handle_client_message(
 
     let response = match msg {
         lp_model::ClientRequest::Filesystem(fs_request) => {
-            ServerResponse::Filesystem(handle_fs_request(base_fs, fs_request)?)
+            ServerMessagePayload::Filesystem(handle_fs_request(base_fs, fs_request)?)
         }
         lp_model::ClientRequest::LoadProject { path } => {
             handle_load_project(project_manager, base_fs, output_provider, path)?
@@ -103,18 +103,18 @@ fn handle_load_project(
     base_fs: &mut dyn LpFs,
     output_provider: &Rc<RefCell<dyn OutputProvider>>,
     path: String,
-) -> Result<ServerResponse, ServerError> {
+) -> Result<ServerMessagePayload, ServerError> {
     let handle = project_manager.load_project(path, base_fs, output_provider.clone())?;
-    Ok(ServerResponse::LoadProject { handle })
+    Ok(ServerMessagePayload::LoadProject { handle })
 }
 
 /// Handle an UnloadProject request
 fn handle_unload_project(
     project_manager: &mut ProjectManager,
     handle: lp_model::project::ProjectHandle,
-) -> Result<ServerResponse, ServerError> {
+) -> Result<ServerMessagePayload, ServerError> {
     project_manager.unload_project(handle)?;
-    Ok(ServerResponse::UnloadProject)
+    Ok(ServerMessagePayload::UnloadProject)
 }
 
 /// Handle a ProjectRequest (project-specific request)
@@ -122,7 +122,7 @@ fn handle_project_request(
     project_manager: &mut ProjectManager,
     handle: lp_model::project::ProjectHandle,
     request: lp_model::project::api::ProjectRequest,
-) -> Result<ServerResponse, ServerError> {
+) -> Result<ServerMessagePayload, ServerError> {
     let project = project_manager
         .get_project_mut(handle)
         .ok_or_else(|| ServerError::ProjectNotFound(format!("handle {}", handle.id())))?;
@@ -141,7 +141,7 @@ fn handle_project_request(
                 .to_serializable()
                 .map_err(|e| ServerError::Core(format!("Failed to serialize response: {}", e)))?;
 
-            Ok(ServerResponse::ProjectRequest {
+            Ok(ServerMessagePayload::ProjectRequest {
                 response: serializable_response,
             })
         }
@@ -152,7 +152,7 @@ fn handle_project_request(
 fn handle_list_available_projects(
     project_manager: &ProjectManager,
     base_fs: &dyn LpFs,
-) -> Result<ServerResponse, ServerError> {
+) -> Result<ServerMessagePayload, ServerError> {
     let names = project_manager.list_available_projects(base_fs)?;
     let projects = names
         .into_iter()
@@ -162,13 +162,13 @@ fn handle_list_available_projects(
             AvailableProject { path }
         })
         .collect();
-    Ok(ServerResponse::ListAvailableProjects { projects })
+    Ok(ServerMessagePayload::ListAvailableProjects { projects })
 }
 
 /// Handle a ListLoadedProjects request
 fn handle_list_loaded_projects(
     project_manager: &ProjectManager,
-) -> Result<ServerResponse, ServerError> {
+) -> Result<ServerMessagePayload, ServerError> {
     let projects = project_manager.list_loaded_projects();
-    Ok(ServerResponse::ListLoadedProjects { projects })
+    Ok(ServerMessagePayload::ListLoadedProjects { projects })
 }
