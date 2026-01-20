@@ -15,7 +15,7 @@ use alloc::{
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::Message;
-use lp_shared::fs::{LpFs, FsChange};
+use lp_shared::fs::{FsChange, LpFs};
 use lp_shared::output::OutputProvider;
 
 /// Main server struct for processing client-server messages
@@ -140,10 +140,10 @@ impl LpServer {
 
         // Get current version and query all changes from base_fs (before mutable borrows)
         let current_version = self.base_fs().current_version();
-        
+
         // Collect changes per project
         let mut project_changes_map: HashMap<_, Vec<FsChange>> = HashMap::new();
-        
+
         for (handle, project_path) in &project_info {
             if let Some(project) = self.project_manager.get_project(*handle) {
                 let last_version = project.last_fs_version();
@@ -152,7 +152,12 @@ impl LpServer {
                 let base_changes = self.base_fs().get_changes_since(last_version);
 
                 // Filter changes for this project
-                let project_prefix = format!("{}/", project_path);
+                // Ensure project_path has trailing slash for prefix matching
+                let project_prefix = if project_path.ends_with('/') {
+                    project_path.clone()
+                } else {
+                    format!("{}/", project_path)
+                };
                 let project_changes: Vec<FsChange> = base_changes
                     .into_iter()
                     .filter_map(|change| {
