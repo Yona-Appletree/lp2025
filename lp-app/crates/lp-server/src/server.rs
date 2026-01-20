@@ -15,7 +15,7 @@ use alloc::{
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::Message;
-use lp_shared::fs::{FsChange, FsVersion, LpFs};
+use lp_shared::fs::{FsChange, LpFs};
 use lp_shared::output::OutputProvider;
 
 /// Main server struct for processing client-server messages
@@ -158,16 +158,11 @@ impl LpServer {
                 let project_changes: Vec<FsChange> = base_changes
                     .into_iter()
                     .filter_map(|change| {
-                        if change.path.starts_with(&project_prefix) {
-                            // Translate to project-relative path
-                            let relative_path = &change.path[project_prefix.len()..];
-                            let normalized = if relative_path.starts_with('/') {
-                                relative_path.to_string()
-                            } else {
-                                format!("/{}", relative_path)
-                            };
+                        // Use LpPath to strip prefix and normalize
+                        let change_path = lp_model::LpPath::from(change.path.as_str());
+                        if let Some(stripped) = change_path.strip_prefix(&project_prefix) {
                             Some(FsChange {
-                                path: normalized,
+                                path: stripped.as_str().to_string(),
                                 change_type: change.change_type,
                             })
                         } else {
