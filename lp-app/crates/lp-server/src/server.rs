@@ -7,13 +7,15 @@ use crate::handlers;
 use crate::project_manager::ProjectManager;
 use alloc::{
     boxed::Box,
+    format,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
 use core::cell::RefCell;
+use hashbrown::HashMap;
 use lp_model::Message;
-use lp_shared::fs::LpFs;
+use lp_shared::fs::{LpFs, FsChange};
 use lp_shared::output::OutputProvider;
 
 /// Main server struct for processing client-server messages
@@ -127,17 +129,74 @@ impl LpServer {
             }
         }
 
-        // Tick all loaded projects
-        // Collect handles first to avoid borrowing issues
-        let project_handles: Vec<_> = self
+        // Process filesystem changes for all loaded projects
+        // Collect project info first to avoid borrowing issues
+        let project_info: Vec<_> = self
             .project_manager
             .list_loaded_projects()
             .iter()
-            .map(|p| p.handle)
+            .map(|p| (p.handle, p.path.clone()))
             .collect();
 
+        // Get current version and query all changes from base_fs (before mutable borrows)
+        let current_version = self.base_fs().current_version();
+        
+        // Collect changes per project
+        let mut project_changes_map: HashMap<_, Vec<FsChange>> = HashMap::new();
+        
+        for (handle, project_path) in &project_info {
+            if let Some(project) = self.project_manager.get_project(*handle) {
+                let last_version = project.last_fs_version();
+
+                // Query changes from base_fs
+                let base_changes = self.base_fs().get_changes_since(last_version);
+
+                // Filter changes for this project
+                let project_prefix = format!("{}/", project_path);
+                let project_changes: Vec<FsChange> = base_changes
+                    .into_iter()
+                    .filter_map(|change| {
+                        if change.path.starts_with(&project_prefix) {
+                            // Translate to project-relative path
+                            let relative_path = &change.path[project_prefix.len()..];
+                            let normalized = if relative_path.starts_with('/') {
+                                relative_path.to_string()
+                            } else {
+                                format!("/{}", relative_path)
+                            };
+                            Some(FsChange {
+                                path: normalized,
+                                change_type: change.change_type,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                if !project_changes.is_empty() {
+                    project_changes_map.insert(*handle, project_changes);
+                }
+            }
+        }
+
+        // Now apply changes to projects (mutable borrows)
+        for (handle, project_changes) in project_changes_map {
+            if let Some(project) = self.project_manager.get_project_mut(handle) {
+                if let Err(_e) = project.runtime_mut().handle_fs_changes(&project_changes) {
+                    // Log error but continue with other projects
+                    // Note: In no_std context, errors are silently ignored
+                    // Errors will be visible when clients sync or query project state
+                } else {
+                    // Update last processed version
+                    project.update_fs_version(current_version);
+                }
+            }
+        }
+
+        // Tick all loaded projects
         // Tick each project's runtime
-        for handle in project_handles {
+        for (handle, _) in project_info {
             if let Some(project) = self.project_manager.get_project_mut(handle) {
                 // Ignore errors and continue with other projects
                 // Errors will be visible when clients sync or query project state
