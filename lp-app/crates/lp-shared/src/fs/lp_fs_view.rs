@@ -4,8 +4,8 @@
 //! all operations between chrooted-relative paths and parent-absolute paths.
 
 use crate::error::FsError;
-use crate::fs::fs_event::{FsChange, FsVersion};
 use crate::fs::LpFs;
+use crate::fs::fs_event::{FsChange, FsVersion};
 use alloc::{
     format,
     rc::Rc,
@@ -35,49 +35,13 @@ impl LpFsView {
         Self { parent, prefix }
     }
 
-    /// Normalize a path string
-    ///
-    /// - Removes leading "./" or "."
-    /// - Ensures path starts with "/"
-    /// - Collapses "//" to "/"
-    /// - Removes trailing "/" (except for root "/")
-    fn normalize_path(path: &str) -> String {
-        let mut normalized = path.trim();
-
-        // Remove leading "./" or "."
-        if normalized.starts_with("./") {
-            normalized = &normalized[2..];
-        } else if normalized == "." {
-            normalized = "";
-        }
-
-        // Ensure it starts with "/"
-        let normalized = if normalized.is_empty() {
-            "/".to_string()
-        } else if normalized.starts_with('/') {
-            normalized.to_string()
-        } else {
-            format!("/{}", normalized)
-        };
-
-        // Collapse multiple slashes
-        let normalized = normalized.replace("//", "/");
-
-        // Remove trailing "/" unless it's the root
-        if normalized.len() > 1 && normalized.ends_with('/') {
-            normalized[..normalized.len() - 1].to_string()
-        } else {
-            normalized
-        }
-    }
-
     /// Translate a chrooted-relative path to a parent-absolute path
     ///
     /// Examples:
     /// - `/src/file.txt` with prefix `/projects/my-project/` → `/projects/my-project/src/file.txt`
     /// - `/` with prefix `/projects/my-project/` → `/projects/my-project`
     fn parent_path(&self, chrooted_path: &str) -> String {
-        let normalized = Self::normalize_path(chrooted_path);
+        let normalized = chrooted_path; // TODO: Phase 6 - convert to LpPathBuf::from()
         if normalized == "/" {
             // Root path - use prefix without trailing /
             self.prefix.trim_end_matches('/').to_string()
@@ -151,11 +115,7 @@ impl LpFs for LpFsView {
         self.parent.borrow().is_dir(&parent_path)
     }
 
-    fn list_dir(
-        &self,
-        path: &str,
-        recursive: bool,
-    ) -> Result<Vec<String>, FsError> {
+    fn list_dir(&self, path: &str, recursive: bool) -> Result<Vec<String>, FsError> {
         let normalized = Self::normalize_path(path);
         self.validate_path(&normalized)?;
         let parent_path = self.parent_path(&normalized);
@@ -200,12 +160,9 @@ impl LpFs for LpFsView {
         self.parent.borrow().delete_dir(&parent_path)
     }
 
-    fn chroot(
-        &self,
-        subdir: &str,
-    ) -> Result<Rc<RefCell<dyn LpFs>>, FsError> {
+    fn chroot(&self, subdir: &str) -> Result<Rc<RefCell<dyn LpFs>>, FsError> {
         // Normalize the subdirectory path
-        let normalized_subdir = Self::normalize_path(subdir);
+        let normalized_subdir = subdir; // TODO: Phase 6 - convert to LpPathBuf::from()
 
         // Construct prefix relative to current chroot
         let relative_prefix = if normalized_subdir.ends_with('/') {

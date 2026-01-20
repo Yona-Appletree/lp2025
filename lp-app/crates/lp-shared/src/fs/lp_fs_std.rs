@@ -1,7 +1,11 @@
 //! Host filesystem implementation using std::fs
 
 use crate::error::FsError;
-use crate::fs::{LpFs, fs_event::{ChangeType, FsChange, FsVersion}, lp_fs_view::LpFsView};
+use crate::fs::{
+    LpFs,
+    fs_event::{ChangeType, FsChange, FsVersion},
+    lp_fs_view::LpFsView,
+};
 use alloc::{
     format,
     rc::Rc,
@@ -53,43 +57,10 @@ impl LpFsStd {
         let version = *current;
         drop(current);
 
-        self.changes.lock().unwrap().insert(path, (version, change_type));
-    }
-
-    /// Normalize a path string
-    ///
-    /// - Removes leading "./" or "."
-    /// - Ensures path starts with "/"
-    /// - Collapses "//" to "/"
-    /// - Removes trailing "/" (except for root "/")
-    fn normalize_path(path: &str) -> String {
-        let mut normalized = path.trim();
-
-        // Remove leading "./" or "."
-        if normalized.starts_with("./") {
-            normalized = &normalized[2..];
-        } else if normalized == "." {
-            normalized = "";
-        }
-
-        // Ensure it starts with "/"
-        let normalized = if normalized.is_empty() {
-            "/".to_string()
-        } else if normalized.starts_with('/') {
-            normalized.to_string()
-        } else {
-            format!("/{}", normalized)
-        };
-
-        // Collapse multiple slashes
-        let normalized = normalized.replace("//", "/");
-
-        // Remove trailing "/" unless it's the root
-        if normalized.len() > 1 && normalized.ends_with('/') {
-            normalized[..normalized.len() - 1].to_string()
-        } else {
-            normalized
-        }
+        self.changes
+            .lock()
+            .unwrap()
+            .insert(path, (version, change_type));
     }
 
     /// Resolve a path relative to the root and validate it stays within root
@@ -449,15 +420,16 @@ impl LpFs for LpFsStd {
     }
 
     fn clear_changes_before(&mut self, before_version: FsVersion) {
-        self.changes.lock().unwrap().retain(|_, (version, _)| {
-            *version >= before_version
-        });
+        self.changes
+            .lock()
+            .unwrap()
+            .retain(|_, (version, _)| *version >= before_version);
     }
 
     fn record_changes(&mut self, changes: Vec<FsChange>) {
         for change in changes {
             // Normalize path to match LpFs conventions
-            let normalized = Self::normalize_path(&change.path);
+            let normalized = &change.path; // TODO: Phase 6 - convert to LpPathBuf::from()
             self.record_change(normalized, change.change_type);
         }
     }
