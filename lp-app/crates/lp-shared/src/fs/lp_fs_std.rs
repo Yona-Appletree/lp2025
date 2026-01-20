@@ -1,7 +1,7 @@
 //! Host filesystem implementation using std::fs
 
 use crate::error::FsError;
-use crate::fs::{LpFs, fs_event::{ChangeType, FsChange, FsVersion}};
+use crate::fs::{LpFs, fs_event::{ChangeType, FsChange, FsVersion}, lp_fs_view::LpFsView};
 use alloc::{
     format,
     rc::Rc,
@@ -406,7 +406,24 @@ impl LpFs for LpFsStd {
             )));
         }
 
-        Ok(Rc::new(RefCell::new(LpFsStd::new(new_root))))
+        // Construct prefix path for LpFsView
+        // The prefix is the normalized subdir path
+        let prefix = if normalized.ends_with('/') {
+            normalized.clone()
+        } else {
+            format!("{}/", normalized)
+        };
+
+        // Wrap self in Rc<RefCell<>> for LpFsView
+        // Create a new LpFsStd instance that shares the same root_path
+        // (though LpFsView will handle path translation)
+        let parent_rc = Rc::new(RefCell::new(LpFsStd {
+            root_path: self.root_path.clone(),
+            current_version: Mutex::new(*self.current_version.lock().unwrap()),
+            changes: Mutex::new(self.changes.lock().unwrap().clone()),
+        }));
+
+        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix))))
     }
 
     fn current_version(&self) -> FsVersion {

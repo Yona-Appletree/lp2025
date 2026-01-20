@@ -1,7 +1,12 @@
 //! In-memory filesystem implementation for testing
 
 use crate::error::FsError;
-use crate::fs::{LpFs, fs_event::ChangeType, fs_event::{FsChange, FsVersion}};
+use crate::fs::{
+    LpFs,
+    fs_event::ChangeType,
+    fs_event::{FsChange, FsVersion},
+    lp_fs_view::LpFsView,
+};
 use alloc::{
     format,
     rc::Rc,
@@ -38,7 +43,9 @@ impl LpFsMemory {
         let version = *current;
         drop(current);
 
-        self.changes.borrow_mut().insert(path, (version, change_type));
+        self.changes
+            .borrow_mut()
+            .insert(path, (version, change_type));
     }
 
     /// Normalize a path string
@@ -413,336 +420,15 @@ impl LpFs for LpFsMemory {
             format!("{}/", normalized_subdir)
         };
 
-        // Create a new LpFsMemory with only files under the subdirectory
-        let mut new_files = HashMap::new();
-        let files = self.files.borrow();
-        for (path, data) in files.iter() {
-            if path.starts_with(&prefix) || path == &normalized_subdir {
-                // Remove the prefix from the path to make it relative to the new root
-                let relative_path = if path.starts_with(&prefix) {
-                    format!("/{}", &path[prefix.len()..])
-                } else {
-                    "/".to_string() // Root file
-                };
-                new_files.insert(relative_path, data.clone());
-            }
-        }
-
-        // Create a new LpFsMemory with the filtered files
-        // We need to wrap it in a way that implements LpFs
-        // Since we can't create a new struct here, we'll create a wrapper
-        struct ChrootedLpFsMemory {
-            files: Rc<RefCell<HashMap<String, Vec<u8>>>>,
-            parent: Rc<RefCell<dyn LpFs>>,
-            chroot_prefix: String,
-        }
-
-        impl LpFs for ChrootedLpFsMemory {
-            fn read_file(&self, path: &str) -> Result<alloc::vec::Vec<u8>, FsError> {
-                // Normalize path first (handles relative paths by prepending /)
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-                // Query shared files storage using parent path
-                let parent_path = self.parent_path(&normalized);
-                self.files
-                    .borrow()
-                    .get(&parent_path)
-                    .cloned()
-                    .ok_or_else(|| FsError::NotFound(path.to_string()))
-            }
-
-            fn write_file(&self, path: &str, data: &[u8]) -> Result<(), FsError> {
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-                self.files
-                    .borrow_mut()
-                    .insert(normalized.clone(), data.to_vec());
-                // Write to parent filesystem as well
-                let parent_path = self.parent_path(&normalized);
-                self.parent.borrow().write_file(&parent_path, data)?;
-                Ok(())
-            }
-
-            fn file_exists(&self, path: &str) -> Result<bool, FsError> {
-                // Normalize path first (handles relative paths by prepending /)
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-                // Query shared files storage using parent path
-                let parent_path = self.parent_path(&normalized);
-                Ok(self.files.borrow().contains_key(&parent_path))
-            }
-
-            fn is_dir(&self, path: &str) -> Result<bool, FsError> {
-                // Normalize path first (handles relative paths by prepending /)
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-                // Query shared files storage using parent path
-                let parent_path = self.parent_path(&normalized);
-                let files = self.files.borrow();
-                // Check if it exists as a file
-                if files.contains_key(&parent_path) {
-                    return Ok(false);
-                }
-                // Check if any file path starts with parent_path + "/" (indicating it's a directory)
-                let dir_prefix = format!("{}/", parent_path);
-                for file_path in files.keys() {
-                    if file_path.starts_with(&dir_prefix) {
-                        return Ok(true);
-                    }
-                }
-                // Path doesn't exist
-                Err(FsError::NotFound(path.to_string()))
-            }
-
-            fn list_dir(
-                &self,
-                path: &str,
-                recursive: bool,
-            ) -> Result<alloc::vec::Vec<alloc::string::String>, FsError> {
-                // Normalize path first (handles relative paths by prepending /)
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-                // Query shared files storage using parent path
-                let parent_path = self.parent_path(&normalized);
-                let prefix = if parent_path.ends_with('/') {
-                    parent_path.clone()
-                } else {
-                    format!("{}/", parent_path)
-                };
-                
-                let mut entries = Vec::new();
-                let files = self.files.borrow();
-                let chroot_prefix = &self.chroot_prefix;
-                
-                if recursive {
-                    // Recursive: return all files with this prefix
-                    for file_path in files.keys() {
-                        if file_path.starts_with(&prefix) {
-                            // Translate to chrooted-relative path
-                            let relative_path = &file_path[chroot_prefix.len()..];
-                            let normalized_relative = if relative_path.starts_with('/') {
-                                relative_path.to_string()
-                            } else {
-                                format!("/{}", relative_path)
-                            };
-                            entries.push(normalized_relative);
-                        }
-                    }
-                } else {
-                    // Non-recursive: only immediate children
-                    for file_path in files.keys() {
-                        if file_path.starts_with(&prefix) {
-                            let remainder = &file_path[prefix.len()..];
-                            if let Some(slash_pos) = remainder.find('/') {
-                                let dir_name = &remainder[..slash_pos];
-                                let full_dir_path = format!("/{}", dir_name);
-                                if !entries.contains(&full_dir_path) {
-                                    entries.push(full_dir_path);
-                                }
-                            } else {
-                                // Translate to chrooted-relative path
-                                let relative_path = &file_path[chroot_prefix.len()..];
-                                let normalized_relative = if relative_path.starts_with('/') {
-                                    relative_path.to_string()
-                                } else {
-                                    format!("/{}", relative_path)
-                                };
-                                entries.push(normalized_relative);
-                            }
-                        }
-                    }
-                }
-                
-                Ok(entries)
-            }
-
-            fn delete_file(&self, path: &str) -> Result<(), FsError> {
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-
-                if normalized == "/" {
-                    return Err(FsError::InvalidPath(
-                        "Cannot delete root directory".to_string(),
-                    ));
-                }
-
-                // Use parent path to check and delete from shared storage
-                let parent_path = self.parent_path(&normalized);
-                if !self.files.borrow().contains_key(&parent_path) {
-                    return Err(FsError::NotFound(path.to_string()));
-                }
-
-                self.files.borrow_mut().remove(&parent_path);
-                // Also delete from parent filesystem (though they share storage, this ensures consistency)
-                let _ = self.parent.borrow().delete_file(&parent_path);
-                Ok(())
-            }
-
-            fn delete_dir(&self, path: &str) -> Result<(), FsError> {
-                let normalized = LpFsMemory::normalize_path(path);
-                self.validate_path(&normalized)?;
-
-                if normalized == "/" {
-                    return Err(FsError::InvalidPath(
-                        "Cannot delete root directory".to_string(),
-                    ));
-                }
-
-                // Use parent path to find files in shared storage
-                let parent_path = self.parent_path(&normalized);
-                let parent_prefix = if parent_path.ends_with('/') {
-                    parent_path.clone()
-                } else {
-                    format!("{}/", parent_path)
-                };
-
-                let mut files_to_remove = Vec::new();
-                {
-                    let files = self.files.borrow();
-                    for file_path in files.keys() {
-                        if file_path == &parent_path || file_path.starts_with(&parent_prefix) {
-                            files_to_remove.push(file_path.clone());
-                        }
-                    }
-                }
-
-                if files_to_remove.is_empty() {
-                    return Err(FsError::NotFound(path.to_string()));
-                }
-
-                let mut files = self.files.borrow_mut();
-                for file_path in &files_to_remove {
-                    files.remove(file_path);
-                }
-                drop(files);
-                
-                // Also delete from parent filesystem (though they share storage, this ensures consistency)
-                for file_path in &files_to_remove {
-                    let _ = self.parent.borrow().delete_file(file_path);
-                }
-
-                Ok(())
-            }
-
-            fn chroot(
-                &self,
-                subdir: &str,
-            ) -> Result<alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>, FsError> {
-                // Recursive chroot - normalize path
-                let normalized_subdir = LpFsMemory::normalize_path(subdir);
-
-                // Construct prefix relative to current chroot
-                let relative_prefix = if normalized_subdir.ends_with('/') {
-                    normalized_subdir.clone()
-                } else {
-                    format!("{}/", normalized_subdir)
-                };
-
-                // Construct full prefix in parent filesystem
-                // Remove leading / from relative_prefix since chroot_prefix already ends with /
-                let prefix = if relative_prefix == "/" {
-                    self.chroot_prefix.clone()
-                } else {
-                    format!("{}{}", self.chroot_prefix, &relative_prefix[1..])
-                };
-
-                let mut new_files = HashMap::new();
-                {
-                    let files = self.files.borrow();
-                    for (path, data) in files.iter() {
-                        if path.starts_with(&prefix) || path == &prefix.trim_end_matches('/') {
-                            let relative_path = if path.starts_with(&prefix) {
-                                format!("/{}", &path[prefix.len()..])
-                            } else {
-                                "/".to_string()
-                            };
-                            new_files.insert(relative_path, data.clone());
-                        }
-                    }
-                }
-
-                let chroot_prefix = prefix;
-                Ok(Rc::new(RefCell::new(ChrootedLpFsMemory {
-                    files: Rc::clone(&self.files),
-                    parent: Rc::clone(&self.parent),
-                    chroot_prefix,
-                })))
-            }
-
-            fn current_version(&self) -> FsVersion {
-                self.parent.borrow().current_version()
-            }
-
-            fn get_changes_since(&self, since_version: FsVersion) -> Vec<FsChange> {
-                let parent_changes = self.parent.borrow().get_changes_since(since_version);
-                let prefix = &self.chroot_prefix;
-                
-                parent_changes
-                    .into_iter()
-                    .filter_map(|change| {
-                        if change.path.starts_with(prefix) {
-                            // Translate to chrooted-relative path
-                            let relative_path = &change.path[prefix.len()..];
-                            let normalized = if relative_path.starts_with('/') {
-                                relative_path.to_string()
-                            } else {
-                                format!("/{}", relative_path)
-                            };
-                            Some(FsChange {
-                                path: normalized,
-                                change_type: change.change_type,
-                            })
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            }
-
-            fn clear_changes_before(&mut self, _before_version: FsVersion) {
-                // No-op for chrooted filesystems (parent manages versions)
-            }
-
-            fn record_changes(&mut self, _changes: Vec<FsChange>) {
-                // No-op for chrooted filesystems (parent manages versions)
-            }
-        }
-
-        impl ChrootedLpFsMemory {
-            fn validate_path(&self, path: &str) -> Result<(), FsError> {
-                if !path.starts_with('/') {
-                    return Err(FsError::InvalidPath(format!(
-                        "Path must be relative to project root (start with /): {}",
-                        path
-                    )));
-                }
-                Ok(())
-            }
-
-            /// Construct parent filesystem path from chrooted-relative path
-            /// chroot_prefix ends with /, normalized starts with /, so we remove the leading / from normalized
-            fn parent_path(&self, normalized: &str) -> String {
-                if normalized == "/" {
-                    // Root path - use chroot prefix without trailing /
-                    self.chroot_prefix.trim_end_matches('/').to_string()
-                } else {
-                    format!("{}{}", self.chroot_prefix, &normalized[1..])
-                }
-            }
-        }
-
-
-        // Share the same files storage so chrooted filesystems see parent changes
-        let chroot_prefix = prefix.clone();
-        Ok(Rc::new(RefCell::new(ChrootedLpFsMemory {
+        // Wrap self in Rc<RefCell<>> for LpFsView
+        // Create a new LpFsMemory instance that shares the same files storage
+        let parent_rc = Rc::new(RefCell::new(LpFsMemory {
             files: Rc::clone(&self.files),
-            parent: Rc::new(RefCell::new(LpFsMemory {
-                files: Rc::clone(&self.files),
-                current_version: RefCell::new(*self.current_version.borrow()),
-                changes: RefCell::new(self.changes.borrow().clone()),
-            })),
-            chroot_prefix,
-        })))
+            current_version: RefCell::new(*self.current_version.borrow()),
+            changes: RefCell::new(self.changes.borrow().clone()),
+        }));
+
+        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix))))
     }
 
     fn current_version(&self) -> FsVersion {
@@ -767,15 +453,27 @@ impl LpFs for LpFsMemory {
     }
 
     fn clear_changes_before(&mut self, before_version: FsVersion) {
-        self.changes.borrow_mut().retain(|_, (version, _)| {
-            *version >= before_version
-        });
+        self.changes
+            .borrow_mut()
+            .retain(|_, (version, _)| *version >= before_version);
     }
 
     fn record_changes(&mut self, changes: Vec<FsChange>) {
         for change in changes {
             self.record_change(change.path, change.change_type);
         }
+    }
+}
+
+impl LpFsMemory {
+    /// Get all changes (convenience method)
+    pub fn get_changes(&self) -> Vec<FsChange> {
+        self.get_changes_since(FsVersion::default())
+    }
+
+    /// Reset all changes (clear the change history)
+    pub fn reset_changes(&mut self) {
+        self.changes.borrow_mut().clear();
     }
 }
 
