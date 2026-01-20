@@ -2,6 +2,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::convert::AsRef;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Light Player path slice - borrowed view of a path (like `Path`).
@@ -31,25 +32,6 @@ impl LpPath {
     pub fn as_str(&self) -> &str {
         &self.0
     }
-}
-
-/// Light Player path buffer - owned, mutable path (like `PathBuf`).
-///
-/// Supports both absolute (starting with `/`) and relative paths.
-/// Paths are automatically normalized on construction.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct LpPathBuf(String);
-
-impl LpPathBuf {
-    /// Create a new LpPath, normalizing the path
-    pub fn new(path: String) -> Self {
-        Self(normalize(&path))
-    }
-
-    /// Get the path as a string slice
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
 
     /// Check if the path is absolute (starts with `/`)
     pub fn is_absolute(&self) -> bool {
@@ -64,8 +46,9 @@ impl LpPathBuf {
     /// Get the parent directory path
     ///
     /// Returns `None` if the path is root (`/`) or empty, or if there's no parent component.
-    pub fn parent(&self) -> Option<LpPathBuf> {
-        if self.0 == "/" || self.0.is_empty() {
+    /// Returns a borrowed view into the original path.
+    pub fn parent(&self) -> Option<&LpPath> {
+        if self.as_str() == "/" || self.as_str().is_empty() {
             return None;
         }
 
@@ -73,10 +56,10 @@ impl LpPathBuf {
         if let Some(last_slash) = self.0.rfind('/') {
             if last_slash == 0 {
                 // Only root `/` remains
-                Some(LpPathBuf("/".to_string()))
+                Some(LpPath::new("/"))
             } else {
                 // Return path up to (but not including) last `/`
-                Some(LpPathBuf(self.0[..last_slash].to_string()))
+                Some(LpPath::new(&self.0[..last_slash]))
             }
         } else {
             // No `/` found, check if there's a parent component
@@ -86,9 +69,9 @@ impl LpPathBuf {
                 // This shouldn't happen after normalization, but handle it
                 if let Some(last_slash) = self.0.rfind('/') {
                     if last_slash == 0 {
-                        Some(LpPathBuf("/".to_string()))
+                        Some(LpPath::new("/"))
                     } else {
-                        Some(LpPathBuf(self.0[..last_slash].to_string()))
+                        Some(LpPath::new(&self.0[..last_slash]))
                     }
                 } else {
                     None
@@ -104,16 +87,17 @@ impl LpPathBuf {
     ///
     /// Returns `None` if the path is root (`/`) or empty.
     pub fn file_name(&self) -> Option<&str> {
-        if self.0 == "/" || self.0.is_empty() {
+        let s = self.as_str();
+        if s == "/" || s.is_empty() {
             return None;
         }
 
         // Find the last `/`
-        if let Some(last_slash) = self.0.rfind('/') {
-            if last_slash == self.0.len() - 1 {
+        if let Some(last_slash) = s.rfind('/') {
+            if last_slash == s.len() - 1 {
                 // Trailing `/`, this shouldn't happen after normalization, but handle it
                 // Find the component before the trailing slash
-                let trimmed = &self.0[..last_slash];
+                let trimmed = &s[..last_slash];
                 if trimmed.is_empty() || trimmed == "/" {
                     None
                 } else if let Some(prev_slash) = trimmed.rfind('/') {
@@ -122,11 +106,11 @@ impl LpPathBuf {
                     Some(trimmed)
                 }
             } else {
-                Some(&self.0[last_slash + 1..])
+                Some(&s[last_slash + 1..])
             }
         } else {
             // No `/` found, entire path is the file name
-            Some(&self.0)
+            Some(s)
         }
     }
 
@@ -167,6 +151,145 @@ impl LpPathBuf {
         })
     }
 
+    /// Strip a prefix from this path
+    ///
+    /// Returns `None` if the prefix doesn't match.
+    /// Returns a borrowed view into the original path.
+    pub fn strip_prefix<P: AsRef<str>>(&self, prefix: P) -> Option<&LpPath> {
+        let prefix_str = prefix.as_ref();
+        let prefix_path = LpPath::new(prefix_str);
+
+        if !self.starts_with(prefix_str) {
+            return None;
+        }
+
+        // Get components after prefix
+        let self_components: Vec<&str> = self.components().collect();
+        let prefix_components: Vec<&str> = prefix_path.components().collect();
+
+        if prefix_components.len() > self_components.len() {
+            return None;
+        }
+
+        if prefix_components.len() == self_components.len() {
+            // Prefix matches entire path
+            return Some(LpPath::new(if self.is_absolute() { "/" } else { "." }));
+        }
+
+        // Find where the prefix components end in the original string
+        // We need to find the position after the last component of the prefix
+        let s = self.as_str();
+        let mut pos = if self.is_absolute() { 1 } else { 0 };
+        for (i, component) in self_components.iter().enumerate() {
+            if i < prefix_components.len() {
+                // Skip this component, it's part of the prefix
+                pos += component.len();
+                if i < prefix_components.len() - 1 {
+                    pos += 1; // Skip the `/`
+                }
+            } else {
+                // This is the first component after the prefix
+                break;
+            }
+        }
+
+        // Create view from the remaining position
+        // For absolute paths, ensure we have a leading slash
+        if self.is_absolute() {
+            if pos == 1 {
+                // Only root was stripped
+                Some(LpPath::new(&s[pos - 1..]))
+            } else {
+                Some(LpPath::new(&s[pos..]))
+            }
+        } else {
+            Some(LpPath::new(&s[pos..]))
+        }
+    }
+
+    /// Check if this path starts with the given base path
+    ///
+    /// Only considers whole path components to match.
+    pub fn starts_with<P: AsRef<str>>(&self, base: P) -> bool {
+        let base_str = base.as_ref();
+        let base_path = LpPath::new(base_str);
+
+        let self_components: Vec<&str> = self.components().collect();
+        let base_components: Vec<&str> = base_path.components().collect();
+
+        if base_components.len() > self_components.len() {
+            return false;
+        }
+
+        self_components[..base_components.len()] == base_components[..]
+    }
+
+    /// Check if this path ends with the given child path
+    ///
+    /// Only considers whole path components to match.
+    pub fn ends_with<P: AsRef<str>>(&self, child: P) -> bool {
+        let child_str = child.as_ref();
+        let child_path = LpPath::new(child_str);
+
+        let self_components: Vec<&str> = self.components().collect();
+        let child_components: Vec<&str> = child_path.components().collect();
+
+        if child_components.len() > self_components.len() {
+            return false;
+        }
+
+        let start_idx = self_components.len() - child_components.len();
+        self_components[start_idx..] == child_components[..]
+    }
+
+    /// Get an iterator over path components
+    ///
+    /// Skips root `/` for absolute paths and empty components.
+    pub fn components(&self) -> Components<'_> {
+        Components {
+            path: &self.0,
+            start: if self.0.starts_with('/') { 1 } else { 0 },
+        }
+    }
+}
+
+impl fmt::Debug for LpPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.as_str(), f)
+    }
+}
+
+impl PartialEq for LpPath {
+    fn eq(&self, other: &LpPath) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for LpPath {}
+
+/// Light Player path buffer - owned, mutable path (like `PathBuf`).
+///
+/// Supports both absolute (starting with `/`) and relative paths.
+/// Paths are automatically normalized on construction.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct LpPathBuf(String);
+
+impl LpPathBuf {
+    /// Create a new LpPath, normalizing the path
+    pub fn new(path: String) -> Self {
+        Self(normalize(&path))
+    }
+
+    /// Get the path as a string slice
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Get as &LpPath
+    pub fn as_path(&self) -> &LpPath {
+        LpPath::new(&self.0)
+    }
+
     /// Join a path to this path
     ///
     /// Matches PathBuf::join behavior:
@@ -202,6 +325,7 @@ impl LpPathBuf {
 
         // Split into components
         let mut components: Vec<&str> = self
+            .as_path()
             .components()
             .collect::<Vec<_>>()
             .iter()
@@ -219,7 +343,7 @@ impl LpPathBuf {
                     // Parent directory - remove last component
                     if components.is_empty() {
                         // Going above root for absolute path
-                        if self.is_absolute() {
+                        if self.as_path().is_absolute() {
                             return None;
                         }
                         // For relative paths, allow going "up"
@@ -239,93 +363,18 @@ impl LpPathBuf {
 
         // Reconstruct path
         let resolved_path = if components.is_empty() {
-            if self.is_absolute() {
+            if self.as_path().is_absolute() {
                 "/".to_string()
             } else {
                 ".".to_string()
             }
-        } else if self.is_absolute() {
+        } else if self.as_path().is_absolute() {
             format!("/{}", components.join("/"))
         } else {
             components.join("/")
         };
 
         Some(LpPathBuf::from(resolved_path))
-    }
-
-    /// Strip a prefix from this path
-    ///
-    /// Returns `None` if the prefix doesn't match.
-    pub fn strip_prefix<P: AsRef<str>>(&self, prefix: P) -> Option<LpPathBuf> {
-        let prefix_str = prefix.as_ref();
-        let prefix_path = LpPathBuf::from(prefix_str);
-
-        if self.starts_with(prefix_str) {
-            // Get components after prefix
-            let self_components: Vec<&str> = self.components().collect();
-            let prefix_components: Vec<&str> = prefix_path.components().collect();
-
-            if prefix_components.len() > self_components.len() {
-                return None;
-            }
-
-            let remaining: Vec<&str> = self_components[prefix_components.len()..].to_vec();
-
-            if remaining.is_empty() {
-                Some(LpPathBuf::from(if self.is_absolute() { "/" } else { "." }))
-            } else if self.is_absolute() {
-                Some(LpPathBuf::from(format!("/{}", remaining.join("/"))))
-            } else {
-                Some(LpPathBuf::from(remaining.join("/")))
-            }
-        } else {
-            None
-        }
-    }
-
-    /// Check if this path starts with the given base path
-    ///
-    /// Only considers whole path components to match.
-    pub fn starts_with<P: AsRef<str>>(&self, base: P) -> bool {
-        let base_str = base.as_ref();
-        let base_path = LpPathBuf::from(base_str);
-
-        let self_components: Vec<&str> = self.components().collect();
-        let base_components: Vec<&str> = base_path.components().collect();
-
-        if base_components.len() > self_components.len() {
-            return false;
-        }
-
-        self_components[..base_components.len()] == base_components[..]
-    }
-
-    /// Check if this path ends with the given child path
-    ///
-    /// Only considers whole path components to match.
-    pub fn ends_with<P: AsRef<str>>(&self, child: P) -> bool {
-        let child_str = child.as_ref();
-        let child_path = LpPathBuf::from(child_str);
-
-        let self_components: Vec<&str> = self.components().collect();
-        let child_components: Vec<&str> = child_path.components().collect();
-
-        if child_components.len() > self_components.len() {
-            return false;
-        }
-
-        let start_idx = self_components.len() - child_components.len();
-        self_components[start_idx..] == child_components[..]
-    }
-
-    /// Get an iterator over path components
-    ///
-    /// Skips root `/` for absolute paths and empty components.
-    pub fn components(&self) -> Components<'_> {
-        Components {
-            path: &self.0,
-            start: if self.0.starts_with('/') { 1 } else { 0 },
-        }
     }
 }
 
@@ -482,63 +531,93 @@ mod tests {
 
     #[test]
     fn test_is_absolute() {
-        assert!(LpPathBuf::from("/src/test").is_absolute());
-        assert!(!LpPathBuf::from("src/test").is_absolute());
-        assert!(LpPathBuf::from("/").is_absolute());
+        assert!(LpPathBuf::from("/src/test").as_path().is_absolute());
+        assert!(!LpPathBuf::from("src/test").as_path().is_absolute());
+        assert!(LpPathBuf::from("/").as_path().is_absolute());
     }
 
     #[test]
     fn test_is_relative() {
-        assert!(!LpPathBuf::from("/src/test").is_relative());
-        assert!(LpPathBuf::from("src/test").is_relative());
-        assert!(!LpPathBuf::from("/").is_relative());
+        assert!(!LpPathBuf::from("/src/test").as_path().is_relative());
+        assert!(LpPathBuf::from("src/test").as_path().is_relative());
+        assert!(!LpPathBuf::from("/").as_path().is_relative());
     }
 
     #[test]
     fn test_parent() {
         assert_eq!(
-            LpPathBuf::from("/src/test").parent(),
-            Some(LpPathBuf::from("/src"))
+            LpPathBuf::from("/src/test")
+                .as_path()
+                .parent()
+                .map(|p| p.as_str()),
+            Some("/src")
         );
-        assert_eq!(LpPathBuf::from("/src").parent(), Some(LpPathBuf::from("/")));
-        assert_eq!(LpPathBuf::from("/").parent(), None);
         assert_eq!(
-            LpPathBuf::from("src/test").parent(),
-            Some(LpPathBuf::from("src"))
+            LpPathBuf::from("/src")
+                .as_path()
+                .parent()
+                .map(|p| p.as_str()),
+            Some("/")
         );
-        assert_eq!(LpPathBuf::from("test").parent(), None);
+        assert_eq!(LpPathBuf::from("/").as_path().parent(), None);
+        assert_eq!(
+            LpPathBuf::from("src/test")
+                .as_path()
+                .parent()
+                .map(|p| p.as_str()),
+            Some("src")
+        );
+        assert_eq!(LpPathBuf::from("test").as_path().parent(), None);
     }
 
     #[test]
     fn test_file_name() {
         assert_eq!(
-            LpPathBuf::from("/src/test.txt").file_name(),
+            LpPathBuf::from("/src/test.txt").as_path().file_name(),
             Some("test.txt")
         );
-        assert_eq!(LpPathBuf::from("/src/test").file_name(), Some("test"));
-        assert_eq!(LpPathBuf::from("/").file_name(), None);
-        assert_eq!(LpPathBuf::from("test.txt").file_name(), Some("test.txt"));
+        assert_eq!(
+            LpPathBuf::from("/src/test").as_path().file_name(),
+            Some("test")
+        );
+        assert_eq!(LpPathBuf::from("/").as_path().file_name(), None);
+        assert_eq!(
+            LpPathBuf::from("test.txt").as_path().file_name(),
+            Some("test.txt")
+        );
     }
 
     #[test]
     fn test_file_stem() {
-        assert_eq!(LpPathBuf::from("/src/test.txt").file_stem(), Some("test"));
         assert_eq!(
-            LpPathBuf::from("/src/test.tar.gz").file_stem(),
+            LpPathBuf::from("/src/test.txt").as_path().file_stem(),
+            Some("test")
+        );
+        assert_eq!(
+            LpPathBuf::from("/src/test.tar.gz").as_path().file_stem(),
             Some("test.tar")
         );
-        assert_eq!(LpPathBuf::from("/src/test").file_stem(), Some("test"));
-        assert_eq!(LpPathBuf::from("/src/.hidden").file_stem(), None);
-        assert_eq!(LpPathBuf::from("/").file_stem(), None);
+        assert_eq!(
+            LpPathBuf::from("/src/test").as_path().file_stem(),
+            Some("test")
+        );
+        assert_eq!(LpPathBuf::from("/src/.hidden").as_path().file_stem(), None);
+        assert_eq!(LpPathBuf::from("/").as_path().file_stem(), None);
     }
 
     #[test]
     fn test_extension() {
-        assert_eq!(LpPathBuf::from("/src/test.txt").extension(), Some("txt"));
-        assert_eq!(LpPathBuf::from("/src/test.tar.gz").extension(), Some("gz"));
-        assert_eq!(LpPathBuf::from("/src/test").extension(), None);
-        assert_eq!(LpPathBuf::from("/src/test.").extension(), None);
-        assert_eq!(LpPathBuf::from("/").extension(), None);
+        assert_eq!(
+            LpPathBuf::from("/src/test.txt").as_path().extension(),
+            Some("txt")
+        );
+        assert_eq!(
+            LpPathBuf::from("/src/test.tar.gz").as_path().extension(),
+            Some("gz")
+        );
+        assert_eq!(LpPathBuf::from("/src/test").as_path().extension(), None);
+        assert_eq!(LpPathBuf::from("/src/test.").as_path().extension(), None);
+        assert_eq!(LpPathBuf::from("/").as_path().extension(), None);
     }
 
     #[test]
@@ -573,47 +652,86 @@ mod tests {
     #[test]
     fn test_strip_prefix() {
         assert_eq!(
-            LpPathBuf::from("/projects/my-project/src").strip_prefix("/projects/my-project"),
-            Some(LpPathBuf::from("/src"))
+            LpPathBuf::from("/projects/my-project/src")
+                .as_path()
+                .strip_prefix("/projects/my-project")
+                .map(|p| p.as_str()),
+            Some("/src")
         );
-        assert_eq!(LpPathBuf::from("/src").strip_prefix("/projects"), None);
+        assert!(
+            LpPathBuf::from("/src")
+                .as_path()
+                .strip_prefix("/projects")
+                .is_none()
+        );
         assert_eq!(
-            LpPathBuf::from("/projects/my-project").strip_prefix("/projects/my-project"),
-            Some(LpPathBuf::from("/"))
+            LpPathBuf::from("/projects/my-project")
+                .as_path()
+                .strip_prefix("/projects/my-project")
+                .map(|p| p.as_str()),
+            Some("/")
         );
     }
 
     #[test]
     fn test_starts_with() {
-        assert!(LpPathBuf::from("/etc/passwd").starts_with("/etc"));
-        assert!(LpPathBuf::from("/etc/passwd").starts_with("/etc/"));
-        assert!(!LpPathBuf::from("/etc/passwd").starts_with("/usr"));
-        assert!(!LpPathBuf::from("/etc/foo.rs").starts_with("/etc/foo"));
+        assert!(LpPathBuf::from("/etc/passwd").as_path().starts_with("/etc"));
+        assert!(
+            LpPathBuf::from("/etc/passwd")
+                .as_path()
+                .starts_with("/etc/")
+        );
+        assert!(!LpPathBuf::from("/etc/passwd").as_path().starts_with("/usr"));
+        assert!(
+            !LpPathBuf::from("/etc/foo.rs")
+                .as_path()
+                .starts_with("/etc/foo")
+        );
     }
 
     #[test]
     fn test_ends_with() {
-        assert!(LpPathBuf::from("/etc/resolv.conf").ends_with("resolv.conf"));
-        assert!(LpPathBuf::from("/etc/resolv.conf").ends_with("etc/resolv.conf"));
-        assert!(LpPathBuf::from("/etc/resolv.conf").ends_with("/etc/resolv.conf"));
+        assert!(
+            LpPathBuf::from("/etc/resolv.conf")
+                .as_path()
+                .ends_with("resolv.conf")
+        );
+        assert!(
+            LpPathBuf::from("/etc/resolv.conf")
+                .as_path()
+                .ends_with("etc/resolv.conf")
+        );
+        assert!(
+            LpPathBuf::from("/etc/resolv.conf")
+                .as_path()
+                .ends_with("/etc/resolv.conf")
+        );
         // /resolv.conf normalized is absolute, but we compare components
         // So /etc/resolv.conf ends with resolv.conf component
-        assert!(LpPathBuf::from("/etc/resolv.conf").ends_with("/resolv.conf"));
-        assert!(!LpPathBuf::from("/etc/resolv.conf").ends_with("conf"));
+        assert!(
+            LpPathBuf::from("/etc/resolv.conf")
+                .as_path()
+                .ends_with("/resolv.conf")
+        );
+        assert!(
+            !LpPathBuf::from("/etc/resolv.conf")
+                .as_path()
+                .ends_with("conf")
+        );
     }
 
     #[test]
     fn test_components() {
         let path1 = LpPathBuf::from("/src/test");
-        let components: Vec<&str> = path1.components().collect();
+        let components: Vec<&str> = path1.as_path().components().collect();
         assert_eq!(components, Vec::from(["src", "test"]));
 
         let path2 = LpPathBuf::from("src/test");
-        let components: Vec<&str> = path2.components().collect();
+        let components: Vec<&str> = path2.as_path().components().collect();
         assert_eq!(components, Vec::from(["src", "test"]));
 
         let path3 = LpPathBuf::from("/");
-        let components: Vec<&str> = path3.components().collect();
+        let components: Vec<&str> = path3.as_path().components().collect();
         assert_eq!(components, Vec::<&str>::new());
     }
 }
