@@ -15,7 +15,7 @@ use alloc::{
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::Message;
-use lp_shared::fs::{FsChange, LpFs};
+use lp_shared::fs::{FsChange, FsVersion, LpFs};
 use lp_shared::output::OutputProvider;
 
 /// Main server struct for processing client-server messages
@@ -138,9 +138,6 @@ impl LpServer {
             .map(|p| (p.handle, p.path.clone()))
             .collect();
 
-        // Get current version and query all changes from base_fs (before mutable borrows)
-        let current_version = self.base_fs().current_version();
-
         // Collect changes per project
         let mut project_changes_map: HashMap<_, Vec<FsChange>> = HashMap::new();
 
@@ -150,6 +147,11 @@ impl LpServer {
 
                 // Query changes from base_fs
                 let base_changes = self.base_fs().get_changes_since(last_version);
+
+                // If no changes, skip this project
+                if base_changes.is_empty() {
+                    continue;
+                }
 
                 // Filter changes for this project
                 let project_prefix = format!("/{}/", project_path);
@@ -180,6 +182,11 @@ impl LpServer {
             }
         }
 
+        // Get current_version AFTER collecting all changes but BEFORE processing
+        // This represents the version that will be assigned to the NEXT change
+        // So all changes we're about to process have versions < current_version
+        let current_version = self.base_fs().current_version();
+
         // Now apply changes to projects (mutable borrows)
         for (handle, project_changes) in project_changes_map {
             if let Some(project) = self.project_manager.get_project_mut(handle) {
@@ -188,8 +195,11 @@ impl LpServer {
                     // Note: In no_std context, errors are silently ignored
                     // Errors will be visible when clients sync or query project state
                 } else {
-                    // Update last processed version
-                    project.update_fs_version(current_version);
+                    // Update last processed version to current_version.next() (one more than the next version)
+                    // This ensures that get_changes_since(current_version.next()) will return nothing next time
+                    // because get_changes_since uses >=, and current_version.next() is beyond all changes we processed
+                    // All changes we processed have versions < current_version, so >= current_version.next() returns nothing
+                    project.update_fs_version(current_version.next());
                 }
             }
         }
