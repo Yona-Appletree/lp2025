@@ -1151,47 +1151,18 @@ impl<'a> crate::runtime::contexts::NodeInitContext for InitContext<'a> {
             // Relative path - resolve from current node's directory
             // Current node path is self.node_path (e.g., "/src/texture.texture")
             // Relative spec is relative to the parent directory (e.g., "../output.output")
-            let current_dir = self.node_path.as_str();
-            // Find the parent directory by removing the last component
-            let parent_dir = if let Some(last_slash) = current_dir.rfind('/') {
-                &current_dir[..last_slash]
-            } else {
+            let parent_dir = self.node_path.parent().unwrap_or_else(|| {
                 // No parent, use root
-                "/"
-            };
+                lp_model::LpPath::from("/")
+            });
 
-            // Resolve relative path
-            let mut components: Vec<&str> =
-                parent_dir.split('/').filter(|s| !s.is_empty()).collect();
-            let relative_components: Vec<&str> = spec_path.split('/').collect();
-
-            for component in relative_components {
-                match component {
-                    "." => {
-                        // Current directory - no change
-                    }
-                    ".." => {
-                        // Parent directory - remove last component
-                        components.pop();
-                    }
-                    "" => {
-                        // Empty component (e.g., leading/trailing slash) - ignore
-                    }
-                    name => {
-                        // Regular component - add it
-                        components.push(name);
-                    }
-                }
-            }
-
-            // Reconstruct path
-            let resolved_path = if components.is_empty() {
-                "/".to_string()
-            } else {
-                format!("/{}", components.join("/"))
-            };
-
-            lp_model::LpPath::from(resolved_path)
+            // Resolve relative path using join_relative
+            parent_dir
+                .join_relative(spec_path)
+                .ok_or_else(|| Error::InvalidConfig {
+                    node_path: spec_path.to_string(),
+                    reason: "Invalid relative path resolution".to_string(),
+                })?
         };
 
         // Look up node by path
