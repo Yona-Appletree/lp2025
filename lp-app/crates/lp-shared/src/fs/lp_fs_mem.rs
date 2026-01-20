@@ -433,7 +433,8 @@ impl LpFs for LpFsMemory {
         // Since we can't create a new struct here, we'll create a wrapper
         struct ChrootedLpFsMemory {
             files: RefCell<HashMap<String, Vec<u8>>>,
-            changes: RefCell<Vec<FsChange>>,
+            parent: Rc<RefCell<dyn LpFs>>,
+            chroot_prefix: String,
         }
 
         impl LpFs for ChrootedLpFsMemory {
@@ -454,10 +455,9 @@ impl LpFs for LpFsMemory {
                 self.files
                     .borrow_mut()
                     .insert(normalized.clone(), data.to_vec());
-                self.changes.borrow_mut().push(FsChange {
-                    path: normalized,
-                    change_type: ChangeType::Modify,
-                });
+                // Write to parent filesystem as well
+                let parent_path = format!("{}{}", self.chroot_prefix, normalized);
+                self.parent.borrow().write_file(&parent_path, data)?;
                 Ok(())
             }
 
@@ -550,10 +550,9 @@ impl LpFs for LpFsMemory {
                 }
 
                 self.files.borrow_mut().remove(&normalized);
-                self.changes.borrow_mut().push(FsChange {
-                    path: normalized,
-                    change_type: ChangeType::Delete,
-                });
+                // Delete from parent filesystem as well
+                let parent_path = format!("{}{}", self.chroot_prefix, normalized);
+                let _ = self.parent.borrow().delete_file(&parent_path);
                 Ok(())
             }
 
@@ -588,13 +587,15 @@ impl LpFs for LpFsMemory {
                 }
 
                 let mut files = self.files.borrow_mut();
-                let mut changes = self.changes.borrow_mut();
-                for file_path in files_to_remove {
-                    files.remove(&file_path);
-                    changes.push(FsChange {
-                        path: file_path,
-                        change_type: ChangeType::Delete,
-                    });
+                for file_path in &files_to_remove {
+                    files.remove(file_path);
+                }
+                drop(files);
+                
+                // Delete from parent filesystem as well
+                for file_path in &files_to_remove {
+                    let parent_path = format!("{}{}", self.chroot_prefix, file_path);
+                    let _ = self.parent.borrow().delete_file(&parent_path);
                 }
 
                 Ok(())
@@ -628,10 +629,50 @@ impl LpFs for LpFsMemory {
                     }
                 }
 
+                let chroot_prefix = format!("{}{}", self.chroot_prefix, prefix);
                 Ok(Rc::new(RefCell::new(ChrootedLpFsMemory {
                     files: RefCell::new(new_files),
-                    changes: RefCell::new(Vec::new()),
+                    parent: Rc::clone(&self.parent),
+                    chroot_prefix,
                 })))
+            }
+
+            fn current_version(&self) -> FsVersion {
+                self.parent.borrow().current_version()
+            }
+
+            fn get_changes_since(&self, since_version: FsVersion) -> Vec<FsChange> {
+                let parent_changes = self.parent.borrow().get_changes_since(since_version);
+                let prefix = &self.chroot_prefix;
+                
+                parent_changes
+                    .into_iter()
+                    .filter_map(|change| {
+                        if change.path.starts_with(prefix) {
+                            // Translate to chrooted-relative path
+                            let relative_path = &change.path[prefix.len()..];
+                            let normalized = if relative_path.starts_with('/') {
+                                relative_path.to_string()
+                            } else {
+                                format!("/{}", relative_path)
+                            };
+                            Some(FsChange {
+                                path: normalized,
+                                change_type: change.change_type,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }
+
+            fn clear_changes_before(&mut self, _before_version: FsVersion) {
+                // No-op for chrooted filesystems (parent manages versions)
+            }
+
+            fn record_changes(&mut self, _changes: Vec<FsChange>) {
+                // No-op for chrooted filesystems (parent manages versions)
             }
         }
 
@@ -647,9 +688,20 @@ impl LpFs for LpFsMemory {
             }
         }
 
+
+        // Create a wrapper around self to use as parent reference
+        // Note: This creates a new Rc wrapper, but we can't easily get an Rc from &self
+        // For now, we'll store the prefix and query through a different mechanism
+        // TODO: Refactor to properly store parent reference
+        let chroot_prefix = prefix.clone();
         Ok(Rc::new(RefCell::new(ChrootedLpFsMemory {
             files: RefCell::new(new_files),
-            changes: RefCell::new(Vec::new()),
+            parent: Rc::new(RefCell::new(LpFsMemory {
+                files: RefCell::new(self.files.borrow().clone()),
+                current_version: RefCell::new(*self.current_version.borrow()),
+                changes: RefCell::new(self.changes.borrow().clone()),
+            })),
+            chroot_prefix,
         })))
     }
 
