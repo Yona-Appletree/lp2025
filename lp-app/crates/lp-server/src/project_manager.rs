@@ -76,7 +76,9 @@ impl ProjectManager {
         self.next_handle_id = self.next_handle_id.wrapping_add(1);
 
         // Build project path relative to projects_base_dir
-        let project_path = format!("{}/{}", self.projects_base_dir, name);
+        // Ensure projects_base_dir doesn't have trailing slash to avoid double slashes
+        let base_dir = self.projects_base_dir.trim_end_matches('/');
+        let project_path = format!("{}/{}", base_dir, name);
 
         // Create project-scoped filesystem using chroot
         let project_fs = base_fs
