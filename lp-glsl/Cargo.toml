@@ -11,7 +11,7 @@ members = [
     "crates/lp-riscv-tools",
     "apps/embive-program",
     "apps/esp32-glsl-jit",
-    "../lp-app/apps/lp-core-cli",
+    "../lp-app/apps/lp-cli",
     "apps/lp-builtin-gen",
     "apps/lp-builtins-app",
     "apps/lp-test",
@@ -51,26 +51,26 @@ multiple_bound_locations = 'warn'
 extra_unused_type_parameters = 'warn'
 
 [workspace.dependencies]
-# Cranelift crates - reference parent workspace
-cranelift-codegen = { path = "../cranelift/codegen", version = "0.127.0", default-features = false }
-cranelift-frontend = { path = "../cranelift/frontend", version = "0.127.0", default-features = false }
-cranelift-module = { path = "../cranelift/module", version = "0.127.0", default-features = false }
-cranelift-jit = { path = "../cranelift/jit", version = "0.127.0", default-features = false }
-cranelift-native = { path = "../cranelift/native", version = "0.127.0" }
-cranelift-object = { path = "../cranelift/object", version = "0.127.0" }
-cranelift-reader = { path = "../cranelift/reader", version = "0.127.0" }
-cranelift-control = { path = "../cranelift/control", version = "0.127.0", default-features = false }
+# Cranelift crates - reference root workspace
+cranelift-codegen = { workspace = true }
+cranelift-frontend = { workspace = true }
+cranelift-module = { workspace = true }
+cranelift-jit = { workspace = true }
+cranelift-native = { workspace = true }
+cranelift-object = { workspace = true }
+cranelift-reader = { workspace = true }
+cranelift-control = { workspace = true }
 
-# Common dependencies
-target-lexicon = "0.13.0"
-hashbrown = { version = "0.15", default-features = false, features = ["alloc", "default-hasher"] }
-anyhow = { version = "1.0.100", default-features = false }
-regex = "1.9.1"
-glob = "0.3.3"
-object = { version = "0.37.3", default-features = false, features = ['read_core', 'elf'] }
-critical-section = { version = "1.2.0", default-features = false, features = ["restore-state-u32"] }
-serde = { version = "1.0.228", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0.80", default-features = false, features = ["alloc"] }
+# Common dependencies - reference root workspace
+target-lexicon = { workspace = true }
+hashbrown = { workspace = true }
+anyhow = { workspace = true }
+regex = { workspace = true }
+glob = { workspace = true }
+object = { workspace = true }
+critical-section = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # Note: ESP32-C3 supports atomic CAS, so portable-atomic's unsafe-assume-single-core
 # feature should not be enabled. If esp-hal enables it incorrectly, this may be
