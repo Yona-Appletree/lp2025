@@ -9,12 +9,12 @@ use alloc::{
     boxed::Box,
     format,
     rc::Rc,
-    string::{String, ToString},
+    string::ToString,
     vec::Vec,
 };
 use core::cell::RefCell;
 use hashbrown::HashMap;
-use lp_model::Message;
+use lp_model::{LpPath, LpPathBuf, Message};
 use lp_shared::fs::{FsChange, LpFs};
 use lp_shared::output::OutputProvider;
 
@@ -45,20 +45,21 @@ impl LpServer {
     ///
     /// ```rust,no_run
     /// extern crate alloc;
+    /// use lp_model::AsLpPath;
     /// use lp_server::LpServer;
     /// use lp_shared::fs::LpFsStd;
     /// use lp_shared::output::MemoryOutputProvider;
-    /// use alloc::{boxed::Box, rc::Rc, string::ToString};
+    /// use alloc::{boxed::Box, rc::Rc};
     /// use core::cell::RefCell;
     ///
     /// let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
     /// let base_fs = Box::new(LpFsStd::new("/path/to/server/root".into()));
-    /// let server = LpServer::new(output_provider, base_fs, "projects/".to_string());
+    /// let server = LpServer::new(output_provider, base_fs, "projects/".as_path());
     /// ```
     pub fn new(
         output_provider: Rc<RefCell<dyn OutputProvider>>,
         base_fs: Box<dyn LpFs>,
-        projects_base_dir: String,
+        projects_base_dir: &LpPath,
     ) -> Self {
         let project_manager = ProjectManager::new(projects_base_dir);
         Self {
@@ -87,7 +88,7 @@ impl LpServer {
     ///
     /// ```rust,no_run
     /// extern crate alloc;
-    /// use lp_model::Message;
+    /// use lp_model::{AsLpPath, Message};
     /// use lp_server::LpServer;
     /// use lp_shared::fs::LpFsMemory;
     /// use lp_shared::output::MemoryOutputProvider;
@@ -96,7 +97,7 @@ impl LpServer {
     ///
     /// let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
     /// let base_fs = Box::new(LpFsMemory::new());
-    /// let mut server = LpServer::new(output_provider, base_fs, "projects/".to_string());
+    /// let mut server = LpServer::new(output_provider, base_fs, "projects/".as_path());
     /// let incoming = vec![/* messages */];
     /// let responses = server.tick(16, incoming).unwrap();
     /// ```
@@ -154,15 +155,16 @@ impl LpServer {
                 }
 
                 // Filter changes for this project
-                let project_prefix = format!("/{}/", project_path);
+                // Build project prefix path using join - ensure it ends with /
+                let project_prefix_buf = LpPathBuf::from("/").join(project_path.as_str()).join("");
+                let project_prefix = project_prefix_buf.as_str();
                 let project_changes: Vec<FsChange> = base_changes
                     .into_iter()
                     .filter_map(|change| {
                         // Use LpPath to strip prefix and normalize
-                        let change_path = lp_model::LpPathBuf::from(change.path.as_str());
-                        if let Some(stripped) = change_path.strip_prefix(&project_prefix) {
+                        if let Some(stripped) = change.path.strip_prefix(project_prefix) {
                             Some(FsChange {
-                                path: stripped.as_str().to_string(),
+                                path: stripped.to_path_buf(),
                                 change_type: change.change_type,
                             })
                         } else {

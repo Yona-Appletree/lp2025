@@ -4,6 +4,7 @@
 
 use crate::project::{api::ProjectRequest, handle::ProjectHandle};
 use crate::server::{FsRequest, ServerMsgBody as ServerMessagePayload};
+use crate::{AsLpPathBuf, LpPathBuf};
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
@@ -77,7 +78,7 @@ mod tests {
         let client_msg = ClientMessage {
             id: 1,
             msg: ClientRequest::Filesystem(FsRequest::Read {
-                path: "/project.json".to_string(),
+                path: "/project.json".as_path_buf(),
             }),
         };
         let message = Message::Client(client_msg);
@@ -89,7 +90,7 @@ mod tests {
                 assert_eq!(id, 1);
                 match msg {
                     ClientRequest::Filesystem(FsRequest::Read { path }) => {
-                        assert_eq!(path, "/project.json");
+                        assert_eq!(path.as_str(), "/project.json");
                     }
                     _ => panic!("Wrong request type"),
                 }
@@ -104,7 +105,7 @@ mod tests {
         let server_msg = ServerMessage {
             id: 1,
             msg: ServerMessagePayload::Filesystem(FsResponse::Read {
-                path: "/project.json".to_string(),
+                path: "/project.json".as_path_buf(),
                 data: Some(b"{}".to_vec()),
                 error: None,
             }),
@@ -118,7 +119,7 @@ mod tests {
                 assert_eq!(id, 1);
                 match msg {
                     ServerMessagePayload::Filesystem(FsResponse::Read { path, data, error }) => {
-                        assert_eq!(path, "/project.json");
+                        assert_eq!(path.as_str(), "/project.json");
                         assert_eq!(data, Some(b"{}".to_vec()));
                         assert_eq!(error, None);
                     }
@@ -132,7 +133,7 @@ mod tests {
     #[test]
     fn test_nested_filesystem_request() {
         let req = ClientRequest::Filesystem(FsRequest::Write {
-            path: "/test.txt".to_string(),
+            path: "/test.txt".as_path_buf(),
             data: b"hello".to_vec(),
         });
         let json = serde_json::to_string(&req).unwrap();
@@ -140,7 +141,7 @@ mod tests {
         let deserialized: ClientRequest = serde_json::from_str(&json).unwrap();
         match deserialized {
             ClientRequest::Filesystem(FsRequest::Write { path, data }) => {
-                assert_eq!(path, "/test.txt");
+                assert_eq!(path.as_str(), "/test.txt");
                 assert_eq!(data, b"hello");
             }
             _ => panic!("Wrong request type"),

@@ -32,7 +32,7 @@ fn test_node_json_modification() {
     runtime.ensure_all_nodes_initialized().unwrap();
 
     // Get shader handle
-    let shader_handle = runtime.handle_for_path("/src/shader-1.shader").unwrap();
+    let shader_handle = runtime.handle_for_path("/src/shader-1.shader".as_path()).unwrap();
 
     // Render a frame to get baseline
     runtime.tick(4).unwrap();
@@ -186,7 +186,7 @@ fn test_node_deletion() {
     runtime.ensure_all_nodes_initialized().unwrap();
 
     // Get shader handle
-    let _shader_handle = runtime.handle_for_path("/src/shader-1.shader").unwrap();
+    let _shader_handle = runtime.handle_for_path("/src/shader-1.shader".as_path()).unwrap();
 
     // Delete node.json
     let shader_config_path = "/src/shader-1.shader/node.json";
@@ -199,7 +199,7 @@ fn test_node_deletion() {
 
     // Verify the node was removed
     assert!(
-        runtime.handle_for_path("/src/shader-1.shader").is_err(),
+        runtime.handle_for_path("/src/shader-1.shader".as_path()).is_err(),
         "Node should be removed after node.json deletion"
     );
 }

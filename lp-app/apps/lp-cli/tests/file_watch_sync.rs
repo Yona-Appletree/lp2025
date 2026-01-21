@@ -22,7 +22,7 @@ fn test_add_pending_change() {
     let mut last_change_time: Option<Instant> = None;
 
     let change1 = FsChange {
-        path: "/src/test1.glsl".to_string(),
+        path: lp_model::LpPathBuf::from("/src/test1.glsl"),
         change_type: ChangeType::Create,
     };
 
@@ -34,7 +34,7 @@ fn test_add_pending_change() {
 
     // Add another change
     let change2 = FsChange {
-        path: "/src/test2.glsl".to_string(),
+        path: lp_model::LpPathBuf::from("/src/test2.glsl"),
         change_type: ChangeType::Modify,
     };
 
@@ -46,7 +46,7 @@ fn test_add_pending_change() {
 
     // Update existing change (should deduplicate by path)
     let change1_updated = FsChange {
-        path: "/src/test1.glsl".to_string(),
+        path: lp_model::LpPathBuf::from("/src/test1.glsl"),
         change_type: ChangeType::Modify, // Changed from Create to Modify
     };
 
@@ -77,12 +77,13 @@ fn test_file_change_detection() {
     let mut fs = LpFsMemory::new();
 
     // Create a file
-    fs.write_file("/src/test.glsl".as_path(), b"void main() { }").unwrap();
+    fs.write_file("/src/test.glsl".as_path(), b"void main() { }")
+        .unwrap();
 
     // Get changes
     let changes = fs.get_changes();
     assert_eq!(changes.len(), 1);
-    assert_eq!(changes[0].path, "/src/test.glsl");
+    assert_eq!(changes[0].path.as_str(), "/src/test.glsl");
     assert_eq!(changes[0].change_type, ChangeType::Create);
 
     // Modify the file
@@ -112,9 +113,12 @@ fn test_multiple_file_changes() {
     let fs = LpFsMemory::new();
 
     // Create multiple files
-    fs.write_file("/src/file1.glsl".as_path(), b"file1").unwrap();
-    fs.write_file("/src/file2.glsl".as_path(), b"file2").unwrap();
-    fs.write_file("/src/file3.glsl".as_path(), b"file3").unwrap();
+    fs.write_file("/src/file1.glsl".as_path(), b"file1")
+        .unwrap();
+    fs.write_file("/src/file2.glsl".as_path(), b"file2")
+        .unwrap();
+    fs.write_file("/src/file3.glsl".as_path(), b"file3")
+        .unwrap();
 
     let changes = fs.get_changes();
     assert_eq!(changes.len(), 3);
@@ -168,7 +172,7 @@ fn test_debouncing_logic() {
 
     // Add a change
     let change = FsChange {
-        path: "/src/test.glsl".to_string(),
+        path: lp_model::LpPathBuf::from("/src/test.glsl"),
         change_type: ChangeType::Create,
     };
     add_pending_change(&mut pending_changes, &mut last_change_time, change);

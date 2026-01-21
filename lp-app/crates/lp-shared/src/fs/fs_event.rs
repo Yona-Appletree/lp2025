@@ -1,6 +1,6 @@
 //! File change tracking types
 
-use alloc::string::String;
+use lp_model::LpPathBuf;
 
 /// Filesystem version identifier - increments on each filesystem change
 #[derive(
@@ -57,7 +57,7 @@ mod tests {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FsChange {
     /// Path affected by the change
-    pub path: String,
+    pub path: LpPathBuf,
     /// Type of change
     pub change_type: ChangeType,
 }

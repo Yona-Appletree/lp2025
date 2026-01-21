@@ -3,7 +3,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::vec::Vec;
-use lp_model::{AsLpPath, LpPathBuf, NodeConfig, NodeKind, ProjectConfig};
+use lp_model::{AsLpPath, LpPath, LpPathBuf, NodeConfig, NodeKind, ProjectConfig};
 use lp_shared::fs::LpFs;
 use serde_json;
 
@@ -40,11 +40,12 @@ pub(crate) fn node_kind_from_path(path: &LpPathBuf) -> Result<NodeKind, Error> {
 }
 
 /// Check if a path is a node directory
-pub(crate) fn is_node_directory(path: &str) -> bool {
-    path.ends_with(".texture")
-        || path.ends_with(".shader")
-        || path.ends_with(".output")
-        || path.ends_with(".fixture")
+pub(crate) fn is_node_directory(path: &LpPathBuf) -> bool {
+    let path_str = path.as_str();
+    path_str.ends_with(".texture")
+        || path_str.ends_with(".shader")
+        || path_str.ends_with(".output")
+        || path_str.ends_with(".fixture")
 }
 
 /// Load project config from filesystem
@@ -73,7 +74,7 @@ pub fn discover_nodes(fs: &dyn LpFs) -> Result<Vec<LpPathBuf>, Error> {
 
     let mut nodes = Vec::new();
     for entry in entries {
-        if is_node_directory(entry.as_str()) {
+        if is_node_directory(&entry) {
             nodes.push(entry);
         }
     }
@@ -84,24 +85,24 @@ pub fn discover_nodes(fs: &dyn LpFs) -> Result<Vec<LpPathBuf>, Error> {
 /// Load a node's config from filesystem
 pub fn load_node(
     fs: &dyn LpFs,
-    path: &LpPathBuf,
+    path: &LpPath,
 ) -> Result<(LpPathBuf, Box<dyn NodeConfig>), Error> {
-    let node_json_path = format!("{}/node.json", path.as_str());
+    let node_json_path = path.to_path_buf().join("node.json");
 
     let data = fs.read_file(node_json_path.as_path()).map_err(|e| Error::Io {
-        path: node_json_path.clone(),
+        path: node_json_path.as_str().to_string(),
         details: format!("Failed to read: {:?}", e),
     })?;
 
     // Determine node kind from path suffix
-    let kind = node_kind_from_path(path)?;
+    let kind = node_kind_from_path(&path.to_path_buf())?;
 
     // Parse config based on kind
     let config: Box<dyn NodeConfig> = match kind {
         NodeKind::Texture => {
             let cfg: lp_model::nodes::texture::TextureConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
-                    file: node_json_path.clone(),
+                    file: node_json_path.as_str().to_string(),
                     error: format!("Failed to parse texture config: {}", e),
                 })?;
             Box::new(cfg)
@@ -109,7 +110,7 @@ pub fn load_node(
         NodeKind::Shader => {
             let cfg: lp_model::nodes::shader::ShaderConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
-                    file: node_json_path.clone(),
+                    file: node_json_path.as_str().to_string(),
                     error: format!("Failed to parse shader config: {}", e),
                 })?;
             Box::new(cfg)
@@ -117,7 +118,7 @@ pub fn load_node(
         NodeKind::Output => {
             let cfg: lp_model::nodes::output::OutputConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
-                    file: node_json_path.clone(),
+                    file: node_json_path.as_str().to_string(),
                     error: format!("Failed to parse output config: {}", e),
                 })?;
             Box::new(cfg)
@@ -125,12 +126,12 @@ pub fn load_node(
         NodeKind::Fixture => {
             let cfg: lp_model::nodes::fixture::FixtureConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
-                    file: node_json_path.clone(),
+                    file: node_json_path.as_str().to_string(),
                     error: format!("Failed to parse fixture config: {}", e),
                 })?;
             Box::new(cfg)
         }
     };
 
-    Ok((path.clone(), config))
+    Ok((path.to_path_buf(), config))
 }

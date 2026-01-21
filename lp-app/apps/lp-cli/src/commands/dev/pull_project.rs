@@ -34,7 +34,7 @@ pub async fn pull_project_async(
 
     // List all files recursively in the project on server
     let files = client
-        .fs_list_dir(&server_project_path, true)
+        .fs_list_dir(server_project_path.as_path(), true)
         .await
         .with_context(|| format!("Failed to list files in project: {}", server_project_path))?;
 
@@ -42,36 +42,39 @@ pub async fn pull_project_async(
     for file_path in files {
         // Read file from server
         let data = client
-            .fs_read(&file_path)
+            .fs_read(file_path.as_path())
             .await
-            .with_context(|| format!("Failed to read file from server: {}", file_path))?;
+            .with_context(|| format!("Failed to read file from server: {}", file_path.as_str()))?;
 
         // Extract local path by removing the "projects/{project_uid}/" prefix
-        let local_path = if file_path.starts_with(&format!("projects/{}/", project_uid)) {
+        let file_path_str = file_path.as_str();
+        let local_path = if file_path_str.starts_with(&format!("projects/{}/", project_uid)) {
             // Remove prefix and ensure it starts with '/'
-            let relative = &file_path[format!("projects/{}/", project_uid).len()..];
+            let relative = &file_path_str[format!("projects/{}/", project_uid).len()..];
             if relative.starts_with('/') {
                 relative.to_string()
             } else {
                 format!("/{}", relative)
             }
-        } else if file_path == format!("projects/{}", project_uid) {
+        } else if file_path_str == format!("projects/{}", project_uid) {
             // This is the project directory itself, skip
             continue;
         } else {
             // Unexpected path format, skip with warning
-            eprintln!("Warning: Unexpected file path format: {}", file_path);
+            eprintln!("Warning: Unexpected file path format: {}", file_path_str);
             continue;
         };
 
         // Write file to local filesystem
-        local_fs.write_file(local_path.as_path(), &data).map_err(|e| {
-            anyhow::anyhow!(
-                "Failed to write file to local filesystem {}: {}",
-                local_path,
-                e
-            )
-        })?;
+        local_fs
+            .write_file(local_path.as_path(), &data)
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to write file to local filesystem {}: {}",
+                    local_path,
+                    e
+                )
+            })?;
     }
 
     Ok(())

@@ -33,10 +33,11 @@ pub async fn sync_file_change(
 ) -> Result<()> {
     // Build server path: projects/{project_uid}/{file_path}
     // Remove leading '/' from change.path for server path
-    let server_path = if change.path.starts_with('/') {
-        format!("projects/{}/{}", project_uid, &change.path[1..])
+    let path_str = change.path.as_str();
+    let server_path = if path_str.starts_with('/') {
+        format!("projects/{}/{}", project_uid, &path_str[1..])
     } else {
-        format!("projects/{}/{}", project_uid, change.path)
+        format!("projects/{}/{}", project_uid, path_str)
     };
 
     match change.change_type {
@@ -50,18 +51,18 @@ pub async fn sync_file_change(
             // Read file from local filesystem
             let data = local_fs
                 .read_file(change.path.as_path())
-                .map_err(|e| anyhow::anyhow!("Failed to read file {}: {}", change.path, e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to read file {}: {}", change.path.as_str(), e))?;
 
             // Write file to server
             client
-                .fs_write(&server_path, data)
+                .fs_write(server_path.as_path(), data)
                 .await
                 .with_context(|| format!("Failed to write file to server: {}", server_path))?;
         }
         ChangeType::Delete => {
             // Delete file from server
             client
-                .fs_delete_file(&server_path)
+                .fs_delete_file(server_path.as_path())
                 .await
                 .with_context(|| format!("Failed to delete file on server: {}", server_path))?;
         }

@@ -4,21 +4,22 @@
 
 use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
+use crate::{AsLpPathBuf, LpPathBuf};
 
 /// Filesystem operation request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "fsType", rename_all = "camelCase")]
 pub enum FsRequest {
     /// Read a file
-    Read { path: String },
+    Read { path: LpPathBuf },
     /// Write a file
-    Write { path: String, data: Vec<u8> },
+    Write { path: LpPathBuf, data: Vec<u8> },
     /// Delete a file
-    DeleteFile { path: String },
+    DeleteFile { path: LpPathBuf },
     /// Delete a directory (always recursive)
-    DeleteDir { path: String },
+    DeleteDir { path: LpPathBuf },
     /// List directory contents
-    ListDir { path: String, recursive: bool },
+    ListDir { path: LpPathBuf, recursive: bool },
 }
 
 /// Filesystem operation response
@@ -30,20 +31,20 @@ pub enum FsRequest {
 pub enum FsResponse {
     /// Response to Read request
     Read {
-        path: String,
+        path: LpPathBuf,
         data: Option<Vec<u8>>,
         error: Option<String>,
     },
     /// Response to Write request
-    Write { path: String, error: Option<String> },
+    Write { path: LpPathBuf, error: Option<String> },
     /// Response to DeleteFile request
-    DeleteFile { path: String, error: Option<String> },
+    DeleteFile { path: LpPathBuf, error: Option<String> },
     /// Response to DeleteDir request
-    DeleteDir { path: String, error: Option<String> },
+    DeleteDir { path: LpPathBuf, error: Option<String> },
     /// Response to ListDir request
     ListDir {
-        path: String,
-        entries: Vec<String>,
+        path: LpPathBuf,
+        entries: Vec<LpPathBuf>,
         error: Option<String>,
     },
 }
@@ -56,13 +57,13 @@ mod tests {
     #[test]
     fn test_fs_request_serialization() {
         let req = FsRequest::Read {
-            path: "/project.json".to_string(),
+            path: "/project.json".as_path_buf(),
         };
         let json = serde_json::to_string(&req).unwrap();
         // Verify round-trip serialization
         let deserialized: FsRequest = serde_json::from_str(&json).unwrap();
         match deserialized {
-            FsRequest::Read { path } => assert_eq!(path, "/project.json"),
+            FsRequest::Read { path } => assert_eq!(path.as_str(), "/project.json"),
             _ => panic!("Wrong variant"),
         }
     }
@@ -70,7 +71,7 @@ mod tests {
     #[test]
     fn test_fs_response_serialization() {
         let resp = FsResponse::Read {
-            path: "/project.json".to_string(),
+            path: "/project.json".as_path_buf(),
             data: Some(b"{}".to_vec()),
             error: None,
         };
@@ -82,7 +83,7 @@ mod tests {
         let deserialized: FsResponse = serde_json::from_str(&json).unwrap();
         match deserialized {
             FsResponse::Read { path, data, error } => {
-                assert_eq!(path, "/project.json");
+                assert_eq!(path.as_str(), "/project.json");
                 assert_eq!(data, Some(b"{}".to_vec()));
                 assert_eq!(error, None);
             }
@@ -93,7 +94,7 @@ mod tests {
     #[test]
     fn test_fs_response_with_error() {
         let resp = FsResponse::Write {
-            path: "/test.txt".to_string(),
+            path: "/test.txt".as_path_buf(),
             error: Some("Permission denied".to_string()),
         };
         let json = serde_json::to_string(&resp).unwrap();
@@ -101,7 +102,7 @@ mod tests {
         let deserialized: FsResponse = serde_json::from_str(&json).unwrap();
         match deserialized {
             FsResponse::Write { path, error } => {
-                assert_eq!(path, "/test.txt");
+                assert_eq!(path.as_str(), "/test.txt");
                 assert_eq!(error, Some("Permission denied".to_string()));
             }
             _ => panic!("Wrong variant"),

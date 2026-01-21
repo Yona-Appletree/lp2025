@@ -1,4 +1,5 @@
 use crate::commands::serve::init::{create_filesystem, initialize_server};
+use lp_model::AsLpPath;
 use lp_server::LpServer;
 use lp_shared::fs::LpFs;
 use lp_shared::output::MemoryOutputProvider;
@@ -48,7 +49,7 @@ pub fn create_server(
     // Since we can't clone Box<dyn LpFs>, we'll return the filesystem that was passed
     // Note: LpServer takes ownership, so we can't return the same instance
     // For now, return a new filesystem instance (caller may not need it)
-    let server = LpServer::new(output_provider, base_fs, "projects/".to_string());
+    let server = LpServer::new(output_provider, base_fs, "projects/".as_path());
 
     // Create a new filesystem instance to return (same type as what was created)
     let returned_fs = create_filesystem(dir, memory)?;

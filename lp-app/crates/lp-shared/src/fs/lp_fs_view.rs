@@ -4,8 +4,8 @@
 //! all operations between chrooted-relative paths and parent-absolute paths.
 
 use crate::error::FsError;
-use crate::fs::fs_event::{FsChange, FsVersion};
 use crate::fs::LpFs;
+use crate::fs::fs_event::{FsChange, FsVersion};
 use alloc::{
     format,
     rc::Rc,
@@ -24,7 +24,7 @@ pub struct LpFsView {
     parent: Rc<RefCell<dyn LpFs>>,
     /// Prefix path in parent filesystem (e.g., "/projects/my-project/")
     /// Always ends with `/` except for root case
-    prefix: String,
+    prefix: LpPathBuf,
 }
 
 impl LpFsView {
@@ -32,8 +32,11 @@ impl LpFsView {
     ///
     /// The prefix should be normalized and end with `/` (except for root).
     /// Paths passed to this view will be translated to `prefix + path` in the parent.
-    pub fn new(parent: Rc<RefCell<dyn LpFs>>, prefix: String) -> Self {
-        Self { parent, prefix }
+    pub fn new(parent: Rc<RefCell<dyn LpFs>>, prefix: &LpPath) -> Self {
+        Self {
+            parent,
+            prefix: prefix.to_path_buf(),
+        }
     }
 
     /// Translate a chrooted-relative path to a parent-absolute path
@@ -46,10 +49,17 @@ impl LpFsView {
         let normalized = chrooted_path;
         if normalized == "/" {
             // Root path - use prefix without trailing /
-            self.prefix.trim_end_matches('/').to_string()
+            self.prefix.as_str().trim_end_matches('/').to_string()
         } else {
             // Remove leading / from normalized path and prepend prefix
-            format!("{}{}", self.prefix, &normalized[1..])
+            // Ensure prefix ends with / for proper joining
+            let prefix_str = self.prefix.as_str();
+            if prefix_str.ends_with('/') {
+                format!("{}{}", prefix_str, &normalized[1..])
+            } else {
+                // This shouldn't happen if chroot is working correctly, but handle it
+                format!("{}/{}", prefix_str, &normalized[1..])
+            }
         }
     }
 
@@ -57,17 +67,21 @@ impl LpFsView {
     ///
     /// Used for translating results from parent operations (e.g., `list_dir`).
     /// Returns `None` if the path doesn't start with the prefix.
-    fn chrooted_path(&self, parent_path: &str) -> Option<String> {
-        if parent_path.starts_with(&self.prefix) {
-            let relative_path = &parent_path[self.prefix.len()..];
-            let normalized = if relative_path.is_empty() {
-                "/".to_string()
-            } else if relative_path.starts_with('/') {
-                relative_path.to_string()
+    fn chrooted_path(&self, parent_path: &LpPathBuf) -> Option<LpPathBuf> {
+        if parent_path.as_str().starts_with(self.prefix.as_str()) {
+            if let Some(stripped) = parent_path.strip_prefix(self.prefix.as_str()) {
+                let relative_str = stripped.as_str();
+                let normalized = if relative_str.is_empty() {
+                    "/"
+                } else if relative_str.starts_with('/') {
+                    relative_str
+                } else {
+                    return Some(LpPathBuf::from(format!("/{}", relative_str)));
+                };
+                Some(LpPathBuf::from(normalized))
             } else {
-                format!("/{}", relative_path)
-            };
-            Some(normalized)
+                None
+            }
         } else {
             None
         }
@@ -92,7 +106,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let parent_path = self.parent_path(normalized_str);
         let parent_lp_path = LpPath::new(parent_path.as_str());
@@ -103,7 +117,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let parent_path = self.parent_path(normalized_str);
         let parent_lp_path = LpPath::new(parent_path.as_str());
@@ -114,7 +128,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let parent_path = self.parent_path(normalized_str);
         let parent_lp_path = LpPath::new(parent_path.as_str());
@@ -125,7 +139,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let parent_path = self.parent_path(normalized_str);
         let parent_lp_path = LpPath::new(parent_path.as_str());
@@ -145,8 +159,8 @@ impl LpFs for LpFsView {
         // Translate parent paths to chrooted-relative paths
         let mut entries = Vec::new();
         for parent_entry in parent_entries {
-            if let Some(chrooted_path) = self.chrooted_path(parent_entry.as_str()) {
-                entries.push(LpPathBuf::from(chrooted_path.as_str()));
+            if let Some(chrooted_path) = self.chrooted_path(&parent_entry) {
+                entries.push(chrooted_path);
             }
         }
 
@@ -157,7 +171,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
 
         if normalized_str == "/" {
@@ -193,7 +207,7 @@ impl LpFs for LpFsView {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(subdir)?;
         // Normalize the subdirectory path for internal use
-        let normalized = LpPathBuf::from(subdir.as_str());
+        let normalized = subdir.to_path_buf();
         let normalized_subdir = normalized.as_str();
 
         // Construct prefix relative to current chroot
@@ -208,7 +222,7 @@ impl LpFs for LpFsView {
         let new_prefix = if relative_prefix == "/" {
             self.prefix.clone()
         } else {
-            format!("{}{}", self.prefix, &relative_prefix[1..])
+            self.prefix.join(&relative_prefix[1..])
         };
 
         Ok(Rc::new(RefCell::new(LpFsView {
@@ -228,7 +242,7 @@ impl LpFs for LpFsView {
         parent_changes
             .into_iter()
             .filter_map(|change| {
-                if change.path.starts_with(prefix) {
+                if change.path.as_str().starts_with(prefix.as_str()) {
                     // Translate to chrooted-relative path
                     if let Some(chrooted_path) = self.chrooted_path(&change.path) {
                         Some(FsChange {
@@ -267,7 +281,7 @@ mod tests {
             .unwrap();
 
         let parent_rc: Rc<RefCell<dyn LpFs>> = Rc::new(RefCell::new(fs));
-        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".to_string());
+        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".as_path());
 
         assert!(view.file_exists("/src/file.txt".as_path()).unwrap());
         let content = view.read_file("/src/file.txt".as_path()).unwrap();
@@ -281,7 +295,7 @@ mod tests {
             .unwrap();
 
         let parent_rc: Rc<RefCell<dyn LpFs>> = Rc::new(RefCell::new(fs));
-        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".to_string());
+        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".as_path());
 
         // Verify initial content
         let content = view.read_file("/src/file.txt".as_path()).unwrap();
@@ -316,7 +330,7 @@ mod tests {
             .unwrap();
 
         let parent_rc: Rc<RefCell<dyn LpFs>> = Rc::new(RefCell::new(fs));
-        let view1 = LpFsView::new(Rc::clone(&parent_rc), "/a/".to_string());
+        let view1 = LpFsView::new(Rc::clone(&parent_rc), "/a/".as_path());
         // Caller must convert relative paths to absolute before passing to chroot
         let chroot_path = LpPathBuf::from("/b");
         let view2 = view1.chroot(chroot_path.as_path()).unwrap();
@@ -337,7 +351,7 @@ mod tests {
             .unwrap();
 
         let parent_rc: Rc<RefCell<dyn LpFs>> = Rc::new(RefCell::new(fs));
-        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".to_string());
+        let view = LpFsView::new(Rc::clone(&parent_rc), "/projects/test/".as_path());
 
         let entries = view.list_dir("/src".as_path(), false).unwrap();
         assert!(entries.contains(&LpPathBuf::from("/src/file1.txt")));

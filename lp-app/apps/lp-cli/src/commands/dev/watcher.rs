@@ -95,7 +95,7 @@ impl FileWatcher {
 
                             // Create FsChange and send to channel (non-blocking)
                             let change = FsChange {
-                                path: normalized_path,
+                                path: lp_model::LpPathBuf::from(normalized_path),
                                 change_type,
                             };
 
@@ -239,7 +239,7 @@ mod tests {
 
         assert!(change.is_some(), "Expected file create event");
         let change = change.unwrap();
-        assert_eq!(change.path, "/test.txt");
+        assert_eq!(change.path.as_str(), "/test.txt");
         assert_eq!(change.change_type, ChangeType::Create);
     }
 
@@ -267,7 +267,7 @@ mod tests {
 
         assert!(change.is_some(), "Expected file modify event");
         let change = change.unwrap();
-        assert_eq!(change.path, "/test.txt");
+        assert_eq!(change.path.as_str(), "/test.txt");
         // Some OSes report modify as Create, so accept either
         assert!(
             change.change_type == ChangeType::Modify || change.change_type == ChangeType::Create,
@@ -298,7 +298,7 @@ mod tests {
         let mut found_delete = false;
         for _ in 0..5 {
             if let Ok(Some(change)) = tokio::time::timeout(Duration::from_secs(1), watcher.next_change()).await {
-                if change.path == "/test.txt" {
+                if change.path.as_str() == "/test.txt" {
                     if change.change_type == ChangeType::Delete {
                         found_delete = true;
                         break;

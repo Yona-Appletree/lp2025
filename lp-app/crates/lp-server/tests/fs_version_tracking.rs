@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use lp_engine::MemoryOutputProvider;
-use lp_model::AsLpPath;
+use lp_model::{AsLpPath, AsLpPathBuf};
 use lp_server::LpServer;
 use lp_shared::fs::LpFsMemory;
 
@@ -12,17 +12,17 @@ fn test_fs_changes_not_repeated() {
     // Create server with memory filesystem
     let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
     let base_fs = Box::new(LpFsMemory::new());
-    let mut server = LpServer::new(output_provider.clone(), base_fs, "projects".to_string());
+    let mut server = LpServer::new(output_provider.clone(), base_fs, "projects".as_path());
 
     // Create a project
     let project_name = "test-project";
-    let project_path = format!("projects/{}", project_name);
+    let project_path = "/projects".as_path_buf().join(project_name);
 
     // Create project.json
     server
         .base_fs_mut()
         .write_file(
-            format!("{}/project.json", project_path).as_path(),
+            project_path.join("project.json").as_path(),
             b"{\"name\":\"test\",\"uid\":\"test\"}",
         )
         .unwrap();
@@ -35,7 +35,7 @@ fn test_fs_changes_not_repeated() {
         unsafe {
             let pm = (*server_ptr).project_manager_mut();
             let fs = (*server_ptr).base_fs_mut();
-            pm.load_project(project_path.clone(), fs, output_provider.clone())
+            pm.load_project(&project_path, fs, output_provider.clone())
                 .expect("Failed to load project")
         }
     };
@@ -46,7 +46,7 @@ fn test_fs_changes_not_repeated() {
     assert_eq!(initial_version.as_i64(), 0);
 
     // Write a file to the project
-    let file_path = format!("{}/src/test.glsl", project_path);
+    let file_path = project_path.join("src/test.glsl");
     server
         .base_fs_mut()
         .write_file(file_path.as_path(), b"test content")
@@ -87,7 +87,7 @@ fn test_fs_changes_not_repeated() {
     assert_eq!(version_after_second.as_i64(), version_after_first.as_i64());
 
     // Write another file
-    let file_path2 = format!("{}/src/test2.glsl", project_path);
+    let file_path2 = project_path.join("src/test2.glsl");
     server
         .base_fs_mut()
         .write_file(file_path2.as_path(), b"test content 2")

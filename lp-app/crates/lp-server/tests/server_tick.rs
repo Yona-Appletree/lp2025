@@ -4,10 +4,10 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 use lp_engine::MemoryOutputProvider;
 use lp_engine_client::ClientProjectView;
-use lp_model::AsLpPath;
+use lp_model::{AsLpPath, AsLpPathBuf};
 use lp_server::LpServer;
-use lp_shared::ProjectBuilder;
 use lp_shared::fs::{LpFs, LpFsMemory};
+use lp_shared::ProjectBuilder;
 
 #[test]
 fn test_server_tick_propagates_to_projects() {
@@ -26,40 +26,53 @@ fn test_server_tick_propagates_to_projects() {
 
     // Copy project files to server filesystem under projects/test-project/
     let project_name = "test-project";
-    let project_prefix = format!("projects/{}", project_name);
+    let project_prefix = "/projects".as_path_buf().join(project_name);
 
     // Prepare base filesystem with project files
     let base_fs = Box::new(LpFsMemory::new());
 
     // Copy project.json
-    let project_json = temp_fs.borrow().read_file("/project.json".as_path()).unwrap();
+    let project_json = temp_fs
+        .borrow()
+        .read_file("/project.json".as_path())
+        .unwrap();
     base_fs
-        .write_file(format!("{}/project.json", project_prefix).as_path(), &project_json)
+        .write_file(
+            project_prefix.join("project.json").as_path(),
+            &project_json,
+        )
         .unwrap();
 
     // Copy all node files
     let node_paths = vec![
-        texture_path.as_str(),
-        "/src/shader-0.shader",
-        output_path.as_str(),
-        "/src/fixture-0.fixture",
+        texture_path.to_path_buf(),
+        "/src/shader-0.shader".as_path_buf(),
+        output_path.to_path_buf(),
+        "/src/fixture-0.fixture".as_path_buf(),
     ];
 
     for node_path in &node_paths {
         // Copy node.json
-        let node_json_path = format!("{}/node.json", node_path);
+        let node_json_path = node_path.join("node.json");
         if let Ok(data) = temp_fs.borrow().read_file(node_json_path.as_path()) {
+            // Strip leading '/' to make it relative for joining
+            let relative_path = node_json_path.as_str().strip_prefix('/').unwrap_or(node_json_path.as_str());
             base_fs
-                .write_file(format!("{}/{}", project_prefix, node_json_path).as_path(), &data)
+                .write_file(
+                    project_prefix.join(relative_path).as_path(),
+                    &data,
+                )
                 .unwrap();
         }
 
         // Copy GLSL file if it's a shader
-        if node_path.contains(".shader") {
-            let glsl_path = format!("{}/main.glsl", node_path);
+        if node_path.as_str().contains(".shader") {
+            let glsl_path = node_path.join("main.glsl");
             if let Ok(data) = temp_fs.borrow().read_file(glsl_path.as_path()) {
+                // Strip leading '/' to make it relative for joining
+                let relative_path = glsl_path.as_str().strip_prefix('/').unwrap_or(glsl_path.as_str());
                 base_fs
-                    .write_file(format!("{}/{}", project_prefix, glsl_path).as_path(), &data)
+                    .write_file(project_prefix.join(relative_path).as_path(), &data)
                     .unwrap();
             }
         }
@@ -69,7 +82,7 @@ fn test_server_tick_propagates_to_projects() {
     let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
 
     // Create server with prepared filesystem
-    let mut server = LpServer::new(output_provider.clone(), base_fs, "projects/".to_string());
+    let mut server = LpServer::new(output_provider.clone(), base_fs, "projects/".as_path());
 
     // Load project
     // We need both project_manager_mut() and base_fs_mut(), but can't borrow server mutably twice.
@@ -80,8 +93,12 @@ fn test_server_tick_propagates_to_projects() {
         unsafe {
             let pm = (*server_ptr).project_manager_mut();
             let fs = (*server_ptr).base_fs_mut();
-            pm.load_project(project_name.to_string(), fs, output_provider.clone())
-                .expect("Failed to load project")
+            pm.load_project(
+                &"/".as_path_buf().join(project_name),
+                fs,
+                output_provider.clone(),
+            )
+            .expect("Failed to load project")
         }
     };
 

@@ -72,7 +72,7 @@ pub async fn push_project_async(
 
         // Write file to server
         client
-            .fs_write(&server_path, data)
+            .fs_write(server_path.as_path(), data)
             .await
             .with_context(|| format!("Failed to write file to server: {}", server_path))?;
     }

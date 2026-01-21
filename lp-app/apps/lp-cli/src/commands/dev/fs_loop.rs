@@ -91,7 +91,7 @@ pub async fn fs_loop(
                 if let Err(e) =
                     sync_file_change(&client, change, &project_uid, &project_dir, &local_fs).await
                 {
-                    eprintln!("Failed to sync file change {}: {}", change.path, e);
+                    eprintln!("Failed to sync file change {}: {}", change.path.as_str(), e);
                     // Continue with other changes even if one fails
                 }
             }
@@ -109,6 +109,6 @@ pub fn add_pending_change(
     last_change_time: &mut Option<Instant>,
     change: FsChange,
 ) {
-    pending_changes.insert(change.path.clone(), change);
+    pending_changes.insert(change.path.as_str().to_string(), change);
     *last_change_time = Some(Instant::now());
 }

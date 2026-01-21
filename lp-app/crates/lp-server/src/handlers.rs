@@ -7,9 +7,8 @@ use crate::project_manager::ProjectManager;
 use alloc::{format, rc::Rc, string::String, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
-    ClientMessage, ServerMessage,
-    server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload},
-    AsLpPath,
+    server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload}, AsLpPath, ClientMessage, LpPath, LpPathBuf,
+    ServerMessage,
 };
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
@@ -28,7 +27,7 @@ pub fn handle_client_message(
             ServerMessagePayload::Filesystem(handle_fs_request(base_fs, fs_request)?)
         }
         lp_model::ClientRequest::LoadProject { path } => {
-            handle_load_project(project_manager, base_fs, output_provider, path)?
+            handle_load_project(project_manager, base_fs, output_provider, path.as_path())?
         }
         lp_model::ClientRequest::UnloadProject { handle } => {
             handle_unload_project(project_manager, handle)?
@@ -85,11 +84,9 @@ fn handle_fs_request(fs: &mut dyn LpFs, request: FsRequest) -> Result<FsResponse
         },
         FsRequest::ListDir { path, recursive } => match fs.list_dir(path.as_path(), recursive) {
             Ok(entries) => {
-                // Convert Vec<LpPathBuf> to Vec<String> for serialization
-                let entries_strings: Vec<String> = entries.iter().map(|e| String::from(e.as_str())).collect();
                 Ok(FsResponse::ListDir {
                     path,
-                    entries: entries_strings,
+                    entries,
                     error: None,
                 })
             }
@@ -107,7 +104,7 @@ fn handle_load_project(
     project_manager: &mut ProjectManager,
     base_fs: &mut dyn LpFs,
     output_provider: &Rc<RefCell<dyn OutputProvider>>,
-    path: String,
+    path: &LpPath,
 ) -> Result<ServerMessagePayload, ServerError> {
     let handle = project_manager.load_project(path, base_fs, output_provider.clone())?;
     Ok(ServerMessagePayload::LoadProject { handle })
@@ -163,7 +160,8 @@ fn handle_list_available_projects(
         .into_iter()
         .map(|name| {
             // Build full path
-            let path = format!("{}/{}", project_manager.projects_base_dir(), name);
+            let base_dir = LpPathBuf::from(project_manager.projects_base_dir());
+            let path = base_dir.join(&name);
             AvailableProject { path }
         })
         .collect();

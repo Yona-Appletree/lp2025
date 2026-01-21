@@ -1,5 +1,6 @@
-use crate::project::{ProjectHandle, ProjectRequest, api::SerializableProjectResponse};
+use crate::project::{api::SerializableProjectResponse, ProjectHandle, ProjectRequest};
 use crate::server::fs_api::{FsRequest, FsResponse};
+use crate::LpPathBuf;
 use alloc::string::String;
 use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ pub enum ClientMsgBody {
     /// Filesystem operation request
     Filesystem(FsRequest),
     /// Load a project
-    LoadProject { path: String },
+    LoadProject { path: LpPathBuf },
     /// Unload a project
     UnloadProject { handle: ProjectHandle },
     /// Project-specific request
@@ -67,11 +68,11 @@ pub enum LogLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AvailableProject {
-    pub path: String,
+    pub path: LpPathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadedProject {
     pub handle: ProjectHandle,
-    pub path: String,
+    pub path: LpPathBuf,
 }

@@ -8,7 +8,7 @@ use alloc::{
 };
 use lp_glsl_compiler::{DecimalFormat, GlslExecutable, GlslOptions, RunMode, glsl_jit};
 use lp_model::{
-    NodeHandle,
+    LpPathBuf, NodeHandle,
     nodes::shader::{ShaderConfig, ShaderState},
 };
 use lp_shared::fs::fs_event::FsChange;
@@ -223,7 +223,7 @@ impl NodeRuntime for ShaderRuntime {
             })?;
 
         // Check if this change affects the shader's GLSL file
-        if change.path == glsl_path {
+        if change.path.as_str() == glsl_path.as_str() {
             match change.change_type {
                 lp_shared::fs::fs_event::ChangeType::Create
                 | lp_shared::fs::fs_event::ChangeType::Modify => {
@@ -270,14 +270,20 @@ impl ShaderRuntime {
         use lp_model::AsLpPath;
         let fs = ctx.get_node_fs();
         let glsl_path = &config.glsl_path;
-        let source_bytes = fs.read_file(glsl_path.as_path()).map_err(|e| Error::Io {
-            path: glsl_path.clone(),
+        // Make path absolute if relative (chrooted filesystem requires absolute paths)
+        let glsl_path_abs = if glsl_path.is_absolute() {
+            glsl_path.clone()
+        } else {
+            LpPathBuf::from(format!("/{}", glsl_path.as_str()))
+        };
+        let source_bytes = fs.read_file(glsl_path_abs.as_path()).map_err(|e| Error::Io {
+            path: glsl_path.as_str().to_string(),
             details: format!("Failed to read GLSL file: {:?}", e),
         })?;
 
         let glsl_source =
             alloc::string::String::from_utf8(source_bytes).map_err(|e| Error::Parse {
-                file: glsl_path.clone(),
+                file: glsl_path.as_str().to_string(),
                 error: format!("Invalid UTF-8 in GLSL file: {}", e),
             })?;
 

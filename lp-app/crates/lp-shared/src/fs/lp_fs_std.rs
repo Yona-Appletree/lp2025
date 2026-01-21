@@ -9,7 +9,7 @@ use crate::fs::{
 use alloc::{
     format,
     rc::Rc,
-    string::{String, ToString},
+    string::ToString,
     vec::Vec,
 };
 use core::cell::RefCell;
@@ -31,7 +31,7 @@ pub struct LpFsStd {
     current_version: Mutex<FsVersion>,
     /// Map of path -> (version, ChangeType) - only latest change per path
     /// Uses Mutex for thread-safety (required for Send + Sync)
-    changes: Mutex<HashMap<String, (FsVersion, ChangeType)>>,
+    changes: Mutex<HashMap<LpPathBuf, (FsVersion, ChangeType)>>,
 }
 
 impl LpFsStd {
@@ -52,7 +52,7 @@ impl LpFsStd {
     }
 
     /// Record a filesystem change
-    fn record_change(&self, path: String, change_type: ChangeType) {
+    fn record_change(&self, path: LpPathBuf, change_type: ChangeType) {
         let mut current = self.current_version.lock().unwrap();
         *current = current.next();
         let version = *current;
@@ -71,7 +71,7 @@ impl LpFsStd {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         // Remove leading slash for joining with root_path
         let normalized_path = if normalized_str == "/" {
@@ -140,7 +140,7 @@ impl LpFsStd {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         // Remove leading slash for joining with root_path
         let normalized_path = if normalized_str == "/" {
@@ -252,7 +252,7 @@ impl LpFs for LpFsStd {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let full_path = self.get_path(path)?;
         if !full_path.exists() {
@@ -265,7 +265,7 @@ impl LpFs for LpFsStd {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
         let full_path = self.resolve_and_validate(path)?;
 
@@ -334,7 +334,7 @@ impl LpFs for LpFsStd {
         // Validate path is safe to delete (explicitly reject "/")
         Self::validate_path_for_deletion(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
 
         let full_path = self.resolve_and_validate(path)?;
@@ -358,7 +358,7 @@ impl LpFs for LpFsStd {
         // Validate path is safe to delete (explicitly reject "/")
         Self::validate_path_for_deletion(path)?;
         // Normalize for internal use
-        let normalized = LpPathBuf::from(path.as_str());
+        let normalized = path.to_path_buf();
         let normalized_str = normalized.as_str();
 
         let full_path = self.resolve_and_validate(path)?;
@@ -384,7 +384,7 @@ impl LpFs for LpFsStd {
         // Validate input is absolute (contract: LpFs only accepts absolute paths)
         self.validate_path(subdir)?;
         // Normalize the subdirectory path for internal use
-        let normalized = LpPathBuf::from(subdir.as_str());
+        let normalized = subdir.to_path_buf();
         let normalized_str = normalized.as_str();
         // Remove leading slash for joining with root_path
         let normalized_subdir = if normalized_str == "/" {
@@ -419,9 +419,9 @@ impl LpFs for LpFsStd {
         // Construct prefix path for LpFsView
         // The prefix is the normalized subdir path
         let prefix = if normalized_str.ends_with('/') {
-            normalized_str.to_string()
+            normalized.clone()
         } else {
-            format!("{}/", normalized_str)
+            normalized.join("")
         };
 
         // Wrap self in Rc<RefCell<>> for LpFsView
@@ -433,7 +433,7 @@ impl LpFs for LpFsStd {
             changes: Mutex::new(self.changes.lock().unwrap().clone()),
         }));
 
-        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix))))
+        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix.as_path()))))
     }
 
     fn current_version(&self) -> FsVersion {
@@ -467,9 +467,8 @@ impl LpFs for LpFsStd {
 
     fn record_changes(&mut self, changes: Vec<FsChange>) {
         for change in changes {
-            // Normalize path to match LpFs conventions
-            let normalized = LpPathBuf::from(change.path.as_str());
-            self.record_change(normalized.as_str().to_string(), change.change_type);
+            // Path is already LpPathBuf, just record it
+            self.record_change(change.path, change.change_type);
         }
     }
 }

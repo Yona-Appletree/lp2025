@@ -9,7 +9,7 @@ use lp_model::nodes::{
     NodeSpecifier,
 };
 use lp_model::path::LpPathBuf;
-use lp_model::AsLpPath;
+use lp_model::{AsLpPath, AsLpPathBuf};
 use serde_json;
 
 /// Builder for creating test projects
@@ -218,7 +218,7 @@ impl ShaderBuilder {
         let glsl_path = format!("{}/main.glsl", path_str);
 
         let config = ShaderConfig {
-            glsl_path: String::from("main.glsl"),
+            glsl_path: "main.glsl".as_path_buf(),
             texture_spec: NodeSpecifier::from(self.texture_path.as_str()),
             render_order: self.render_order,
         };

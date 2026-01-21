@@ -44,6 +44,23 @@ impl LpPath {
         !self.0.starts_with('/')
     }
 
+    /// Convert to an owned `LpPathBuf`
+    ///
+    /// This is equivalent to `LpPathBuf::from(self)` but may be more readable.
+    /// The path will be normalized during conversion.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use lp_model::path::{LpPath, LpPathBuf};
+    ///
+    /// let path = LpPath::new("/foo/bar");
+    /// let owned = path.to_path_buf();
+    /// ```
+    pub fn to_path_buf(&self) -> LpPathBuf {
+        LpPathBuf::from(self.as_str())
+    }
+
     /// Get the parent directory path
     ///
     /// Returns `None` if the path is root (`/`) or empty, or if there's no parent component.
@@ -243,6 +260,28 @@ impl LpPath {
         self_components[start_idx..] == child_components[..]
     }
 
+    /// Check if this path ends with the given string suffix
+    ///
+    /// This is a string-based check (unlike `ends_with` which checks path components).
+    /// Useful for checking file extensions or specific file names.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use lp_model::path::LpPath;
+    ///
+    /// let path = LpPath::new("/src/my-shader.shader");
+    /// assert!(path.has_suffix(".shader"));
+    /// assert!(path.has_suffix("shader"));
+    ///
+    /// let file_path = LpPath::new("/src/my-shader.shader/node.json");
+    /// assert!(file_path.has_suffix("/node.json"));
+    /// assert!(file_path.has_suffix("node.json"));
+    /// ```
+    pub fn has_suffix<S: AsRef<str>>(&self, suffix: S) -> bool {
+        self.as_str().ends_with(suffix.as_ref())
+    }
+
     /// Get an iterator over path components
     ///
     /// Skips root `/` for absolute paths and empty components.
@@ -390,7 +429,19 @@ impl From<&str> for LpPathBuf {
     }
 }
 
+impl From<&LpPath> for LpPathBuf {
+    fn from(path: &LpPath) -> Self {
+        Self(normalize(path.as_str()))
+    }
+}
+
 // AsRef implementations for LpPath
+
+impl AsRef<str> for LpPath {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
 
 impl AsRef<LpPath> for &str {
     fn as_ref(&self) -> &LpPath {
@@ -463,6 +514,48 @@ impl AsLpPath for LpPathBuf {
 impl AsLpPath for &LpPath {
     fn as_path(&self) -> &LpPath {
         self
+    }
+}
+
+/// Trait for ergonomic conversion to `LpPathBuf`
+///
+/// Provides `.as_path_buf()` method for common path-like types, making it easier
+/// to convert strings to `LpPathBuf` for owned path operations.
+///
+/// # Examples
+///
+/// ```
+/// use lp_model::path::AsLpPathBuf;
+///
+/// let path_str = "/test.txt";
+/// let path_buf = path_str.as_path_buf();
+/// ```
+pub trait AsLpPathBuf {
+    /// Convert this value to `LpPathBuf`
+    fn as_path_buf(&self) -> LpPathBuf;
+}
+
+impl AsLpPathBuf for &str {
+    fn as_path_buf(&self) -> LpPathBuf {
+        LpPathBuf::from(*self)
+    }
+}
+
+impl AsLpPathBuf for String {
+    fn as_path_buf(&self) -> LpPathBuf {
+        LpPathBuf::from(self.as_str())
+    }
+}
+
+impl AsLpPathBuf for LpPathBuf {
+    fn as_path_buf(&self) -> LpPathBuf {
+        self.clone()
+    }
+}
+
+impl AsLpPathBuf for &LpPath {
+    fn as_path_buf(&self) -> LpPathBuf {
+        self.to_path_buf()
     }
 }
 

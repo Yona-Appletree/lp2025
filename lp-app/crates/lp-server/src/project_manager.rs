@@ -14,7 +14,7 @@ use alloc::{
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::project::ProjectHandle;
-use lp_model::AsLpPath;
+use lp_model::{AsLpPath, LpPath, LpPathBuf};
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
 
@@ -27,7 +27,7 @@ pub struct ProjectManager {
     /// Next handle ID to assign (starts at 1)
     next_handle_id: u32,
     /// Base directory where projects are stored (relative path)
-    projects_base_dir: String,
+    projects_base_dir: LpPathBuf,
 }
 
 impl ProjectManager {
@@ -35,12 +35,12 @@ impl ProjectManager {
     ///
     /// `projects_base_dir` is the base directory where all projects are stored.
     /// Each project will have its own subdirectory.
-    pub fn new(projects_base_dir: String) -> Self {
+    pub fn new(projects_base_dir: &LpPath) -> Self {
         Self {
             projects: HashMap::new(),
             name_to_handle: HashMap::new(),
             next_handle_id: 1,
-            projects_base_dir,
+            projects_base_dir: projects_base_dir.to_path_buf(),
         }
     }
 
@@ -60,12 +60,12 @@ impl ProjectManager {
     /// Returns the ProjectHandle for the loaded project.
     pub fn load_project(
         &mut self,
-        path: String,
+        path: &LpPath,
         base_fs: &mut dyn LpFs,
         output_provider: Rc<RefCell<dyn OutputProvider>>,
     ) -> Result<ProjectHandle, ServerError> {
         // Extract project name from path
-        let name = self.extract_project_name_from_path(&path)?;
+        let name = self.extract_project_name_from_path(path.as_str())?;
 
         // Check if already loaded
         if let Some(handle) = self.name_to_handle.get(&name) {
@@ -76,10 +76,16 @@ impl ProjectManager {
         let handle = ProjectHandle::new(self.next_handle_id);
         self.next_handle_id = self.next_handle_id.wrapping_add(1);
 
-        // Build project path relative to projects_base_dir
-        // Ensure projects_base_dir doesn't have trailing slash to avoid double slashes
-        let base_dir = self.projects_base_dir.trim_end_matches('/');
-        let project_path = format!("{}/{}", base_dir, name);
+        // Build project path relative to projects_base_dir using join
+        // Ensure result is absolute (chroot requires absolute paths)
+        let project_path = if self.projects_base_dir.is_absolute() {
+            self.projects_base_dir.join(&name)
+        } else {
+            // If base_dir is relative, make it absolute first
+            LpPathBuf::from("/")
+                .join(self.projects_base_dir.as_str())
+                .join(&name)
+        };
 
         // Create project-scoped filesystem using chroot
         let project_fs = base_fs
@@ -89,7 +95,7 @@ impl ProjectManager {
         // Create a new project instance
         let mut project = Project::new(
             name.clone(),
-            project_path.clone(),
+            project_path.as_path(),
             project_fs,
             output_provider,
         )?;
@@ -128,8 +134,9 @@ impl ProjectManager {
         let mut normalized_path = path.trim_end_matches('/').to_string();
 
         // Strip projects_base_dir prefix if present
-        if normalized_path.starts_with(&self.projects_base_dir) {
-            normalized_path = normalized_path[self.projects_base_dir.len()..].to_string();
+        let base_dir_str = self.projects_base_dir.as_str();
+        if normalized_path.starts_with(base_dir_str) {
+            normalized_path = normalized_path[base_dir_str.len()..].to_string();
             normalized_path = normalized_path.trim_start_matches('/').to_string();
         }
 
@@ -179,7 +186,7 @@ impl ProjectManager {
 
     /// Get the projects base directory
     pub fn projects_base_dir(&self) -> &str {
-        &self.projects_base_dir
+        self.projects_base_dir.as_str()
     }
 
     /// List all loaded projects
@@ -190,7 +197,7 @@ impl ProjectManager {
             .iter()
             .map(|(handle, project)| lp_model::server::LoadedProject {
                 handle: *handle,
-                path: project.path().to_string(),
+                path: project.path().to_path_buf(),
             })
             .collect()
     }
@@ -201,14 +208,16 @@ impl ProjectManager {
     /// Requires a filesystem to query.
     pub fn list_available_projects(&self, fs: &dyn LpFs) -> Result<Vec<String>, ServerError> {
         // List entries in the base directory
-        let entries = fs.list_dir(self.projects_base_dir.as_path(), false).map_err(|e| {
-            ServerError::Filesystem(format!("Failed to read projects directory: {}", e))
-        })?;
+        let entries = fs
+            .list_dir(self.projects_base_dir.as_path(), false)
+            .map_err(|e| {
+                ServerError::Filesystem(format!("Failed to read projects directory: {}", e))
+            })?;
 
         let mut projects = Vec::new();
         for entry in entries {
             // Check if this entry is a project directory (has project.json)
-            let project_json_path = format!("{}/project.json", entry.as_str());
+            let project_json_path = entry.join("project.json");
             if fs.file_exists(project_json_path.as_path()).unwrap_or(false) {
                 // Extract project name from path
                 // Entry format: "/base/project-name" or "/base/project-name/"

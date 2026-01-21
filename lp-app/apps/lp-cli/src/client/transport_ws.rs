@@ -153,7 +153,7 @@ impl ClientTransport for WebSocketClientTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lp_model::server::FsRequest;
+    use lp_model::{server::FsRequest, AsLpPathBuf};
 
     #[test]
     fn test_serialization_format() {
@@ -161,7 +161,7 @@ mod tests {
         let msg = ClientMessage {
             id: 1,
             msg: lp_model::ClientRequest::Filesystem(FsRequest::Read {
-                path: "/test".to_string(),
+                path: "/test".as_path_buf(),
             }),
         };
 

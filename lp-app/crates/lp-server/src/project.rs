@@ -6,6 +6,7 @@ use crate::error::ServerError;
 use alloc::{format, rc::Rc, string::String};
 use core::cell::RefCell;
 use lp_engine::ProjectRuntime;
+use lp_model::{LpPath, LpPathBuf};
 use lp_shared::fs::{FsVersion, LpFs};
 use lp_shared::output::OutputProvider;
 
@@ -14,7 +15,7 @@ pub struct Project {
     /// Project name/identifier
     name: String,
     /// Project filesystem path
-    path: String,
+    path: LpPathBuf,
     /// The underlying ProjectRuntime instance
     runtime: ProjectRuntime,
     /// Last filesystem version processed by this project
@@ -28,7 +29,7 @@ impl Project {
     /// Takes an OutputProvider from the server as Rc<RefCell> (for no_std compatibility).
     pub fn new(
         name: String,
-        path: String,
+        path: &LpPath,
         fs: Rc<RefCell<dyn LpFs>>,
         output_provider: Rc<RefCell<dyn OutputProvider>>,
     ) -> Result<Self, ServerError> {
@@ -37,7 +38,7 @@ impl Project {
 
         Ok(Self {
             name,
-            path,
+            path: path.to_path_buf(),
             runtime,
             last_fs_version: FsVersion::default(),
         })
@@ -49,7 +50,7 @@ impl Project {
     }
 
     /// Get the project path
-    pub fn path(&self) -> &str {
+    pub fn path(&self) -> &LpPath {
         &self.path
     }
 

@@ -10,13 +10,13 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use lp_model::{
+    AsLpPath, FrameId, LpPath, LpPathBuf, NodeConfig, NodeHandle, NodeKind,
     project::api::{
         ApiNodeSpecifier, NodeChange, NodeDetail, NodeState, NodeStatus as ApiNodeStatus,
         ProjectResponse,
-    }, AsLpPath, FrameId, LpPathBuf, NodeConfig, NodeHandle,
-    NodeKind,
+    },
 };
-use lp_shared::fs::{fs_event::FsChange, LpFs};
+use lp_shared::fs::{LpFs, fs_event::FsChange};
 #[cfg(feature = "std")]
 use serde_json;
 
@@ -217,19 +217,19 @@ impl ProjectRuntime {
                         message: format!("Node handle {} not found", handle.as_i32()),
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
-                    let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data =
-                        self.fs
-                            .borrow()
-                            .read_file(node_json_path.as_path())
-                            .map_err(|e| Error::Io {
-                                path: node_json_path.clone(),
-                                details: format!("Failed to read: {:?}", e),
-                            })?;
+                    let node_json_path = entry.path.join("node.json");
+                    let data = self
+                        .fs
+                        .borrow()
+                        .read_file(node_json_path.as_path())
+                        .map_err(|e| Error::Io {
+                            path: node_json_path.as_str().to_string(),
+                            details: format!("Failed to read: {:?}", e),
+                        })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::texture::TextureConfig>(&data)
                             .map_err(|e| Error::Parse {
-                                file: node_json_path,
+                                file: node_json_path.as_str().to_string(),
                                 error: format!("Failed to parse texture config: {}", e),
                             })?,
                     )
@@ -242,19 +242,19 @@ impl ProjectRuntime {
                         message: format!("Node handle {} not found", handle.as_i32()),
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
-                    let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data =
-                        self.fs
-                            .borrow()
-                            .read_file(node_json_path.as_path())
-                            .map_err(|e| Error::Io {
-                                path: node_json_path.clone(),
-                                details: format!("Failed to read: {:?}", e),
-                            })?;
+                    let node_json_path = entry.path.join("node.json");
+                    let data = self
+                        .fs
+                        .borrow()
+                        .read_file(node_json_path.as_path())
+                        .map_err(|e| Error::Io {
+                            path: node_json_path.as_str().to_string(),
+                            details: format!("Failed to read: {:?}", e),
+                        })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::fixture::FixtureConfig>(&data)
                             .map_err(|e| Error::Parse {
-                                file: node_json_path,
+                                file: node_json_path.as_str().to_string(),
                                 error: format!("Failed to parse fixture config: {}", e),
                             })?,
                     )
@@ -267,19 +267,19 @@ impl ProjectRuntime {
                         message: format!("Node handle {} not found", handle.as_i32()),
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
-                    let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data =
-                        self.fs
-                            .borrow()
-                            .read_file(node_json_path.as_path())
-                            .map_err(|e| Error::Io {
-                                path: node_json_path.clone(),
-                                details: format!("Failed to read: {:?}", e),
-                            })?;
+                    let node_json_path = entry.path.join("node.json");
+                    let data = self
+                        .fs
+                        .borrow()
+                        .read_file(node_json_path.as_path())
+                        .map_err(|e| Error::Io {
+                            path: node_json_path.as_str().to_string(),
+                            details: format!("Failed to read: {:?}", e),
+                        })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::shader::ShaderConfig>(&data)
                             .map_err(|e| Error::Parse {
-                                file: node_json_path,
+                                file: node_json_path.as_str().to_string(),
                                 error: format!("Failed to parse shader config: {}", e),
                             })?,
                     )
@@ -292,19 +292,19 @@ impl ProjectRuntime {
                         message: format!("Node handle {} not found", handle.as_i32()),
                     })?;
                     // Reload config from filesystem (workaround for trait object limitation)
-                    let node_json_path = format!("{}/node.json", entry.path.as_str());
-                    let data =
-                        self.fs
-                            .borrow()
-                            .read_file(node_json_path.as_path())
-                            .map_err(|e| Error::Io {
-                                path: node_json_path.clone(),
-                                details: format!("Failed to read: {:?}", e),
-                            })?;
+                    let node_json_path = entry.path.join("node.json");
+                    let data = self
+                        .fs
+                        .borrow()
+                        .read_file(node_json_path.as_path())
+                        .map_err(|e| Error::Io {
+                            path: node_json_path.as_str().to_string(),
+                            details: format!("Failed to read: {:?}", e),
+                        })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::output::OutputConfig>(&data)
                             .map_err(|e| Error::Parse {
-                                file: node_json_path,
+                                file: node_json_path.as_str().to_string(),
                                 error: format!("Failed to parse output config: {}", e),
                             })?,
                     )
@@ -576,10 +576,10 @@ impl ProjectRuntime {
     /// Handle a delete change
     fn handle_delete_change(&mut self, change: &FsChange) -> Result<(), Error> {
         // Check if node.json was deleted
-        if change.path.ends_with("/node.json") {
+        if change.path.has_suffix("/node.json") {
             // Extract node path from file path
-            if let Some(node_path) = self.extract_node_path_from_file_path(&change.path) {
-                if let Ok(handle) = self.handle_for_path(&node_path) {
+            if let Some(node_path) = self.extract_node_path_from_file_path(change.path.as_path()) {
+                if let Ok(handle) = self.handle_for_path(node_path.as_path()) {
                     // Destroy runtime if it exists
                     if let Some(entry) = self.nodes.get_mut(&handle) {
                         if let Some(mut runtime) = entry.runtime.take() {
@@ -590,10 +590,10 @@ impl ProjectRuntime {
                     self.nodes.remove(&handle);
                 }
             }
-        } else if self.is_node_directory_path(&change.path) {
+        } else if self.is_node_directory_path(change.path.as_path()) {
             // Node directory was deleted
-            if let Some(node_path) = self.extract_node_path_from_file_path(&change.path) {
-                if let Ok(handle) = self.handle_for_path(&node_path) {
+            if let Some(node_path) = self.extract_node_path_from_file_path(change.path.as_path()) {
+                if let Ok(handle) = self.handle_for_path(node_path.as_path()) {
                     // Destroy runtime if it exists
                     if let Some(entry) = self.nodes.get_mut(&handle) {
                         if let Some(mut runtime) = entry.runtime.take() {
@@ -612,12 +612,11 @@ impl ProjectRuntime {
     /// Handle a create change
     fn handle_create_change(&mut self, change: &FsChange) -> Result<(), Error> {
         // Check if this is a new node directory
-        if self.is_node_directory_path(&change.path) {
-            let node_path = LpPathBuf::from(change.path.as_str());
+        if self.is_node_directory_path(change.path.as_path()) {
             // Check if node already exists
-            if self.handle_for_path(change.path.as_str()).is_err() {
+            if self.handle_for_path(change.path.as_path()).is_err() {
                 // Load the new node
-                self.load_node_by_path(&node_path)?;
+                self.load_node_by_path(change.path.as_path())?;
             }
         }
 
@@ -631,7 +630,7 @@ impl ProjectRuntime {
         let mut target_path: Option<LpPathBuf> = None;
 
         for (handle, entry) in &self.nodes {
-            if self.file_belongs_to_node(&change.path, &entry.path) {
+            if self.file_belongs_to_node(change.path.as_path(), entry.path.as_path()) {
                 target_handle = Some(*handle);
                 target_path = Some(entry.path.clone());
                 break;
@@ -640,7 +639,7 @@ impl ProjectRuntime {
 
         if let (Some(handle), Some(path)) = (target_handle, target_path) {
             // Check if it's node.json
-            if change.path.ends_with("/node.json") {
+            if change.path.has_suffix("/node.json") {
                 // Reload config
                 let (_, config_for_update) =
                     crate::project::loader::load_node(&*self.fs.borrow(), &path)?;
@@ -677,23 +676,26 @@ impl ProjectRuntime {
             } else {
                 // Other file change - call handle_fs_change on the node runtime
                 // Convert full path to relative path (node directory is chrooted in InitContext)
-                let node_path_str = path.as_str();
-                let relative_path = if change.path.starts_with(node_path_str) {
-                    // Strip node path prefix and leading slash
-                    let suffix = &change.path[node_path_str.len()..];
-                    if suffix.starts_with('/') {
-                        &suffix[1..]
+                let relative_path = if let Some(stripped) = change.path.strip_prefix(path.as_str())
+                {
+                    // strip_prefix returns a path starting with "/" if the result is absolute
+                    // We want the relative part without the leading slash
+                    let stripped_str = stripped.as_str();
+                    if stripped_str == "/" {
+                        ""
+                    } else if stripped_str.starts_with('/') {
+                        &stripped_str[1..]
                     } else {
-                        suffix
+                        stripped_str
                     }
                 } else {
                     // Fallback: use full path if it doesn't match (shouldn't happen)
-                    &change.path
+                    change.path.as_str()
                 };
 
                 // Create FsChange with relative path
                 let relative_change = FsChange {
-                    path: relative_path.to_string(),
+                    path: LpPathBuf::from(relative_path),
                     change_type: change.change_type,
                 };
 
@@ -720,35 +722,28 @@ impl ProjectRuntime {
     }
 
     /// Check if a file path belongs to a node directory
-    fn file_belongs_to_node(&self, file_path: &str, node_path: &LpPathBuf) -> bool {
-        let node_path_str = node_path.as_str();
-        file_path.starts_with(node_path_str) && file_path.len() > node_path_str.len()
+    fn file_belongs_to_node(&self, file_path: &LpPath, node_path: &LpPath) -> bool {
+        file_path.starts_with(node_path)
     }
 
     /// Extract node path from a file path
     ///
     /// Given a file path like "/src/my-shader.shader/node.json" or "/src/my-shader.shader/main.glsl",
     /// returns the node path "/src/my-shader.shader".
-    fn extract_node_path_from_file_path(&self, file_path: &str) -> Option<String> {
-        // Find the last slash before the filename
-        if let Some(last_slash) = file_path.rfind('/') {
-            if last_slash > 0 {
-                return Some(file_path[..last_slash].to_string());
-            }
-        }
-        None
+    fn extract_node_path_from_file_path(&self, file_path: &LpPath) -> Option<LpPathBuf> {
+        file_path.parent().map(|p| p.to_path_buf())
     }
 
     /// Check if a path is a node directory (ends with .shader, .texture, etc.)
-    fn is_node_directory_path(&self, path: &str) -> bool {
-        path.ends_with(".shader")
-            || path.ends_with(".texture")
-            || path.ends_with(".output")
-            || path.ends_with(".fixture")
+    fn is_node_directory_path(&self, path: &LpPath) -> bool {
+        path.has_suffix(".shader")
+            || path.has_suffix(".texture")
+            || path.has_suffix(".output")
+            || path.has_suffix(".fixture")
     }
 
     /// Load a single node by path
-    fn load_node_by_path(&mut self, path: &LpPathBuf) -> Result<NodeHandle, Error> {
+    fn load_node_by_path(&mut self, path: &LpPath) -> Result<NodeHandle, Error> {
         match crate::project::loader::load_node(&*self.fs.borrow(), path) {
             Ok((path, config)) => {
                 let handle = NodeHandle::new(self.next_handle);
@@ -775,7 +770,7 @@ impl ProjectRuntime {
     /// Resolve a path to a node handle
     ///
     /// Returns the handle for the node at the given path, or an error if not found.
-    pub fn handle_for_path(&self, path: &str) -> Result<NodeHandle, Error> {
+    pub fn handle_for_path(&self, path: &LpPath) -> Result<NodeHandle, Error> {
         let node_path = lp_model::LpPathBuf::from(path);
 
         // Look up node by path
@@ -786,7 +781,7 @@ impl ProjectRuntime {
         }
 
         Err(Error::NotFound {
-            path: path.to_string(),
+            path: path.as_str().to_string(),
         })
     }
 
@@ -1151,10 +1146,14 @@ impl<'a> crate::runtime::contexts::NodeInitContext for InitContext<'a> {
             // Relative path - resolve from current node's directory
             // Current node path is self.node_path (e.g., "/src/texture.texture")
             // Relative spec is relative to the parent directory (e.g., "../output.output")
-            let parent_dir = self.node_path.parent().map(|p| LpPathBuf::from(p.as_str())).unwrap_or_else(|| {
-                // No parent, use root
-                lp_model::LpPathBuf::from("/")
-            });
+            let parent_dir = self
+                .node_path
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| {
+                    // No parent, use root
+                    lp_model::LpPathBuf::from("/")
+                });
 
             // Resolve relative path using join_relative
             parent_dir

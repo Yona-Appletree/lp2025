@@ -37,7 +37,7 @@ fn test_scene_render() {
     let mut client_view = ClientProjectView::new();
 
     // Get output handle
-    let output_handle = runtime.handle_for_path(output_path.as_str()).unwrap();
+    let output_handle = runtime.handle_for_path(output_path.as_path()).unwrap();
 
     // Watch output for detail changes
     client_view.watch_detail(output_handle);

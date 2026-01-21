@@ -4,16 +4,16 @@
 
 use anyhow::{Error, Result};
 use lp_model::{
-    ClientMessage, ClientRequest, ServerMessage,
     project::{
-        FrameId,
         api::{ApiNodeSpecifier, SerializableProjectResponse},
         handle::ProjectHandle,
-    },
-    server::{AvailableProject, FsResponse, LoadedProject, ServerMsgBody},
+        FrameId,
+    }, server::{AvailableProject, FsResponse, LoadedProject, ServerMsgBody}, ClientMessage, ClientRequest,
+    LpPath, LpPathBuf,
+    ServerMessage,
 };
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use crate::client::transport::ClientTransport;
 
@@ -93,9 +93,9 @@ impl LpClient {
     ///
     /// * `Ok(Vec<u8>)` if the file was read successfully
     /// * `Err` if reading failed or transport error occurred
-    pub async fn fs_read(&self, path: &str) -> Result<Vec<u8>> {
+    pub async fn fs_read(&self, path: &LpPath) -> Result<Vec<u8>> {
         let request = ClientRequest::Filesystem(lp_model::server::FsRequest::Read {
-            path: path.to_string(),
+            path: path.to_path_buf(),
         });
 
         let response = self.send_request(request).await?;
@@ -125,9 +125,9 @@ impl LpClient {
     ///
     /// * `Ok(())` if the file was written successfully
     /// * `Err` if writing failed or transport error occurred
-    pub async fn fs_write(&self, path: &str, data: Vec<u8>) -> Result<()> {
+    pub async fn fs_write(&self, path: &LpPath, data: Vec<u8>) -> Result<()> {
         let request = ClientRequest::Filesystem(lp_model::server::FsRequest::Write {
-            path: path.to_string(),
+            path: path.to_path_buf(),
             data,
         });
 
@@ -157,9 +157,9 @@ impl LpClient {
     ///
     /// * `Ok(())` if the file was deleted successfully
     /// * `Err` if deletion failed or transport error occurred
-    pub async fn fs_delete_file(&self, path: &str) -> Result<()> {
+    pub async fn fs_delete_file(&self, path: &LpPath) -> Result<()> {
         let request = ClientRequest::Filesystem(lp_model::server::FsRequest::DeleteFile {
-            path: path.to_string(),
+            path: path.to_path_buf(),
         });
 
         let response = self.send_request(request).await?;
@@ -187,11 +187,11 @@ impl LpClient {
     ///
     /// # Returns
     ///
-    /// * `Ok(Vec<String>)` - List of file/directory paths
+    /// * `Ok(Vec<LpPathBuf>)` - List of file/directory paths
     /// * `Err` if listing failed or transport error occurred
-    pub async fn fs_list_dir(&self, path: &str, recursive: bool) -> Result<Vec<String>> {
+    pub async fn fs_list_dir(&self, path: &LpPath, recursive: bool) -> Result<Vec<LpPathBuf>> {
         let request = ClientRequest::Filesystem(lp_model::server::FsRequest::ListDir {
-            path: path.to_string(),
+            path: path.to_path_buf(),
             recursive,
         });
 
