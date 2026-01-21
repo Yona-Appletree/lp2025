@@ -39,6 +39,10 @@ impl Riscv32Emulator {
         args: &[DataValue],
         signature: &Signature,
     ) -> Result<Vec<DataValue>, EmulatorError> {
+        // Clear log buffer for clean output on this function call
+        self.clear_logs();
+        self.instruction_count = 0;
+
         // Check if function uses StructReturn
         if has_struct_return(signature) {
             // StructReturn: caller must provide struct size
@@ -474,9 +478,7 @@ fn allocate_struct_return_buffer(
         return Err(EmulatorError::InvalidInstruction {
             pc: emulator.pc,
             instruction: 0,
-            reason: format!(
-                "Not enough RAM for struct return buffer (need {aligned_size} bytes)"
-            ),
+            reason: format!("Not enough RAM for struct return buffer (need {aligned_size} bytes)"),
             regs: emulator.regs,
         });
     }
@@ -818,9 +820,7 @@ fn extract_stack_return_value(
             .map_err(|e| EmulatorError::InvalidInstruction {
                 pc: emulator.pc,
                 instruction: 0,
-                reason: format!(
-                    "Failed to read stack return value at 0x{stack_addr:08x}: {e}"
-                ),
+                reason: format!("Failed to read stack return value at 0x{stack_addr:08x}: {e}"),
                 regs: emulator.regs,
             })?;
     Ok(word_value as u32)

@@ -178,13 +178,13 @@ impl Riscv32Emulator {
     ///
     /// # Arguments
     ///
-    /// * `highlight_pc` - Optional PC to highlight in disassembly (for errors)
+    /// * `highlight_pc` - Optional PC to highlight in disassembly (for errors or current position)
     /// * `log_count` - Number of recent logs to show (default 20)
     pub fn format_debug_info(&self, highlight_pc: Option<u32>, log_count: usize) -> String {
         let mut result = String::new();
         let code = self.memory.code();
 
-        // Show disassembly only when there's an error PC to highlight
+        // Show disassembly when there's a PC to highlight (error or current position)
         if let Some(error_pc) = highlight_pc {
             // Disassemble all instructions
             let mut instructions = Vec::new();

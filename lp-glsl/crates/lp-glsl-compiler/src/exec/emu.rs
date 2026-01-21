@@ -1064,13 +1064,26 @@ impl GlslExecutable for GlslEmulatorModule {
             .call_function(func_address, &data_args, &sig)
             .map_err(|e| match e {
                 EmulatorError::Trap { code, pc, regs } => {
+                    crate::debug!(
+                        "Emulator trap calling '{}':\n{}",
+                        name,
+                        self.emulator.dump_state()
+                    );
                     self.format_trap_error_from_emulator_error(code, pc, &regs, name)
                 }
-                other => self.build_enhanced_error(
-                    ErrorCode::E0400,
-                    &format!("Emulator execution failed: {other}"),
-                    name,
-                ),
+                other => {
+                    crate::debug!(
+                        "Emulator error calling '{}': {}\n{}",
+                        name,
+                        other,
+                        self.emulator.dump_state()
+                    );
+                    self.build_enhanced_error(
+                        ErrorCode::E0400,
+                        &format!("Emulator execution failed: {other}"),
+                        name,
+                    )
+                }
             })?;
 
         // Extract i32 return value
@@ -1078,7 +1091,7 @@ impl GlslExecutable for GlslEmulatorModule {
             Some(cranelift_codegen::data_value::DataValue::I32(v)) => Ok(*v),
             _ => Err(GlslError::new(
                 ErrorCode::E0400,
-                "Expected i32 return value",
+                format!("Expected i32 return value, got: {:?}", results),
             )),
         }
     }
@@ -1804,7 +1817,9 @@ impl GlslExecutable for GlslEmulatorModule {
     #[cfg(feature = "std")]
     fn format_emulator_state(&self) -> Option<String> {
         let state_dump = self.emulator.dump_state();
-        let debug_info = self.emulator.format_debug_info(None, 100);
+        let current_pc = self.emulator.get_pc();
+        // Always show disassembly around current PC (like filetests do)
+        let debug_info = self.emulator.format_debug_info(Some(current_pc), 100);
         // Only include debug info section if there's actual content
         if debug_info.is_empty() {
             Some(format!("\n=== Emulator State ===\n{state_dump}"))

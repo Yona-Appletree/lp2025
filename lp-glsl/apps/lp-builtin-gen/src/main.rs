@@ -42,8 +42,13 @@ fn main() {
 fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut current = std::env::current_dir()?;
     loop {
-        if current.join("lp-glsl/Cargo.toml").exists() {
-            return Ok(current);
+        let cargo_toml = current.join("Cargo.toml");
+        if cargo_toml.exists() {
+            // Check if this is the workspace root by looking for [workspace] section
+            let content = std::fs::read_to_string(&cargo_toml)?;
+            if content.contains("[workspace]") && current.join("lp-glsl").exists() {
+                return Ok(current);
+            }
         }
         if !current.pop() {
             return Err("Could not find workspace root".into());
