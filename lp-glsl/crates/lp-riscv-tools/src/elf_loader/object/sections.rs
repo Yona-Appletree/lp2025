@@ -4,8 +4,7 @@ extern crate alloc;
 
 use crate::debug;
 use ::object::{Object, ObjectSection};
-use alloc::format;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 use super::layout::ObjectLayout;

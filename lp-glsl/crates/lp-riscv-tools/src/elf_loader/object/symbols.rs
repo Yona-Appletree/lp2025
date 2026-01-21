@@ -91,7 +91,8 @@ pub fn build_object_symbol_map(
                                         }
                                         // Add size of this section (aligned)
                                         let sec_size = section.size() as usize;
-                                        subsection_offset = (subsection_offset + sec_size as u32 + 3) & !3;
+                                        subsection_offset =
+                                            (subsection_offset + sec_size as u32 + 3) & !3;
                                     }
                                 }
                             }
@@ -105,7 +106,9 @@ pub fn build_object_symbol_map(
                         } else {
                             // Section has non-zero VMA - symbol_addr is absolute, need to subtract VMA first
                             let offset = (symbol_addr - section_vma) as u32;
-                            text_placement.wrapping_add(subsection_offset).wrapping_add(offset)
+                            text_placement
+                                .wrapping_add(subsection_offset)
+                                .wrapping_add(offset)
                         }
                     }
                     Some(name) if name == ".data" || name.starts_with(".data.") => {
@@ -122,7 +125,8 @@ pub fn build_object_symbol_map(
                                         }
                                         // Add size of this section (aligned)
                                         let sec_size = section.size() as usize;
-                                        subsection_offset = (subsection_offset + sec_size as u32 + 3) & !3;
+                                        subsection_offset =
+                                            (subsection_offset + sec_size as u32 + 3) & !3;
                                     }
                                 }
                             }
