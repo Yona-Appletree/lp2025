@@ -1,5 +1,27 @@
 [workspace]
-members = ["lp-app", "lp-glsl"]
+members = [
+    # lp-app workspace members
+    "lp-app/crates/lp-engine",
+    "lp-app/crates/lp-engine-client",
+    "lp-app/crates/lp-shared",
+    "lp-app/crates/lp-server",
+    "lp-app/apps/lp-cli",
+    "lp-app/crates/lp-model",
+    # lp-glsl workspace members
+    "lp-glsl/crates/lp-builtins",
+    "lp-glsl/crates/lp-filetests-gen",
+    "lp-glsl/crates/lp-glsl-compiler",
+    "lp-glsl/crates/lp-glsl-filetests",
+    "lp-glsl/crates/lp-jit-util",
+    "lp-glsl/crates/lp-riscv-shared",
+    "lp-glsl/crates/lp-riscv-tools",
+    "lp-glsl/apps/embive-program",
+    "lp-glsl/apps/esp32-glsl-jit",
+    "lp-glsl/apps/lp-builtin-gen",
+    "lp-glsl/apps/lp-builtins-app",
+    "lp-glsl/apps/lp-test",
+    "lp-glsl/apps/test-structreturn",
+]
 resolver = "2"
 
 [workspace.package]

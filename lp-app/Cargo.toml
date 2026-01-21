@@ -1,22 +1,23 @@
-[workspace]
-resolver = '2'
-members = [
-    "crates/lp-engine",
-    "crates/lp-engine-client",
-    "crates/lp-shared",
-    "crates/lp-server",
-    "apps/lp-cli",
-    "crates/lp-model",
-]
+# This file is kept for reference but workspace is now defined in root Cargo.toml
+# [workspace]
+# resolver = '2'
+# members = [
+#     "crates/lp-engine",
+#     "crates/lp-engine-client",
+#     "crates/lp-shared",
+#     "crates/lp-server",
+#     "apps/lp-cli",
+#     "crates/lp-model",
+# ]
 
-[workspace.package]
+[package]
 version = "40.0.0"
 authors = ["The Wasmtime Project Developers"]
 edition = "2024"
 license = "Apache-2.0 WITH LLVM-exception"
 rust-version = "1.90.0"
 
-[workspace.lints.rust]
+# [workspace.lints.rust]
 unused_extern_crates = 'warn'
 trivial_numeric_casts = 'warn'
 unstable_features = 'warn'
@@ -24,7 +25,7 @@ unused_import_braces = 'warn'
 unused-lifetimes = 'warn'
 unused-macro-rules = 'warn'
 
-[workspace.lints.clippy]
+# [workspace.lints.clippy]
 all = { level = 'allow', priority = -1 }
 clone_on_copy = 'warn'
 map_clone = 'warn'
@@ -41,7 +42,7 @@ redundant_field_names = 'warn'
 multiple_bound_locations = 'warn'
 extra_unused_type_parameters = 'warn'
 
-[workspace.dependencies]
+# [workspace.dependencies]
 # Cranelift crates - reference root workspace
 cranelift-codegen = { workspace = true }
 cranelift-frontend = { workspace = true }
@@ -63,7 +64,7 @@ critical-section = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
-[profile.release]
-# Link-time optimization for all release builds - saves ~100-300 KB
-# This applies to all packages in the workspace
-lto = true
+# [profile.release]
+# # Link-time optimization for all release builds - saves ~100-300 KB
+# # This applies to all packages in the workspace
+# lto = true
