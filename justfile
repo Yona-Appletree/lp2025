@@ -94,3 +94,7 @@ clean-all: clean
 
 check: fmt-check clippy
 validate: check test
+push: check
+    scripts/push.sh
+merge: check
+    scripts/push.sh --merge
