@@ -180,7 +180,7 @@ await_validation() {
   commit_hash="$(git rev-parse HEAD)"
 
   # First, wait for workflow to start (if it hasn't already)
-  local run_id
+  local run_id run_url
   run_id="$(wait_for_workflow_start "$commit_hash")"
 
   if [[ -z "$run_id" ]]; then
@@ -188,6 +188,18 @@ await_validation() {
     printf "%sWarning: No workflow found for commit %s%s\n" "${YELLOW}" "$commit_hash" "${NC}"
     echo "This might mean workflows haven't started yet, or no workflows are configured."
     return 1
+  fi
+
+  # Get run URL for display
+  run_url="$(gh run view "$run_id" --json htmlUrl --jq -r '.htmlUrl' 2>/dev/null || echo "")"
+  if [[ -z "$run_url" ]]; then
+    # Fallback: construct URL from repo info
+    local repo_owner repo_name
+    repo_owner="$(gh repo view --json owner --jq -r '.owner.login' 2>/dev/null || echo "")"
+    repo_name="$(gh repo view --json name --jq -r '.name' 2>/dev/null || echo "")"
+    if [[ -n "$repo_owner" ]] && [[ -n "$repo_name" ]]; then
+      run_url="https://github.com/$repo_owner/$repo_name/actions/runs/$run_id"
+    fi
   fi
 
   # Check if workflow already completed (idempotent check)
@@ -201,24 +213,34 @@ await_validation() {
 
     if [[ "$status" == "completed" ]] && [[ "$conclusion" == "success" ]]; then
       printf "\r%s%s Build checks passed\n" "${SUCCESS}" "${NC}"
+      if [[ -n "$run_url" ]]; then
+        printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+      fi
       return 0
     elif [[ "$status" == "completed" ]] && ([[ "$conclusion" == "failure" ]] || [[ "$conclusion" == "cancelled" ]]); then
       printf "\r%s%s Build checks failed\n" "${FAIL}" "${NC}"
-      handle_workflow_failure "$run_id" "$pr_url"
+      if [[ -n "$run_url" ]]; then
+        printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+      fi
+      handle_workflow_failure "$run_id" "$run_url" "$pr_url"
       return 1
     elif [[ "$conclusion" == "failure" ]] || [[ "$conclusion" == "cancelled" ]]; then
       # Conclusion set but status might not be "completed" yet
       printf "\r%s%s Build checks failed\n" "${FAIL}" "${NC}"
-      handle_workflow_failure "$run_id" "$pr_url"
+      if [[ -n "$run_url" ]]; then
+        printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+      fi
+      handle_workflow_failure "$run_id" "$run_url" "$pr_url"
       return 1
     fi
   fi
 
   # Watch workflow until completion
-  watch_workflow "$run_id" "$pr_url"
+  watch_workflow "$run_id" "$run_url" "$pr_url"
 }
 
 # Wait for workflow to start, return run ID
+# Gets the most recent run for the commit
 wait_for_workflow_start() {
   local commit_hash="$1"
   local max_wait=60  # 60 seconds
@@ -226,10 +248,12 @@ wait_for_workflow_start() {
   local interval=2   # Check every 2 seconds
 
   while [[ $elapsed -lt $max_wait ]]; do
+    # Get the most recent run (gh run list returns runs sorted by most recent first by default)
+    # Use databaseId for the run ID (this is the numeric ID used in URLs)
     local run_id
-    run_id="$(gh run list --commit "$commit_hash" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
+    run_id="$(gh run list --commit "$commit_hash" --limit 1 --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null || true)"
 
-    if [[ -n "$run_id" ]] && [[ "$run_id" != "null" ]]; then
+    if [[ -n "$run_id" ]] && [[ "$run_id" != "null" ]] && [[ "$run_id" != "" ]]; then
       echo "$run_id"
       return 0
     fi
@@ -245,7 +269,8 @@ wait_for_workflow_start() {
 # Returns 0 (success) if successful, 1 (failure) if failed
 watch_workflow() {
   local run_id="$1"
-  local pr_url="$2"
+  local run_url="$2"
+  local pr_url="$3"
   local max_wait=1800  # 30 minutes
   local elapsed=0
   local interval=5     # Check every 5 seconds
@@ -261,13 +286,16 @@ watch_workflow() {
       consecutive_failures=$((consecutive_failures + 1))
       if [[ $consecutive_failures -ge $max_consecutive_failures ]]; then
         echo
-        echo -e "${RED}Error: Could not fetch workflow status after $max_consecutive_failures attempts${NC}"
-        echo "Run ID: $run_id"
-        echo "PR URL: $pr_url"
+        printf "%sError: Could not fetch workflow status after %s attempts%s\n" "${RED}" "$max_consecutive_failures" "${NC}"
+        if [[ -n "$run_url" ]]; then
+          printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+        else
+          printf "Run ID: %s\n" "$run_id"
+        fi
         return 1
       fi
       echo
-      echo -e "${YELLOW}Warning: Could not fetch workflow status. Retrying... (attempt $consecutive_failures/$max_consecutive_failures)${NC}"
+      printf "%sWarning: Could not fetch workflow status. Retrying... (attempt %s/%s)%s\n" "${YELLOW}" "$consecutive_failures" "$max_consecutive_failures" "${NC}"
       sleep "$interval"
       elapsed=$((elapsed + interval))
       continue
@@ -284,10 +312,16 @@ watch_workflow() {
     if [[ "$status" == "completed" ]]; then
       if [[ "$conclusion" == "success" ]]; then
         printf "\r%s%s Build checks passed\n" "${SUCCESS}" "${NC}"
+        if [[ -n "$run_url" ]]; then
+          printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+        fi
         return 0
       else
         printf "\r%s%s Build checks failed\n" "${FAIL}" "${NC}"
-        handle_workflow_failure "$run_id" "$pr_url"
+        if [[ -n "$run_url" ]]; then
+          printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+        fi
+        handle_workflow_failure "$run_id" "$run_url" "$pr_url"
         return 1
       fi
     fi
@@ -297,10 +331,16 @@ watch_workflow() {
     if [[ "$conclusion" != "none" ]] && [[ "$conclusion" != "null" ]]; then
       if [[ "$conclusion" == "success" ]]; then
         printf "\r%s%s Build checks passed\n" "${SUCCESS}" "${NC}"
+        if [[ -n "$run_url" ]]; then
+          printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+        fi
         return 0
       elif [[ "$conclusion" == "failure" ]] || [[ "$conclusion" == "cancelled" ]]; then
         printf "\r%s%s Build checks failed\n" "${FAIL}" "${NC}"
-        handle_workflow_failure "$run_id" "$pr_url"
+        if [[ -n "$run_url" ]]; then
+          printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+        fi
+        handle_workflow_failure "$run_id" "$run_url" "$pr_url"
         return 1
       fi
     fi
@@ -315,14 +355,18 @@ watch_workflow() {
   done
 
   echo
-  echo -e "${YELLOW}Timeout waiting for workflow to complete${NC}"
+  printf "%sTimeout waiting for workflow to complete%s\n" "${YELLOW}" "${NC}"
+  if [[ -n "$run_url" ]]; then
+    printf "Run: %s%s%s\n" "${GRAY}" "$run_url" "${NC}"
+  fi
   return 1
 }
 
 # Handle workflow failure - download logs and analyze
 handle_workflow_failure() {
   local run_id="$1"
-  local pr_url="$2"
+  local run_url="$2"
+  local pr_url="$3"
 
   echo
   printf "%sDownloading logs...%s\n" "${RED}" "${NC}"
