@@ -7,7 +7,9 @@
 .*.rustfmt
 .mypy_cache
 \#*\#
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/keybindings.json
 .vs/
 rusty-tags.*
 tags

@@ -1,0 +1,6 @@
+{
+  // Cursor IDE settings
+  // Note: This may help with UI permissions, but the primary control
+  // is through Cursor's Auto-Run Mode setting in Preferences
+  "cursor.agent.autoRunMode": "sandbox"
+}

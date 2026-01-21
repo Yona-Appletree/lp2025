@@ -1,0 +1,21 @@
+# Cranelift Fork - Cursor Rules
+
+# Warnings: Fix warnings before committing. Don't just ignore them. If you can't fix them easily, ask for help.
+
+# Commits: Commit frequently with small incremental changes
+
+# Commits: Keep commit messages short (one line when possible)
+
+# Commits: Keep code compiling and tests passing between commits (when possible)
+
+# Style: Follow existing cranelift code style
+
+# Style: Use `#![no_std]` where appropriate
+
+# Style: Gate std-dependent code behind features
+
+# Structure: Keep cranelift fork clean for potential upstream merges
+
+# Structure: Use feature flags to gate optional components
+
+# Structure: Keep wasmtime components but gate behind features (Option 1 approach)
