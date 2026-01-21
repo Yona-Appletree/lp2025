@@ -1,6 +1,5 @@
 use crate::nodes::{NodeConfig, NodeKind, NodeSpecifier};
-use crate::{AsLpPath, AsLpPathBuf, LpPathBuf};
-use alloc::string::ToString;
+use crate::{AsLpPathBuf, LpPathBuf};
 use serde::{Deserialize, Serialize};
 
 /// Shader node configuration

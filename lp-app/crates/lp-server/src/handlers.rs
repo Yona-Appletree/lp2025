@@ -4,7 +4,7 @@ extern crate alloc;
 
 use crate::error::ServerError;
 use crate::project_manager::ProjectManager;
-use alloc::{format, rc::Rc, string::String, vec::Vec};
+use alloc::{format, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
     server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload}, AsLpPath, ClientMessage, LpPath, LpPathBuf,

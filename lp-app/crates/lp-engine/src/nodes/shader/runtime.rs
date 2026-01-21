@@ -267,7 +267,6 @@ impl ShaderRuntime {
         config: &ShaderConfig,
         ctx: &dyn NodeInitContext,
     ) -> Result<String, Error> {
-        use lp_model::AsLpPath;
         let fs = ctx.get_node_fs();
         let glsl_path = &config.glsl_path;
         // Make path absolute if relative (chrooted filesystem requires absolute paths)

@@ -4,7 +4,7 @@
 
 use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
-use crate::{AsLpPathBuf, LpPathBuf};
+use crate::LpPathBuf;
 
 /// Filesystem operation request
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +52,7 @@ pub enum FsResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AsLpPathBuf;
     use alloc::string::ToString;
 
     #[test]

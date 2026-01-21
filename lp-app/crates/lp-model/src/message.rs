@@ -4,7 +4,6 @@
 
 use crate::project::{api::ProjectRequest, handle::ProjectHandle};
 use crate::server::{FsRequest, ServerMsgBody as ServerMessagePayload};
-use crate::{AsLpPathBuf, LpPathBuf};
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 
@@ -71,6 +70,7 @@ pub enum ClientRequest {
 mod tests {
     use super::*;
     use crate::server::FsResponse;
+    use crate::AsLpPathBuf;
     use alloc::string::ToString;
 
     #[test]

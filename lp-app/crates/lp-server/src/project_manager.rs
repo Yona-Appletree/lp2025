@@ -14,7 +14,7 @@ use alloc::{
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::project::ProjectHandle;
-use lp_model::{AsLpPath, LpPath, LpPathBuf};
+use lp_model::{LpPath, LpPathBuf};
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
 
