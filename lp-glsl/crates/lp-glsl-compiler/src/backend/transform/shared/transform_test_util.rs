@@ -1,6 +1,6 @@
 use crate::backend::transform::identity::IdentityTransform;
 use crate::backend::transform::pipeline::Transform;
-use cranelift_codegen::write_function;
+use alloc::string::ToString;
 use cranelift_module::Linkage;
 use cranelift_reader::{ParseOptions, parse_test};
 use std::prelude::rust_2015::{String, Vec};
@@ -25,13 +25,33 @@ fn normalize_clif(clif: &str) -> String {
 fn format_module<M: cranelift_module::Module>(
     module: &crate::backend::module::gl_module::GlModule<M>,
 ) -> String {
+    use crate::backend::util::clif_format::format_function;
+    use hashbrown::HashMap;
+    
+    // Build mapping from func_id string to function name for updating external references
+    let mut name_mapping: HashMap<String, String> = HashMap::new();
+    for (name, gl_func) in &module.fns {
+        name_mapping.insert(gl_func.func_id.as_u32().to_string(), name.clone());
+    }
+    
     let mut result = String::new();
     // Sort functions by name for deterministic output
     let mut funcs: Vec<_> = module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
-    for (_name, gl_func) in funcs {
-        write_function(&mut result, &gl_func.function).unwrap();
-        result.push('\n');
+    for (name, gl_func) in funcs {
+        // Use format_function to convert User names back to TestCase names for comparison
+        match format_function(&gl_func.function, name, &name_mapping) {
+            Ok(func_text) => {
+                result.push_str(&func_text);
+                result.push('\n');
+            }
+            Err(_) => {
+                // Fallback to write_function if format_function fails
+                use cranelift_codegen::write_function;
+                write_function(&mut result, &gl_func.function).unwrap();
+                result.push('\n');
+            }
+        }
     }
     result
 }

@@ -435,16 +435,16 @@ impl<M: Module> GlModule<M> {
             // Update the function in place using the FuncId from declaration
             // This ensures we use the same FuncId that was assigned during declaration
             let new_sig = transform.transform_signature(&gl_func.clif_sig);
-            
+
             // IMPORTANT: Update the function's name to match the FuncId
             // Cranelift uses the function name to match it with the FuncId during define_function
             use cranelift_codegen::ir::UserFuncName;
             let mut transformed_func_with_name = transformed_func;
             transformed_func_with_name.name = UserFuncName::user(0, func_id.as_u32());
-            
+
             // Remove the placeholder that was created during declaration
             new_module.fns.remove(&name);
-            
+
             // Store the transformed function with the correct FuncId
             // Note: The function is already declared in the module, so we just update our internal state
             new_module.fns.insert(
