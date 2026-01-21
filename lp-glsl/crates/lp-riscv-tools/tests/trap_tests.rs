@@ -150,9 +150,7 @@ fn test_trap_at_absolute_address() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_DIVISION_BY_ZERO);
         }
-        Ok(other) => panic!(
-            "Expected Trap, got {other:?} - this demonstrates the bug!"
-        ),
+        Ok(other) => panic!("Expected Trap, got {other:?} - this demonstrates the bug!"),
         Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }

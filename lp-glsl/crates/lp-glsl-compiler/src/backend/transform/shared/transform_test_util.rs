@@ -138,9 +138,7 @@ fn build_and_run_module(
     use cranelift_codegen::write_function;
 
     // Print transformed CLIF
-    eprintln!(
-        "\n=== CLIF IR (AFTER {transform_name} transformation) ==="
-    );
+    eprintln!("\n=== CLIF IR (AFTER {transform_name} transformation) ===");
     let mut funcs: Vec<_> = gl_module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
     for (name, gl_func) in funcs {

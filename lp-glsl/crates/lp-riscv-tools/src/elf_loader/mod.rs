@@ -259,9 +259,7 @@ mod tests {
         let max_steps = 10000;
         loop {
             if steps >= max_steps {
-                println!(
-                    "\n=== Emulator exceeded {max_steps} steps - possible infinite loop ==="
-                );
+                println!("\n=== Emulator exceeded {max_steps} steps - possible infinite loop ===");
                 println!("PC: 0x{:x}", emu.get_pc());
                 println!("\n=== Emulator State ===");
                 println!("{}", emu.dump_state());

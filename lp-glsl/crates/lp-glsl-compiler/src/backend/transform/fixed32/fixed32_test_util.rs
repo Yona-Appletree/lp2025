@@ -108,9 +108,7 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     let expected_fixed = float_to_fixed32(expected_float);
 
     eprintln!("\n=== Results ===");
-    eprintln!(
-        "Expected: {expected_fixed} (fixed-point) = {expected_float} (float)"
-    );
+    eprintln!("Expected: {expected_fixed} (fixed-point) = {expected_float} (float)");
     eprintln!(
         "Got:      {} (fixed-point) = {} (float)",
         result_i32,

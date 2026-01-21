@@ -96,9 +96,7 @@ pub mod test_helpers {
             .ok_or_else(|| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!(
-                        "Function '{callee_name}' not found (must be declared first)"
-                    ),
+                    format!("Function '{callee_name}' not found (must be declared first)"),
                 )
             })?
             .func_id;

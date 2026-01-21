@@ -330,9 +330,7 @@ mod tests {
 
         // Verify last _init wins
         if let Some(init_addr) = obj2_info.init_address {
-            println!(
-                "Second object file's _init() at 0x{init_addr:x} (last one wins)"
-            );
+            println!("Second object file's _init() at 0x{init_addr:x} (last one wins)");
         }
     }
 

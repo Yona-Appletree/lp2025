@@ -33,9 +33,7 @@ fn main() {
 
     let mut executable2 = glsl_jit(shader2, options.clone()).unwrap();
     let result2 = executable2.call_bool("main", &[]).unwrap();
-    println!(
-        "Example 2 - Boolean comparison: {result2} (expected: true)"
-    );
+    println!("Example 2 - Boolean comparison: {result2} (expected: true)");
     assert_eq!(result2, true);
 
     // Example 3: Complex expression
