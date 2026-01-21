@@ -18,14 +18,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure git and cargo for dependencies
-        env:
-          CARGO_NET_GIT_FETCH_WITH_CLI: true
-        run: |
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-          chmod 600 ~/.git-credentials
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:

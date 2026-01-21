@@ -92,9 +92,16 @@ clean:
 clean-all: clean
     rm -rf {{lp_glsl_dir}}/target
 
+# Check code for linting, formatting, etc...
 check: fmt-check clippy
+
+# Validate code by checking and testing
 validate: check test
+
+# Push changes to origin and create/update PR
 push: check
     scripts/push.sh
+
+# Push changes, run ci, and merge PR if successful
 merge: check
     scripts/push.sh --merge
