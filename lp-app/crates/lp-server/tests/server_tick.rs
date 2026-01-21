@@ -6,8 +6,8 @@ use lp_engine::MemoryOutputProvider;
 use lp_engine_client::ClientProjectView;
 use lp_model::{AsLpPath, AsLpPathBuf};
 use lp_server::LpServer;
-use lp_shared::fs::{LpFs, LpFsMemory};
 use lp_shared::ProjectBuilder;
+use lp_shared::fs::{LpFs, LpFsMemory};
 
 #[test]
 fn test_server_tick_propagates_to_projects() {
@@ -37,10 +37,7 @@ fn test_server_tick_propagates_to_projects() {
         .read_file("/project.json".as_path())
         .unwrap();
     base_fs
-        .write_file(
-            project_prefix.join("project.json").as_path(),
-            &project_json,
-        )
+        .write_file(project_prefix.join("project.json").as_path(), &project_json)
         .unwrap();
 
     // Copy all node files
@@ -56,12 +53,12 @@ fn test_server_tick_propagates_to_projects() {
         let node_json_path = node_path.join("node.json");
         if let Ok(data) = temp_fs.borrow().read_file(node_json_path.as_path()) {
             // Strip leading '/' to make it relative for joining
-            let relative_path = node_json_path.as_str().strip_prefix('/').unwrap_or(node_json_path.as_str());
+            let relative_path = node_json_path
+                .as_str()
+                .strip_prefix('/')
+                .unwrap_or(node_json_path.as_str());
             base_fs
-                .write_file(
-                    project_prefix.join(relative_path).as_path(),
-                    &data,
-                )
+                .write_file(project_prefix.join(relative_path).as_path(), &data)
                 .unwrap();
         }
 
@@ -70,7 +67,10 @@ fn test_server_tick_propagates_to_projects() {
             let glsl_path = node_path.join("main.glsl");
             if let Ok(data) = temp_fs.borrow().read_file(glsl_path.as_path()) {
                 // Strip leading '/' to make it relative for joining
-                let relative_path = glsl_path.as_str().strip_prefix('/').unwrap_or(glsl_path.as_str());
+                let relative_path = glsl_path
+                    .as_str()
+                    .strip_prefix('/')
+                    .unwrap_or(glsl_path.as_str());
                 base_fs
                     .write_file(project_prefix.join(relative_path).as_path(), &data)
                     .unwrap();

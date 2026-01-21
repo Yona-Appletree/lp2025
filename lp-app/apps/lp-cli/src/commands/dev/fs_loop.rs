@@ -42,8 +42,8 @@ pub async fn fs_loop(
     let client = Arc::new(LpClient::new_shared(transport));
 
     // Create file watcher
-    let mut watcher = FileWatcher::new(project_dir.clone())
-        .context("Failed to create file watcher")?;
+    let mut watcher =
+        FileWatcher::new(project_dir.clone()).context("Failed to create file watcher")?;
 
     // Debouncing state
     let mut pending_changes: HashMap<String, FsChange> = HashMap::new();

@@ -5,8 +5,8 @@ use alloc::{format, rc::Rc, string::String};
 use core::cell::RefCell;
 use lp_model::nodes::fixture::ColorOrder;
 use lp_model::nodes::{
-    fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig, texture::TextureConfig,
-    NodeSpecifier,
+    NodeSpecifier, fixture::FixtureConfig, output::OutputConfig, shader::ShaderConfig,
+    texture::TextureConfig,
 };
 use lp_model::path::LpPathBuf;
 use lp_model::{AsLpPath, AsLpPathBuf};

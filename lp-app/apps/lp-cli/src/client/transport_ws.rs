@@ -153,7 +153,7 @@ impl ClientTransport for WebSocketClientTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lp_model::{server::FsRequest, AsLpPathBuf};
+    use lp_model::{AsLpPathBuf, server::FsRequest};
 
     #[test]
     fn test_serialization_format() {

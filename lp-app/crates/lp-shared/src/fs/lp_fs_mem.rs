@@ -2,17 +2,12 @@
 
 use crate::error::FsError;
 use crate::fs::{
+    LpFs,
     fs_event::ChangeType,
     fs_event::{FsChange, FsVersion},
     lp_fs_view::LpFsView,
-    LpFs,
 };
-use alloc::{
-    format,
-    rc::Rc,
-    string::ToString,
-    vec::Vec,
-};
+use alloc::{format, rc::Rc, string::ToString, vec::Vec};
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::path::{LpPath, LpPathBuf};
@@ -402,7 +397,10 @@ impl LpFs for LpFsMemory {
             changes: RefCell::new(self.changes.borrow().clone()),
         }));
 
-        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix.as_path()))))
+        Ok(Rc::new(RefCell::new(LpFsView::new(
+            parent_rc,
+            prefix.as_path(),
+        ))))
     }
 
     fn current_version(&self) -> FsVersion {

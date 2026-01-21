@@ -5,13 +5,7 @@ extern crate alloc;
 use crate::error::ServerError;
 use crate::handlers;
 use crate::project_manager::ProjectManager;
-use alloc::{
-    boxed::Box,
-    format,
-    rc::Rc,
-    string::ToString,
-    vec::Vec,
-};
+use alloc::{boxed::Box, format, rc::Rc, string::ToString, vec::Vec};
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::{LpPath, LpPathBuf, Message};
