@@ -93,9 +93,16 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
 
     // Call main function and get result
     eprintln!("\n=== Executing main function ===");
-    let result_i32 = executable
-        .call_i32("main", &[])
-        .expect("Failed to execute main function");
+    let result_i32 = match executable.call_i32("main", &[]) {
+        Ok(result) => result,
+        Err(e) => {
+            // On error, output emulator state and execution log like filetests do
+            if let Some(ref emulator_state) = executable.format_emulator_state() {
+                eprintln!("{}", emulator_state);
+            }
+            panic!("Failed to execute main function: {}", e);
+        }
+    };
 
     // Convert expected float to fixed-point
     let expected_fixed = float_to_fixed32(expected_float);
@@ -113,13 +120,18 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
 
     // Compare results (allow small tolerance for rounding)
     let tolerance = 1; // 1 fixed-point unit ≈ 0.000015
-    assert!(
-        (result_i32 - expected_fixed).abs() <= tolerance,
-        "Expected fixed-point value {} (float {}), got {} (float {})\n\n\
-         See debug output above for CLIF before/after transformation.",
-        expected_fixed,
-        expected_float,
-        result_i32,
-        fixed32_to_float(result_i32)
-    );
+    if (result_i32 - expected_fixed).abs() > tolerance {
+        // On failure, output emulator state and execution log like filetests do
+        if let Some(ref emulator_state) = executable.format_emulator_state() {
+            eprintln!("{}", emulator_state);
+        }
+        panic!(
+            "Expected fixed-point value {} (float {}), got {} (float {})\n\n\
+             See debug output above for CLIF before/after transformation.",
+            expected_fixed,
+            expected_float,
+            result_i32,
+            fixed32_to_float(result_i32)
+        );
+    }
 }
