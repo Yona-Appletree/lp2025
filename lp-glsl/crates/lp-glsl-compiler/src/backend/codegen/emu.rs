@@ -385,6 +385,11 @@ pub fn build_emu_executable(
         .with_log_level(LogLevel::Instructions);
 
     // 7. Run bootstrap init: initialize .bss/.data and optionally call user _init
+    // Temporarily increase instruction limit for bootstrap init (which can be longer)
+    let original_max_instructions = options.max_instructions;
+    let init_max_instructions = 10000u64.max(options.max_instructions * 10);
+    emulator.set_max_instructions(init_max_instructions);
+
     // Set up stack pointer (sp = x2) to point to high RAM
     let sp_value = 0x80000000u32.wrapping_add((ram_size as u32).wrapping_sub(16));
     emulator.set_register(Gpr::Sp, sp_value as i32);
@@ -410,6 +415,8 @@ pub fn build_emu_executable(
         load_info.entry_point,
         init_address
     );
+
+
 
     loop {
         if init_steps >= max_init_steps {
@@ -470,6 +477,9 @@ pub fn build_emu_executable(
             }
         }
     }
+
+    // Restore original instruction limit for normal function execution
+    emulator.set_max_instructions(original_max_instructions);
 
     crate::debug!("Bootstrap init completed successfully");
 
