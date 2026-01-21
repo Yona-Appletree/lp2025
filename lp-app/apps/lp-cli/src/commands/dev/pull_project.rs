@@ -30,7 +30,7 @@ pub async fn pull_project_async(
     project_uid: &str,
 ) -> Result<()> {
     // Build server project path
-    let server_project_path = format!("projects/{}", project_uid);
+    let server_project_path = format!("/projects/{}", project_uid);
 
     // List all files recursively in the project on server
     let files = client
@@ -46,17 +46,27 @@ pub async fn pull_project_async(
             .await
             .with_context(|| format!("Failed to read file from server: {}", file_path.as_str()))?;
 
-        // Extract local path by removing the "projects/{project_uid}/" prefix
+        // Extract local path by removing the "/projects/{project_uid}/" prefix
         let file_path_str = file_path.as_str();
-        let local_path = if file_path_str.starts_with(&format!("projects/{}/", project_uid)) {
+        let prefix_with_slash = format!("/projects/{}/", project_uid);
+        let prefix_without_slash = format!("projects/{}/", project_uid);
+        let local_path = if file_path_str.starts_with(&prefix_with_slash) {
             // Remove prefix and ensure it starts with '/'
-            let relative = &file_path_str[format!("projects/{}/", project_uid).len()..];
+            let relative = &file_path_str[prefix_with_slash.len()..];
             if relative.starts_with('/') {
                 relative.to_string()
             } else {
                 format!("/{}", relative)
             }
-        } else if file_path_str == format!("projects/{}", project_uid) {
+        } else if file_path_str.starts_with(&prefix_without_slash) {
+            // Handle paths without leading slash (backward compatibility)
+            let relative = &file_path_str[prefix_without_slash.len()..];
+            if relative.starts_with('/') {
+                relative.to_string()
+            } else {
+                format!("/{}", relative)
+            }
+        } else if file_path_str == format!("/projects/{}", project_uid) || file_path_str == format!("projects/{}", project_uid) {
             // This is the project directory itself, skip
             continue;
         } else {

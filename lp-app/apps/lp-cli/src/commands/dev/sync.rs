@@ -31,14 +31,15 @@ pub async fn sync_file_change(
     _project_dir: &std::path::Path,
     local_fs: &Arc<dyn LpFs + Send + Sync>,
 ) -> Result<()> {
-    // Build server path: projects/{project_uid}/{file_path}
-    // Remove leading '/' from change.path for server path
+    // Build server path: /projects/{project_uid}/{file_path}
+    // Remove leading '/' from change.path for server path, then prepend /projects/{project_uid}/
     let path_str = change.path.as_str();
-    let server_path = if path_str.starts_with('/') {
-        format!("projects/{}/{}", project_uid, &path_str[1..])
+    let relative_path = if path_str.starts_with('/') {
+        &path_str[1..]
     } else {
-        format!("projects/{}/{}", project_uid, path_str)
+        path_str
     };
+    let server_path = format!("/projects/{}/{}", project_uid, relative_path);
 
     match change.change_type {
         ChangeType::Create | ChangeType::Modify => {

@@ -62,13 +62,14 @@ pub async fn push_project_async(
             }
         };
 
-        // Build server path: projects/{project_uid}/{entry_path}
-        // Remove leading '/' from entry_path for server path
-        let server_path = if entry_str.starts_with('/') {
-            format!("projects/{}/{}", project_uid, &entry_str[1..])
+        // Build server path: /projects/{project_uid}/{entry_path}
+        // Remove leading '/' from entry_path for server path, then prepend /projects/{project_uid}/
+        let relative_path = if entry_str.starts_with('/') {
+            &entry_str[1..]
         } else {
-            format!("projects/{}/{}", project_uid, entry_str)
+            entry_str
         };
+        let server_path = format!("/projects/{}/{}", project_uid, relative_path);
 
         // Write file to server
         client
