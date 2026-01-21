@@ -15,7 +15,7 @@ use alloc::{format, string::String, vec::Vec};
 /// JIT-compiled GLSL module (executes on host or embedded)
 /// Works in both std and no_std (JITModule supports no_std)
 pub struct GlslJitModule {
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "JIT module stored for future use")]
     pub(crate) jit_module: cranelift_jit::JITModule,
     pub(crate) function_ptrs: HashMap<String, *const u8>,
     pub(crate) signatures: HashMap<String, FunctionSignature>,
@@ -883,7 +883,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -899,7 +899,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -987,7 +987,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -1003,7 +1003,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -1097,7 +1097,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -1113,7 +1113,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -1293,7 +1293,7 @@ impl GlslExecutable for GlslJitModule {
                 unsafe {
                     call_structreturn(
                         *func_ptr,
-                        buffer.as_mut_ptr() as *mut u8,
+                        buffer.as_mut_ptr(),
                         buffer_size,
                         self.call_conv,
                         self.pointer_type,
@@ -1310,7 +1310,7 @@ impl GlslExecutable for GlslJitModule {
                 unsafe {
                     call_structreturn_with_args(
                         *func_ptr,
-                        buffer.as_mut_ptr() as *mut u8,
+                        buffer.as_mut_ptr(),
                         buffer_size,
                         &jit_args,
                         self.call_conv,

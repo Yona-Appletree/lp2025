@@ -39,7 +39,8 @@ fn test_wrapper_clone() {
 #[test]
 fn test_wrap_function() {
     let func_ptr = 0x1000 as *const u8;
-    let wrapped =
-        wrap_structreturn_function::<f32>(func_ptr, 3, CallConv::AppleAarch64, types::I64);
+    let wrapped = unsafe {
+        wrap_structreturn_function::<f32>(func_ptr, 3, CallConv::AppleAarch64, types::I64)
+    };
     assert!(wrapped.is_ok());
 }

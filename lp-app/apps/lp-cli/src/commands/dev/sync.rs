@@ -34,8 +34,8 @@ pub async fn sync_file_change(
     // Build server path: /projects/{project_uid}/{file_path}
     // Remove leading '/' from change.path for server path, then prepend /projects/{project_uid}/
     let path_str = change.path.as_str();
-    let relative_path = if path_str.starts_with('/') {
-        &path_str[1..]
+    let relative_path = if let Some(stripped) = path_str.strip_prefix('/') {
+        stripped
     } else {
         path_str
     };

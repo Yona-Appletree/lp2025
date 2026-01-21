@@ -683,8 +683,8 @@ impl ProjectRuntime {
                     let stripped_str = stripped.as_str();
                     if stripped_str == "/" {
                         ""
-                    } else if stripped_str.starts_with('/') {
-                        &stripped_str[1..]
+                    } else if let Some(stripped) = stripped_str.strip_prefix('/') {
+                        stripped
                     } else {
                         stripped_str
                     }
@@ -1111,7 +1111,10 @@ impl ProjectRuntime {
 /// Init context implementation
 struct InitContext<'a> {
     runtime: &'a ProjectRuntime,
-    #[allow(dead_code)] // Used for chroot filesystem creation, may be needed for future features
+    #[allow(
+        dead_code,
+        reason = "Used for chroot filesystem creation, may be needed for future features"
+    )]
     node_path: &'a LpPathBuf,
     node_fs: alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>,
 }

@@ -106,11 +106,17 @@ impl<T> Clone for StructReturnWrapper<T> {
 ///
 /// This is the primary API for wrapping StructReturn functions.
 ///
+/// # Safety
+/// - `func_ptr` must be a valid function pointer to a JIT-compiled function
+/// - The function signature must match: `fn(*mut T) -> ()` with StructReturn
+/// - The calling convention must match the one used when compiling the function
+/// - `buffer_size` must be correct for the return type `T`
+///
 /// # Note
 /// This function is provided as a convenience API. The main `lp-glsl-compiler` crate uses
 /// `call_structreturn` directly for performance, but this wrapper can be useful
 /// for applications that prefer a simpler, higher-level interface.
-pub fn wrap_structreturn_function<T>(
+pub unsafe fn wrap_structreturn_function<T>(
     func_ptr: *const u8,
     buffer_size: usize,
     call_conv: CallConv,
@@ -119,8 +125,9 @@ pub fn wrap_structreturn_function<T>(
 where
     T: Copy + Default + 'static,
 {
-    let wrapper =
-        unsafe { StructReturnWrapper::new(func_ptr, buffer_size, call_conv, pointer_type)? };
+    unsafe {
+        let wrapper = StructReturnWrapper::new(func_ptr, buffer_size, call_conv, pointer_type)?;
 
-    Ok(Box::new(move || wrapper.call()))
+        Ok(Box::new(move || wrapper.call()))
+    }
 }
