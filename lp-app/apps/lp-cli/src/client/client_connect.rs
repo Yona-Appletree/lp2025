@@ -96,7 +96,7 @@ mod tests {
         let result = client_connect(spec);
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(format!("{}", e).contains("not yet implemented"));
+            assert!(format!("{e}").contains("not yet implemented"));
         }
     }
 }

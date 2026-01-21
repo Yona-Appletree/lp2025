@@ -21,7 +21,7 @@ fn fixed32_to_float(fixed: i32) -> f32 {
 pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     // Print input CLIF
     eprintln!("\n=== CLIF IR (INPUT) ===");
-    eprintln!("{}", clif_input);
+    eprintln!("{clif_input}");
 
     // Parse CLIF
     let test_file =
@@ -56,10 +56,10 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     use std::prelude::rust_2015::{String, Vec}; // Print parsed CLIF (before transformation)
     eprintln!("\n=== CLIF IR (BEFORE transformation) ===");
     for (name, func) in &original_funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, func).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Apply fixed32 transform
@@ -72,10 +72,10 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     eprintln!("\n=== CLIF IR (AFTER transformation) ===");
     for (name, _) in &original_funcs {
         if let Some(gl_func) = transformed_module.get_func(name) {
-            eprintln!("function {}:", name);
+            eprintln!("function {name}:");
             let mut buf = String::new();
             write_function(&mut buf, &gl_func.function).unwrap();
-            eprintln!("{}", buf);
+            eprintln!("{buf}");
         }
     }
 
@@ -98,9 +98,9 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
         Err(e) => {
             // On error, output emulator state and execution log like filetests do
             if let Some(ref emulator_state) = executable.format_emulator_state() {
-                eprintln!("{}", emulator_state);
+                eprintln!("{emulator_state}");
             }
-            panic!("Failed to execute main function: {}", e);
+            panic!("Failed to execute main function: {e}");
         }
     };
 
@@ -109,8 +109,7 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
 
     eprintln!("\n=== Results ===");
     eprintln!(
-        "Expected: {} (fixed-point) = {} (float)",
-        expected_fixed, expected_float
+        "Expected: {expected_fixed} (fixed-point) = {expected_float} (float)"
     );
     eprintln!(
         "Got:      {} (fixed-point) = {} (float)",
@@ -123,7 +122,7 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     if (result_i32 - expected_fixed).abs() > tolerance {
         // On failure, output emulator state and execution log like filetests do
         if let Some(ref emulator_state) = executable.format_emulator_state() {
-            eprintln!("{}", emulator_state);
+            eprintln!("{emulator_state}");
         }
         panic!(
             "Expected fixed-point value {} (float {}), got {} (float {})\n\n\

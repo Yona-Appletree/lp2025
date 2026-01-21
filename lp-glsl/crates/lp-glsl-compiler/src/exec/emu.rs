@@ -1925,9 +1925,7 @@ mod tests {
         // Allow some tolerance for fixed-point conversion
         assert!(
             (result_fixed - expected_fixed).abs() < 10,
-            "Expected fixed-point value around {}, got {}",
-            expected_fixed,
-            result_fixed
+            "Expected fixed-point value around {expected_fixed}, got {result_fixed}"
         );
 
         // Verify it's approximately correct as float
@@ -1953,9 +1951,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.0001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -1978,9 +1974,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -2007,9 +2001,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -2031,9 +2023,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.01,
-            "Expected sqrt(4.0) ≈ {}, got {}",
-            expected,
-            result_float
+            "Expected sqrt(4.0) ≈ {expected}, got {result_float}"
         );
     }
 }

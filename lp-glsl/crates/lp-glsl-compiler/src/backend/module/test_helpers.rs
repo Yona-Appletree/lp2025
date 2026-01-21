@@ -33,7 +33,7 @@ pub mod test_helpers {
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare function '{}': {}", name, e),
+                    format!("Failed to declare function '{name}': {e}"),
                 )
             })?;
 
@@ -97,8 +97,7 @@ pub mod test_helpers {
                 GlslError::new(
                     ErrorCode::E0400,
                     format!(
-                        "Function '{}' not found (must be declared first)",
-                        callee_name
+                        "Function '{callee_name}' not found (must be declared first)"
                     ),
                 )
             })?
@@ -111,7 +110,7 @@ pub mod test_helpers {
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare function '{}': {}", name, e),
+                    format!("Failed to declare function '{name}': {e}"),
                 )
             })?;
 

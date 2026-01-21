@@ -307,12 +307,11 @@ mod tests {
             assert_eq!(decoded.rs2, *rs2);
             assert_eq!(decoded.func, func);
 
-            let encoded = decoded.to_riscv_no_opcode() | u32::from(*opcode);
+            let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for R-type: opcode=0x{:02x}, rd={}, rs1={}, rs2={}, \
-                 funct7=0x{:02x}",
-                opcode, rd, rs1, rs2, funct7
+                "Round-trip failed for R-type: opcode=0x{opcode:02x}, rd={rd}, rs1={rs1}, rs2={rs2}, \
+                 funct7=0x{funct7:02x}"
             );
         }
     }
@@ -341,16 +340,15 @@ mod tests {
             assert_eq!(decoded.func, *funct3);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch: expected {}, got {}",
-                imm, decoded.imm
+                "Immediate mismatch: expected {imm}, got {}",
+                decoded.imm
             );
 
             let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for I-type: opcode=0x{:02x}, rd={}, rs1={}, imm={}, \
-                 funct3=0x{:x}",
-                opcode, rd, rs1, imm, funct3
+                "Round-trip failed for I-type: opcode=0x{opcode:02x}, rd={rd}, rs1={rs1}, imm={imm}, \
+                 funct3=0x{funct3:x}"
             );
         }
     }
@@ -380,16 +378,15 @@ mod tests {
             assert_eq!(decoded.func, *funct3);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch: expected {}, got {}",
-                imm, decoded.imm
+                "Immediate mismatch: expected {imm}, got {}",
+                decoded.imm
             );
 
             let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for S-type: opcode=0x{:02x}, rs1={}, rs2={}, imm={}, \
-                 funct3=0x{:x}",
-                opcode, rs1, rs2, imm, funct3
+                "Round-trip failed for S-type: opcode=0x{opcode:02x}, rs1={rs1}, rs2={rs2}, imm={imm}, \
+                 funct3=0x{funct3:x}"
             );
         }
     }
@@ -424,16 +421,15 @@ mod tests {
             assert_eq!(decoded.func, *funct3);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch: expected {}, got {}",
-                imm, decoded.imm
+                "Immediate mismatch: expected {imm}, got {}",
+                decoded.imm
             );
 
             let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for B-type: opcode=0x{:02x}, rs1={}, rs2={}, imm={}, \
-                 funct3=0x{:x}",
-                opcode, rs1, rs2, imm, funct3
+                "Round-trip failed for B-type: opcode=0x{opcode:02x}, rs1={rs1}, rs2={rs2}, imm={imm}, \
+                 funct3=0x{funct3:x}"
             );
         }
     }
@@ -464,15 +460,14 @@ mod tests {
             assert_eq!(decoded.rd, *rd);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch: expected {}, got {}",
-                imm, decoded.imm
+                "Immediate mismatch: expected {imm}, got {}",
+                decoded.imm
             );
 
             let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for J-type: opcode=0x{:02x}, rd={}, imm={}",
-                opcode, rd, imm
+                "Round-trip failed for J-type: opcode=0x{opcode:02x}, rd={rd}, imm={imm}"
             );
         }
     }
@@ -497,15 +492,14 @@ mod tests {
             assert_eq!(decoded.rd, *rd);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch: expected 0x{:08x}, got 0x{:08x}",
-                imm_u32, decoded.imm as u32
+                "Immediate mismatch: expected 0x{imm_u32:08x}, got 0x{:08x}",
+                decoded.imm as u32
             );
 
             let encoded = decoded.to_riscv_no_opcode() | *opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for U-type: opcode=0x{:02x}, rd={}, imm=0x{:08x}",
-                opcode, rd, imm_u32
+                "Round-trip failed for U-type: opcode=0x{opcode:02x}, rd={rd}, imm=0x{imm_u32:08x}"
             );
         }
     }
@@ -533,15 +527,14 @@ mod tests {
             let decoded = TypeU::from_riscv(inst_word);
             assert_eq!(
                 decoded.imm, *imm,
-                "Immediate mismatch for 0x{:08x}: expected 0x{:08x}, got 0x{:08x}",
-                imm_u32, imm_u32, decoded.imm as u32
+                "Immediate mismatch for 0x{imm_u32:08x}: expected 0x{imm_u32:08x}, got 0x{:08x}",
+                decoded.imm as u32
             );
 
             let encoded = decoded.to_riscv_no_opcode() | opcode;
             assert_eq!(
                 encoded, inst_word,
-                "Round-trip failed for U-type with imm=0x{:08x}",
-                imm_u32
+                "Round-trip failed for U-type with imm=0x{imm_u32:08x}"
             );
         }
     }

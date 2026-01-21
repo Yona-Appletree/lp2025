@@ -72,7 +72,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         }
         Ok(Err(e)) => {
             // Compilation error - this is unexpected but not a panic
-            panic!("GLSL compilation failed (unexpected): {}", e);
+            panic!("GLSL compilation failed (unexpected): {e}");
         }
         Err(_) => {
             // Panic occurred - this is the bug we're trying to fix

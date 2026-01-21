@@ -19,7 +19,7 @@ fn main() {
 
     let mut executable1 = glsl_jit(shader1, options.clone()).unwrap();
     let result1 = executable1.call_i32("main", &[]).unwrap();
-    println!("Example 1 - Integer arithmetic: {} (expected: 42)", result1);
+    println!("Example 1 - Integer arithmetic: {result1} (expected: 42)");
     assert_eq!(result1, 42);
 
     // Example 2: Boolean comparison
@@ -34,8 +34,7 @@ fn main() {
     let mut executable2 = glsl_jit(shader2, options.clone()).unwrap();
     let result2 = executable2.call_bool("main", &[]).unwrap();
     println!(
-        "Example 2 - Boolean comparison: {} (expected: true)",
-        result2
+        "Example 2 - Boolean comparison: {result2} (expected: true)"
     );
     assert_eq!(result2, true);
 
@@ -51,7 +50,7 @@ fn main() {
 
     let mut executable3 = glsl_jit(shader3, options).unwrap();
     let result3 = executable3.call_i32("main", &[]).unwrap();
-    println!("Example 3 - Complex expression: {} (expected: 12)", result3);
+    println!("Example 3 - Complex expression: {result3} (expected: 12)");
     assert_eq!(result3, 12); // (5 + 3) * 2 - 4 = 12
 
     println!("\nAll examples passed!");

@@ -495,8 +495,7 @@ mod tests {
         let effective_addr = auipc_result.wrapping_add(lo12);
         assert_eq!(
             effective_addr, symbol_addr,
-            "auipc_result=0x{:x}, lo12=0x{:x}, effective=0x{:x}, expected=0x{:x}",
-            auipc_result, lo12, effective_addr, symbol_addr
+            "auipc_result=0x{auipc_result:x}, lo12=0x{lo12:x}, effective=0x{effective_addr:x}, expected=0x{symbol_addr:x}"
         );
     }
 
@@ -554,8 +553,7 @@ mod tests {
             let effective_addr = auipc_result.wrapping_add(lo12);
             assert_eq!(
                 effective_addr, symbol_addr,
-                "Failed for auipc_pc=0x{:x}, symbol_addr=0x{:x}: auipc_result=0x{:x}, lo12=0x{:x}, effective=0x{:x}",
-                auipc_pc, symbol_addr, auipc_result, lo12, effective_addr
+                "Failed for auipc_pc=0x{auipc_pc:x}, symbol_addr=0x{symbol_addr:x}: auipc_result=0x{auipc_result:x}, lo12=0x{lo12:x}, effective=0x{effective_addr:x}"
             );
         }
     }

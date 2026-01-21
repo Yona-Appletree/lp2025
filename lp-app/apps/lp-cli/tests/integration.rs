@@ -61,10 +61,9 @@ fn create_test_project(fs: &mut LpFsMemory, name: &str, uid: &str) -> Result<(),
     // Create project.json
     let project_json = format!(
         r#"{{
-  "uid": "{}",
-  "name": "{}"
-}}"#,
-        uid, name
+  "uid": "{uid}",
+  "name": "{name}"
+}}"#
     );
     fs.write_file_mut("/project.json".as_path(), project_json.as_bytes())
         .map_err(|_| todo!())?;
@@ -112,10 +111,9 @@ fn test_create_command_structure() {
     // Create project.json
     let project_json = format!(
         r#"{{
-  "uid": "{}",
-  "name": "{}"
-}}"#,
-        project_uid, project_name
+  "uid": "{project_uid}",
+  "name": "{project_name}"
+}}"#
     );
     fs.write_file_mut("/project.json".as_path(), project_json.as_bytes())
         .unwrap();

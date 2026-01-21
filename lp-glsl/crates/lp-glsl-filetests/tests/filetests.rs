@@ -61,12 +61,12 @@ fn filetests() -> Result<()> {
         let test_file = match parse::parse_test_file(path) {
             Ok(tf) => tf,
             Err(e) => {
-                print!("test {} ... ", relative_path);
+                print!("test {relative_path} ... ");
                 println_colored("FAILED (parse error)", colors::RED);
                 if should_color() {
                     println!("  {}Error:{} {:#}", colors::RED, colors::RESET, e);
                 } else {
-                    println!("  Error: {:#}", e);
+                    println!("  Error: {e:#}");
                 }
                 failed += 1;
                 continue;
@@ -95,7 +95,7 @@ fn filetests() -> Result<()> {
             relative_path.to_string()
         };
 
-        print!("test {} ... ", test_label);
+        print!("test {test_label} ... ");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
 
         // Catch panics so one test failure doesn't stop others
@@ -110,7 +110,7 @@ fn filetests() -> Result<()> {
                 println_colored("FAILED", colors::RED);
                 // Error is already fully formatted by GlslError::Display and format_compilation_error
                 // Just display it directly - no reformatting needed
-                println!("\n{:#}", e);
+                println!("\n{e:#}");
                 failed += 1;
             }
             Err(panic_payload) => {
@@ -123,7 +123,7 @@ fn filetests() -> Result<()> {
                 } else {
                     "unknown panic".to_string()
                 };
-                println!("  Panic: {}", panic_msg);
+                println!("  Panic: {panic_msg}");
                 failed += 1;
             }
         }
@@ -132,14 +132,14 @@ fn filetests() -> Result<()> {
     print!("\ntest result: ");
     if failed == 0 {
         print_colored("ok", colors::GREEN);
-        println!(". {} passed; {} failed; 0 ignored", passed, failed);
+        println!(". {passed} passed; {failed} failed; 0 ignored");
     } else {
         print_colored("FAILED", colors::RED);
-        println!(". {} passed; {} failed; 0 ignored", passed, failed);
+        println!(". {passed} passed; {failed} failed; 0 ignored");
     }
 
     if failed > 0 {
-        anyhow::bail!("{} test file(s) failed", failed);
+        anyhow::bail!("{failed} test file(s) failed");
     }
 
     Ok(())
@@ -165,7 +165,7 @@ fn print_colored(text: &str, color: &str) {
     if should_color() {
         print!("{}{}{}", color, text, colors::RESET);
     } else {
-        print!("{}", text);
+        print!("{text}");
     }
 }
 
@@ -174,7 +174,7 @@ fn println_colored(text: &str, color: &str) {
     if should_color() {
         println!("{}{}{}", color, text, colors::RESET);
     } else {
-        println!("{}", text);
+        println!("{text}");
     }
 }
 

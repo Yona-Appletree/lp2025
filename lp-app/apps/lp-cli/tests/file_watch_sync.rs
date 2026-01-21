@@ -149,7 +149,7 @@ fn test_sync_file_change_path_formatting() {
 
     // Test path without leading slash
     let file_path_no_slash = "src/test.glsl";
-    let expected_server_path2 = format!("projects/{}/{}", project_uid, file_path_no_slash);
+    let expected_server_path2 = format!("projects/{project_uid}/{file_path_no_slash}");
     assert_eq!(expected_server_path2, "projects/test-project/src/test.glsl");
 
     // Test nested path

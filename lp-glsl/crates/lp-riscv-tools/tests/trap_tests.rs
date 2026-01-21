@@ -13,8 +13,8 @@ fn test_trap_with_code() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_DIVISION_BY_ZERO);
         }
-        Ok(other) => panic!("Expected Trap, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Trap, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }
 
@@ -25,8 +25,8 @@ fn test_trap_without_metadata() {
 
     match emu.step() {
         Ok(StepResult::Halted) => {} // Expected
-        Ok(other) => panic!("Expected Halted, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Halted, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }
 
@@ -43,8 +43,8 @@ fn test_trap_at_offset_4() {
     // First step: execute nop
     match emu.step() {
         Ok(StepResult::Continue) => {}
-        Ok(other) => panic!("Expected Continue, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Continue, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 
     // Second step: execute ebreak at offset 4
@@ -52,8 +52,8 @@ fn test_trap_at_offset_4() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_OVERFLOW);
         }
-        Ok(other) => panic!("Expected Trap, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Trap, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }
 
@@ -76,8 +76,8 @@ fn test_multiple_traps() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_DIVISION_BY_ZERO);
         }
-        Ok(other) => panic!("Expected Trap, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Trap, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 
     // Reset PC to continue testing
@@ -86,8 +86,8 @@ fn test_multiple_traps() {
     // Second step: execute nop
     match emu.step() {
         Ok(StepResult::Continue) => {}
-        Ok(other) => panic!("Expected Continue, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Continue, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 
     // Third step: trap at offset 8
@@ -95,8 +95,8 @@ fn test_multiple_traps() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_OVERFLOW);
         }
-        Ok(other) => panic!("Expected Trap, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Trap, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }
 
@@ -120,8 +120,8 @@ fn test_trap_sorting() {
         Ok(StepResult::Trap(code)) => {
             assert_eq!(code, TrapCode::INTEGER_DIVISION_BY_ZERO);
         }
-        Ok(other) => panic!("Expected Trap, got {:?}", other),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Ok(other) => panic!("Expected Trap, got {other:?}"),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }
 
@@ -151,9 +151,8 @@ fn test_trap_at_absolute_address() {
             assert_eq!(code, TrapCode::INTEGER_DIVISION_BY_ZERO);
         }
         Ok(other) => panic!(
-            "Expected Trap, got {:?} - this demonstrates the bug!",
-            other
+            "Expected Trap, got {other:?} - this demonstrates the bug!"
         ),
-        Err(e) => panic!("Unexpected error: {:?}", e),
+        Err(e) => panic!("Unexpected error: {e:?}"),
     }
 }

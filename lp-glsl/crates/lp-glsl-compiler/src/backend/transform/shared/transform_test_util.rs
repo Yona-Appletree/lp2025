@@ -103,10 +103,9 @@ pub fn assert_identity_transform(message: &str, clif_input: &str) {
 
     assert_eq!(
         normalized_parsed, normalized_transformed,
-        "{}\n\
-     PARSED:\n{}\n\n\
-     TRANSFORMED:\n{}",
-        message, parsed_buf, transformed_buf
+        "{message}\n\
+     PARSED:\n{parsed_buf}\n\n\
+     TRANSFORMED:\n{transformed_buf}"
     );
 }
 
@@ -123,10 +122,9 @@ pub fn assert_nop_fixed32_transform(message: &str, clif_input: &str) {
 
     assert_eq!(
         normalized_parsed, normalized_transformed,
-        "{}\n\
-     PARSED:\n{}\n\n\
-     TRANSFORMED:\n{}",
-        message, parsed_buf, transformed_buf
+        "{message}\n\
+     PARSED:\n{parsed_buf}\n\n\
+     TRANSFORMED:\n{transformed_buf}"
     );
 }
 
@@ -141,16 +139,15 @@ fn build_and_run_module(
 
     // Print transformed CLIF
     eprintln!(
-        "\n=== CLIF IR (AFTER {} transformation) ===",
-        transform_name
+        "\n=== CLIF IR (AFTER {transform_name} transformation) ==="
     );
     let mut funcs: Vec<_> = gl_module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
     for (name, gl_func) in funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, &gl_func.function).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Build executable
@@ -160,13 +157,13 @@ fn build_and_run_module(
         max_instructions: 10000,
     };
 
-    eprintln!("\n=== Building executable ({}) ===", transform_name);
+    eprintln!("\n=== Building executable ({transform_name}) ===");
     let mut executable = gl_module
         .build_executable(&options, None, None)
         .expect("Failed to build executable");
 
     // Call main function and get result
-    eprintln!("\n=== Executing main function ({}) ===", transform_name);
+    eprintln!("\n=== Executing main function ({transform_name}) ===");
     executable
         .call_i32("main", &[])
         .expect("Failed to execute main function")
@@ -185,7 +182,7 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Print input GLSL
     eprintln!("\n=== GLSL Source (INPUT) ===");
-    eprintln!("{}", glsl_source);
+    eprintln!("{glsl_source}");
 
     let target = Target::riscv32_emulator().unwrap();
     let mut compiler = GlslCompiler::new();
@@ -202,10 +199,10 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
     let mut funcs: Vec<_> = raw_module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
     for (name, gl_func) in funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, &gl_func.function).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Run raw (no transform)
@@ -234,34 +231,29 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Verify all results match expected value
     eprintln!("\n=== Results ===");
-    eprintln!("Expected: {}", expected_int);
-    eprintln!("Raw:      {}", raw_result);
-    eprintln!("Identity: {}", identity_result);
-    eprintln!("Fixed32:  {}", fixed32_result);
+    eprintln!("Expected: {expected_int}");
+    eprintln!("Raw:      {raw_result}");
+    eprintln!("Identity: {identity_result}");
+    eprintln!("Fixed32:  {fixed32_result}");
 
     assert_eq!(
         raw_result, expected_int,
-        "Raw execution failed: expected {}, got {}",
-        expected_int, raw_result
+        "Raw execution failed: expected {expected_int}, got {raw_result}"
     );
     assert_eq!(
         identity_result, expected_int,
-        "Identity transform failed: expected {}, got {}",
-        expected_int, identity_result
+        "Identity transform failed: expected {expected_int}, got {identity_result}"
     );
     assert_eq!(
         fixed32_result, expected_int,
-        "Fixed32 transform failed: expected {}, got {}",
-        expected_int, fixed32_result
+        "Fixed32 transform failed: expected {expected_int}, got {fixed32_result}"
     );
     assert_eq!(
         raw_result, identity_result,
-        "Raw and identity results differ: raw={}, identity={}",
-        raw_result, identity_result
+        "Raw and identity results differ: raw={raw_result}, identity={identity_result}"
     );
     assert_eq!(
         raw_result, fixed32_result,
-        "Raw and fixed32 results differ: raw={}, fixed32={}",
-        raw_result, fixed32_result
+        "Raw and fixed32 results differ: raw={raw_result}, fixed32={fixed32_result}"
     );
 }

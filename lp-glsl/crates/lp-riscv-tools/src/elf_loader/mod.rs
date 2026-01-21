@@ -260,8 +260,7 @@ mod tests {
         loop {
             if steps >= max_steps {
                 println!(
-                    "\n=== Emulator exceeded {} steps - possible infinite loop ===",
-                    max_steps
+                    "\n=== Emulator exceeded {max_steps} steps - possible infinite loop ==="
                 );
                 println!("PC: 0x{:x}", emu.get_pc());
                 println!("\n=== Emulator State ===");
@@ -282,12 +281,12 @@ mod tests {
                         println!("Panic message: {}", panic_info.message);
                         if let Some(ref file) = panic_info.file {
                             if let Some(line) = panic_info.line {
-                                println!("  at {}:{}", file, line);
+                                println!("  at {file}:{line}");
                             } else {
-                                println!("  at {}", file);
+                                println!("  at {file}");
                             }
                         } else if let Some(line) = panic_info.line {
-                            println!("  at line {}", line);
+                            println!("  at line {line}");
                         } else {
                             println!(
                                 "  (no file/line information available, PC: 0x{:x})",
@@ -314,8 +313,8 @@ mod tests {
                 }
                 Err(e) => {
                     println!("\n=== Emulator Error ===");
-                    println!("Error: {}", e);
-                    println!("Steps executed: {}", steps);
+                    println!("Error: {e}");
+                    println!("Steps executed: {steps}");
                     println!("PC: 0x{:x}", emu.get_pc());
                     println!("\n=== Emulator State ===");
                     println!("{}", emu.dump_state());

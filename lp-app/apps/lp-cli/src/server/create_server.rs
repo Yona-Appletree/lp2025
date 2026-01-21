@@ -107,7 +107,7 @@ mod tests {
         let result = create_server::create_server(Some(dir), false, Some(false));
         assert!(result.is_err());
         if let Err(e) = result {
-            let err_msg = format!("{}", e);
+            let err_msg = format!("{e}");
             assert!(err_msg.contains("No server.json found"));
         }
     }
