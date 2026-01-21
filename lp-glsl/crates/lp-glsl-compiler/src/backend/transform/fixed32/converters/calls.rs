@@ -329,9 +329,32 @@ pub(crate) fn convert_call(
 
                 // Handle TestCase vs User external names
                 let new_name = match &old_ext_func.name {
-                    ExternalName::TestCase(_) => {
-                        // Clone TestCase name directly (like identity transform)
-                        old_ext_func.name.clone()
+                    ExternalName::TestCase(testcase_name) => {
+                        // Convert TestCase name to User name for ObjectModule compatibility
+                        // ObjectModule doesn't support TestCase names in relocations (unimplemented!)
+                        // Extract function name from TestCase format (%name -> name)
+                        let func_name_str = core::str::from_utf8(testcase_name.raw())
+                            .map_err(|e| {
+                                GlslError::new(
+                                    ErrorCode::E0400,
+                                    format!("Invalid TestCase name encoding: {e}"),
+                                )
+                            })?;
+                        // Look up the new FuncId for this function name
+                        let new_func_id = func_id_map.get(func_name_str).ok_or_else(|| {
+                            GlslError::new(
+                                ErrorCode::E0400,
+                                format!("Function '{func_name_str}' not found in func_id_map"),
+                            )
+                        })?;
+                        // Create UserExternalName with the new FuncId
+                        let new_user_name = cranelift_codegen::ir::UserExternalName {
+                            namespace: 0,
+                            index: new_func_id.as_u32(),
+                        };
+                        let new_user_ref =
+                            builder.func.declare_imported_user_function(new_user_name);
+                        ExternalName::User(new_user_ref)
                     }
                     ExternalName::User(old_user_ref) => {
                         // Map User function reference to new FuncId
