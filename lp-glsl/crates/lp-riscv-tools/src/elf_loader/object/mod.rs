@@ -98,7 +98,9 @@ pub fn load_object_file(
         build_object_symbol_map(&obj, layout.text_placement, layout.data_placement);
 
     // Step 7: Merge symbol maps (base takes precedence)
-    let merged_symbol_map = merge_symbol_maps(symbol_map, &obj_symbol_map);
+    // Fail fast if there are symbol conflicts
+    let merged_symbol_map = merge_symbol_maps(symbol_map, &obj_symbol_map)
+        .map_err(|e| format!("Symbol merge failed: {e}"))?;
 
     // Step 8: Apply relocations using merged symbol map
     apply_object_relocations(&obj, code, ram, &merged_symbol_map, &section_placement)?;

@@ -4,6 +4,7 @@ extern crate alloc;
 
 use crate::debug;
 use ::object::{Object, ObjectSection, ObjectSymbol, SymbolSection};
+use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use hashbrown::HashMap;
@@ -70,8 +71,21 @@ pub fn build_object_symbol_map(
                 match section_name {
                     Some(".text") => {
                         // .text section symbol: adjust by text_placement
-                        // symbol_addr is section-relative offset
-                        text_placement.wrapping_add(symbol_addr as u32)
+                        // Get section VMA to determine if symbol_addr is absolute or relative
+                        let section_vma = symbol_section
+                            .index()
+                            .and_then(|idx| obj.section_by_index(idx).ok())
+                            .map(|s| s.address())
+                            .unwrap_or(0);
+
+                        if section_vma == 0 {
+                            // Section starts at 0, so symbol_addr is section-relative offset
+                            text_placement.wrapping_add(symbol_addr as u32)
+                        } else {
+                            // Section has non-zero VMA - symbol_addr is absolute, need to subtract VMA first
+                            let offset = (symbol_addr - section_vma) as u32;
+                            text_placement.wrapping_add(offset)
+                        }
                     }
                     Some(".data") => {
                         // .data section symbol: adjust by RAM_START + data_placement
@@ -134,6 +148,7 @@ pub fn build_object_symbol_map(
 /// Merge base and object symbol maps.
 ///
 /// Combines symbol maps, with base symbols taking precedence over object symbols.
+/// Detects conflicts and returns an error if a symbol exists in both maps with different addresses.
 ///
 /// # Arguments
 ///
@@ -142,16 +157,37 @@ pub fn build_object_symbol_map(
 ///
 /// # Returns
 ///
-/// Merged symbol map with base symbols taking precedence.
+/// Merged symbol map with base symbols taking precedence, or error if conflicts detected.
 pub fn merge_symbol_maps(
     base_map: &HashMap<String, u32>,
     obj_map: &HashMap<String, u32>,
-) -> HashMap<String, u32> {
-    // TODO: Phase 6 - Implement symbol map merging
-    // For now, just return base map to allow compilation
+) -> Result<HashMap<String, u32>, String> {
     let mut merged = base_map.clone();
-    for (name, addr) in obj_map {
-        merged.entry(name.clone()).or_insert(*addr);
+    let mut conflicts = Vec::new();
+
+    for (name, obj_addr) in obj_map {
+        if let Some(&base_addr) = base_map.get(name) {
+            // Only report conflict if both symbols are defined (non-zero addresses)
+            // Undefined symbols (0x0) in object file should resolve to base executable
+            if base_addr != *obj_addr && *obj_addr != 0 {
+                conflicts.push(format!(
+                    "Symbol '{}' conflict: base executable has 0x{:08x}, object file has 0x{:08x}",
+                    name, base_addr, obj_addr
+                ));
+            }
+            // Keep base version (already in merged)
+        } else {
+            // New symbol from object file - add it
+            merged.insert(name.clone(), *obj_addr);
+        }
     }
-    merged
+
+    if !conflicts.is_empty() {
+        return Err(format!(
+            "Symbol conflicts detected during linking:\n  {}",
+            conflicts.join("\n  ")
+        ));
+    }
+
+    Ok(merged)
 }
