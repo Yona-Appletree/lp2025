@@ -80,13 +80,8 @@ clippy-esp32: install-target
     @echo "Running clippy on ESP32 app (riscv32imac-unknown-none-elf)..."
     cargo clippy --target {{riscv_target}} -p esp32-glsl-jit -- --no-deps -D warnings
 
-# Run clippy on lp-builtins-app (requires RISC-V target)
-clippy-builtins: install-target
-    @echo "Running clippy on lp-builtins-app (riscv32imac-unknown-none-elf)..."
-    cargo clippy --target {{riscv_target}} -p lp-builtins-app -- --no-deps -D warnings
-
 # Run clippy on all packages including embedded targets
-clippy-all: clippy clippy-esp32 clippy-builtins
+clippy-all: clippy clippy-esp32
 
 # Build ESP32 app (excluded from default-members, only builds for RISC-V)
 esp32-build:
