@@ -98,28 +98,27 @@ mod tests {
             }
         }
 
-        // Try both debug and release profiles
-        for profile in ["debug", "release"].iter() {
-            let exe_path = current_dir
-                .join("../../../../../../lp-app")
+        // Only use release builds (filetests-setup builds in release mode)
+        let profile = "release";
+        let exe_path = current_dir
+            .join("../../../../../../lp-app")
+            .join("target")
+            .join(target)
+            .join(profile)
+            .join("lp-builtins-app");
+
+        let exe_path = if exe_path.exists() {
+            exe_path
+        } else {
+            current_dir
                 .join("target")
                 .join(target)
                 .join(profile)
-                .join("lp-builtins-app");
+                .join("lp-builtins-app")
+        };
 
-            let exe_path = if exe_path.exists() {
-                exe_path
-            } else {
-                current_dir
-                    .join("target")
-                    .join(target)
-                    .join(profile)
-                    .join("lp-builtins-app")
-            };
-
-            if exe_path.exists() {
-                return std::fs::read(&exe_path).ok();
-            }
+        if exe_path.exists() {
+            return std::fs::read(&exe_path).ok();
         }
 
         None

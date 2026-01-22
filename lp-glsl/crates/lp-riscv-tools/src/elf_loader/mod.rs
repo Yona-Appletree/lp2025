@@ -179,31 +179,30 @@ mod tests {
             }
         }
 
-        // Try both debug and release profiles
-        for profile in ["debug", "release"].iter() {
-            // Path to the executable
-            // Try both workspace root and lightplayer/ subdirectory
-            let exe_path = current_dir
-                .join("../../../../../lp-app")
+        // Only use release builds (filetests-setup builds in release mode)
+        let profile = "release";
+        // Path to the executable
+        // Try both workspace root and lightplayer/ subdirectory
+        let exe_path = current_dir
+            .join("../../../../../lp-app")
+            .join("target")
+            .join(target)
+            .join(profile)
+            .join("lp-builtins-app");
+
+        // If not found, try workspace root directly (for when running from lightplayer/)
+        let exe_path = if exe_path.exists() {
+            exe_path
+        } else {
+            current_dir
                 .join("target")
                 .join(target)
                 .join(profile)
-                .join("lp-builtins-app");
+                .join("lp-builtins-app")
+        };
 
-            // If not found, try workspace root directly (for when running from lightplayer/)
-            let exe_path = if exe_path.exists() {
-                exe_path
-            } else {
-                current_dir
-                    .join("target")
-                    .join(target)
-                    .join(profile)
-                    .join("lp-builtins-app")
-            };
-
-            if exe_path.exists() {
-                return std::fs::read(&exe_path).ok();
-            }
+        if exe_path.exists() {
+            return std::fs::read(&exe_path).ok();
         }
 
         None
