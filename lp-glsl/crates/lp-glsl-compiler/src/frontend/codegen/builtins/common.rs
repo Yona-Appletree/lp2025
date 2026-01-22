@@ -5,7 +5,7 @@ use crate::frontend::codegen::context::CodegenContext;
 use crate::semantic::types::Type;
 use cranelift_codegen::ir::{InstBuilder, Value, condcodes::IntCC, types};
 
-use alloc::vec::Vec;
+use alloc::{format, vec, vec::Vec};
 
 impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
     /// min(x, y) - component-wise for vectors
@@ -554,7 +554,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0105,
-                        format!("isinf() not supported for vector dimension {}", dim),
+                        format!("isinf() not supported for vector dimension {dim}"),
                     ));
                 }
             }
@@ -605,7 +605,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0105,
-                        format!("isnan() not supported for vector dimension {}", dim),
+                        format!("isnan() not supported for vector dimension {dim}"),
                     ));
                 }
             }

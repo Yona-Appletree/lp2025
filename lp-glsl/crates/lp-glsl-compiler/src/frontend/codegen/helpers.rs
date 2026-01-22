@@ -38,10 +38,7 @@ fn generate_default_scalar_return<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!(
-                    "unsupported return type for default return: {:?}",
-                    return_type
-                ),
+                format!("unsupported return type for default return: {return_type:?}"),
             ));
         }
     };
@@ -92,7 +89,7 @@ fn create_zero_value<M: cranelift_module::Module>(
         Type::Bool => Ok(ctx.builder.ins().iconst(types::I8, 0)),
         _ => Err(GlslError::new(
             ErrorCode::E0400,
-            format!("unsupported base type for zero value: {:?}", base_ty),
+            format!("unsupported base type for zero value: {base_ty:?}"),
         )),
     }
 }
@@ -110,7 +107,7 @@ fn generate_default_vector_return<M: cranelift_module::Module>(
     let base_ty = return_type.vector_base_type().ok_or_else(|| {
         GlslError::new(
             ErrorCode::E0400,
-            format!("expected vector type, got: {:?}", return_type),
+            format!("expected vector type, got: {return_type:?}"),
         )
     })?;
     let count = return_type.component_count().unwrap();
@@ -164,7 +161,7 @@ fn generate_default_matrix_return<M: cranelift_module::Module>(
     let element_count = return_type.matrix_element_count().ok_or_else(|| {
         GlslError::new(
             ErrorCode::E0400,
-            format!("expected matrix type, got: {:?}", return_type),
+            format!("expected matrix type, got: {return_type:?}"),
         )
     })?;
 

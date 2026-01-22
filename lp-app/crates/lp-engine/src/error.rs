@@ -51,16 +51,16 @@ impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Error::Io { path, details } => {
-                write!(f, "I/O error: {} ({})", details, path)
+                write!(f, "I/O error: {details} ({path})")
             }
             Error::Parse { file, error } => {
-                write!(f, "Parse error in {}: {}", file, error)
+                write!(f, "Parse error in {file}: {error}")
             }
             Error::NotFound { path } => {
-                write!(f, "Not found: {}", path)
+                write!(f, "Not found: {path}")
             }
             Error::InvalidConfig { node_path, reason } => {
-                write!(f, "Invalid config for {}: {}", node_path, reason)
+                write!(f, "Invalid config for {node_path}: {reason}")
             }
             Error::WrongNodeKind {
                 specifier,
@@ -69,12 +69,11 @@ impl core::fmt::Display for Error {
             } => {
                 write!(
                     f,
-                    "Wrong node kind for {}: expected {:?}, got {:?}",
-                    specifier, expected, actual
+                    "Wrong node kind for {specifier}: expected {expected:?}, got {actual:?}"
                 )
             }
             Error::Other { message } => {
-                write!(f, "Error: {}", message)
+                write!(f, "Error: {message}")
             }
         }
     }
@@ -90,10 +89,10 @@ impl From<lp_shared::OutputError> for Error {
     fn from(err: lp_shared::OutputError) -> Self {
         match err {
             lp_shared::OutputError::PinAlreadyOpen { pin } => Error::Other {
-                message: format!("Pin {} is already open", pin),
+                message: format!("Pin {pin} is already open"),
             },
             lp_shared::OutputError::InvalidHandle { handle } => Error::Other {
-                message: format!("Invalid handle: {}", handle),
+                message: format!("Invalid handle: {handle}"),
             },
             lp_shared::OutputError::InvalidConfig { reason } => Error::InvalidConfig {
                 node_path: String::from("output"),
@@ -103,8 +102,7 @@ impl From<lp_shared::OutputError> for Error {
                 Error::InvalidConfig {
                     node_path: String::from("output"),
                     reason: format!(
-                        "Data length {} doesn't match expected byte_count {}",
-                        actual, expected
+                        "Data length {actual} doesn't match expected byte_count {expected}"
                     ),
                 }
             }

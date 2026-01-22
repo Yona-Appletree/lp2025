@@ -33,8 +33,7 @@ impl WebSocketClientTransport {
         // Connect via tokio-tungstenite
         let (stream, _) = connect_async(url).await.map_err(|e| {
             TransportError::Other(format!(
-                "Failed to establish WebSocket connection to '{}': {}",
-                url, e
+                "Failed to establish WebSocket connection to '{url}': {e}"
             ))
         })?;
 
@@ -59,14 +58,14 @@ impl ClientTransport for WebSocketClientTransport {
 
         // Serialize ClientMessage to JSON
         let json = serde_json::to_string(&msg).map_err(|e| {
-            TransportError::Serialization(format!("Failed to serialize ClientMessage: {}", e))
+            TransportError::Serialization(format!("Failed to serialize ClientMessage: {e}"))
         })?;
 
         // Send as text message
         stream
             .send(tokio_tungstenite::tungstenite::Message::Text(json))
             .await
-            .map_err(|e| TransportError::Other(format!("Failed to send message: {}", e)))?;
+            .map_err(|e| TransportError::Other(format!("Failed to send message: {e}")))?;
 
         Ok(())
     }
@@ -88,8 +87,7 @@ impl ClientTransport for WebSocketClientTransport {
                     // Deserialize ServerMessage from JSON
                     return serde_json::from_str(&text).map_err(|e| {
                         TransportError::Deserialization(format!(
-                            "Failed to deserialize ServerMessage: {}",
-                            e
+                            "Failed to deserialize ServerMessage: {e}"
                         ))
                     });
                 }
@@ -97,8 +95,7 @@ impl ClientTransport for WebSocketClientTransport {
                     // Deserialize ServerMessage from binary JSON
                     return serde_json::from_slice(&data).map_err(|e| {
                         TransportError::Deserialization(format!(
-                            "Failed to deserialize ServerMessage: {}",
-                            e
+                            "Failed to deserialize ServerMessage: {e}"
                         ))
                     });
                 }
@@ -121,7 +118,7 @@ impl ClientTransport for WebSocketClientTransport {
                 Some(Err(e)) => {
                     // WebSocket error
                     self.stream = None;
-                    return Err(TransportError::Other(format!("WebSocket error: {}", e)));
+                    return Err(TransportError::Other(format!("WebSocket error: {e}")));
                 }
                 None => {
                     // Stream ended

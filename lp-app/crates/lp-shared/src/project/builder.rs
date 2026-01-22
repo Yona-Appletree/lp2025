@@ -177,8 +177,8 @@ impl TextureBuilder {
         let id = builder.texture_id;
         builder.texture_id += 1;
 
-        let path_str = format!("/src/texture-{}.texture", id);
-        let node_path = format!("{}/node.json", path_str);
+        let path_str = format!("/src/texture-{id}.texture");
+        let node_path = format!("{path_str}/node.json");
 
         let config = TextureConfig {
             width: self.width,
@@ -213,9 +213,9 @@ impl ShaderBuilder {
         let id = builder.shader_id;
         builder.shader_id += 1;
 
-        let path_str = format!("/src/shader-{}.shader", id);
-        let node_path = format!("{}/node.json", path_str);
-        let glsl_path = format!("{}/main.glsl", path_str);
+        let path_str = format!("/src/shader-{id}.shader");
+        let node_path = format!("{path_str}/node.json");
+        let glsl_path = format!("{path_str}/main.glsl");
 
         let config = ShaderConfig {
             glsl_path: "main.glsl".as_path_buf(),
@@ -249,8 +249,8 @@ impl OutputBuilder {
         let id = builder.output_id;
         builder.output_id += 1;
 
-        let path_str = format!("/src/output-{}.output", id);
-        let node_path = format!("{}/node.json", path_str);
+        let path_str = format!("/src/output-{id}.output");
+        let node_path = format!("{path_str}/node.json");
 
         let config = OutputConfig::GpioStrip { pin: self.pin };
 
@@ -294,8 +294,8 @@ impl FixtureBuilder {
         let id = builder.fixture_id;
         builder.fixture_id += 1;
 
-        let path_str = format!("/src/fixture-{}.fixture", id);
-        let node_path = format!("{}/node.json", path_str);
+        let path_str = format!("/src/fixture-{id}.fixture");
+        let node_path = format!("{path_str}/node.json");
 
         let config = FixtureConfig {
             output_spec: NodeSpecifier::from(self.output_path.as_str()),

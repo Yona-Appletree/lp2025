@@ -5,22 +5,22 @@
 
 /// Print success message with next steps
 pub fn print_success(message: &str, next_steps: &[&str]) {
-    println!("✓ {}", message);
+    println!("✓ {message}");
     if !next_steps.is_empty() {
         println!("\nNext steps:");
         for step in next_steps {
-            println!("  {}", step);
+            println!("  {step}");
         }
     }
 }
 
 /// Print error message with suggestions
 pub fn print_error(message: &str, suggestions: &[&str]) {
-    eprintln!("✗ {}", message);
+    eprintln!("✗ {message}");
     if !suggestions.is_empty() {
         eprintln!();
         for suggestion in suggestions {
-            eprintln!("  {}", suggestion);
+            eprintln!("  {suggestion}");
         }
     }
 }
@@ -31,7 +31,7 @@ pub fn print_error(message: &str, suggestions: &[&str]) {
 /// an error for propagation.
 pub fn print_error_and_return(message: &str, suggestions: &[&str]) -> anyhow::Error {
     print_error(message, suggestions);
-    anyhow::anyhow!("{}", message)
+    anyhow::anyhow!("{message}")
 }
 
 /// Format command for copy-paste (with proper quoting if needed)

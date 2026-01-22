@@ -24,9 +24,7 @@ pub(crate) fn convert_f32const(
             return Err(GlslError::new(
                 ErrorCode::E0301,
                 alloc::format!(
-                    "F32const instruction {:?} has unexpected format: {:?}",
-                    old_inst,
-                    inst_data
+                    "F32const instruction {old_inst:?} has unexpected format: {inst_data:?}"
                 ),
             ));
         }

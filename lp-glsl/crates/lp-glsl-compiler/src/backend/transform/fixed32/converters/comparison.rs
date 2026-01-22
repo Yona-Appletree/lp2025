@@ -76,7 +76,7 @@ pub(crate) fn convert_fcmp(
     } else {
         return Err(GlslError::new(
             crate::error::ErrorCode::E0301,
-            alloc::format!("Fcmp instruction has unexpected format: {:?}", inst_data),
+            alloc::format!("Fcmp instruction has unexpected format: {inst_data:?}"),
         ));
     }
 

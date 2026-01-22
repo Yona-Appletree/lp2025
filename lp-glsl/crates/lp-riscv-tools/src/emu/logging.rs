@@ -272,7 +272,7 @@ impl fmt::Display for InstLog {
 
         // Print cycle count, address and instruction, padding instruction to align semicolons
         // Format: [cycle] 0xPC: instruction (padded to 30 chars) ; comment
-        write!(f, "[{:4}] 0x{:08x}: {:30}", cycle, pc, disassembly)?;
+        write!(f, "[{cycle:4}] 0x{pc:08x}: {disassembly:30}")?;
 
         // Format comment on the same line, separated by semicolon
         match self {
@@ -284,11 +284,11 @@ impl fmt::Display for InstLog {
                 rd_new,
                 ..
             } => {
-                write!(f, "; {}: {} -> {}", rd, rd_old, rd_new)?;
+                write!(f, "; {rd}: {rd_old} -> {rd_new}")?;
                 if let Some(rs2_val) = rs2_val {
-                    write!(f, " (rs1={}, rs2={})", rs1_val, rs2_val)?;
+                    write!(f, " (rs1={rs1_val}, rs2={rs2_val})")?;
                 } else {
-                    write!(f, " (rs1={})", rs1_val)?;
+                    write!(f, " (rs1={rs1_val})")?;
                 }
             }
             InstLog::Load {
@@ -302,8 +302,7 @@ impl fmt::Display for InstLog {
             } => {
                 write!(
                     f,
-                    "; {}: {} -> {} (mem[0x{:08x}] = {}) (rs1={})",
-                    rd, rd_old, rd_new, addr, mem_val, rs1_val
+                    "; {rd}: {rd_old} -> {rd_new} (mem[0x{addr:08x}] = {mem_val}) (rs1={rs1_val})"
                 )?;
             }
             InstLog::Store {
@@ -316,8 +315,7 @@ impl fmt::Display for InstLog {
             } => {
                 write!(
                     f,
-                    "; mem[0x{:08x}]: {} -> {} (rs1={}, rs2={})",
-                    addr, mem_old, mem_new, rs1_val, rs2_val
+                    "; mem[0x{addr:08x}]: {mem_old} -> {mem_new} (rs1={rs1_val}, rs2={rs2_val})"
                 )?;
             }
             InstLog::Branch {
@@ -331,14 +329,13 @@ impl fmt::Display for InstLog {
                     if let Some(target) = target_pc {
                         write!(
                             f,
-                            "; branch taken: 0x{:08x} -> 0x{:08x} (rs1={}, rs2={})",
-                            pc, target, rs1_val, rs2_val
+                            "; branch taken: 0x{pc:08x} -> 0x{target:08x} (rs1={rs1_val}, rs2={rs2_val})"
                         )?;
                     } else {
-                        write!(f, "; branch taken (rs1={}, rs2={})", rs1_val, rs2_val)?;
+                        write!(f, "; branch taken (rs1={rs1_val}, rs2={rs2_val})")?;
                     }
                 } else {
-                    write!(f, "; branch not taken (rs1={}, rs2={})", rs1_val, rs2_val)?;
+                    write!(f, "; branch not taken (rs1={rs1_val}, rs2={rs2_val})")?;
                 }
             }
             InstLog::Jump {
@@ -350,17 +347,16 @@ impl fmt::Display for InstLog {
                 if let Some(rd_new) = rd_new {
                     write!(
                         f,
-                        "; rd: {} -> {} jump: 0x{:08x} -> 0x{:08x}",
-                        rd_old, rd_new, pc, target_pc
+                        "; rd: {rd_old} -> {rd_new} jump: 0x{pc:08x} -> 0x{target_pc:08x}"
                     )?;
                 } else {
-                    write!(f, "; jump: 0x{:08x} -> 0x{:08x}", pc, target_pc)?;
+                    write!(f, "; jump: 0x{pc:08x} -> 0x{target_pc:08x}")?;
                 }
             }
             InstLog::Immediate {
                 rd, rd_old, rd_new, ..
             } => {
-                write!(f, "; {}: {} -> {}", rd, rd_old, rd_new)?;
+                write!(f, "; {rd}: {rd_old} -> {rd_new}")?;
             }
             InstLog::System { kind, .. } => match kind {
                 SystemKind::Ecall => write!(f, "; syscall")?,

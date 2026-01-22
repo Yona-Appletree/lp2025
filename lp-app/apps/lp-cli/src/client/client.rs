@@ -4,16 +4,16 @@
 
 use anyhow::{Error, Result};
 use lp_model::{
+    ClientMessage, ClientRequest, LpPath, LpPathBuf, ServerMessage,
     project::{
+        FrameId,
         api::{ApiNodeSpecifier, SerializableProjectResponse},
         handle::ProjectHandle,
-        FrameId,
-    }, server::{AvailableProject, FsResponse, LoadedProject, ServerMsgBody}, ClientMessage, ClientRequest,
-    LpPath, LpPathBuf,
-    ServerMessage,
+    },
+    server::{AvailableProject, FsResponse, LoadedProject, ServerMsgBody},
 };
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::client::transport::ClientTransport;
 
@@ -38,7 +38,7 @@ impl LpClient {
     /// # Returns
     ///
     /// * `Self` - The client
-    #[allow(dead_code)] // Will be used in tests and other contexts
+    #[allow(dead_code, reason = "Will be used in tests and other contexts")]
     pub fn new(transport: Box<dyn ClientTransport>) -> Self {
         Self {
             transport: Arc::new(tokio::sync::Mutex::new(transport)),
@@ -74,13 +74,13 @@ impl LpClient {
         transport
             .send(msg)
             .await
-            .map_err(|e| Error::msg(format!("Transport error: {}", e)))?;
+            .map_err(|e| Error::msg(format!("Transport error: {e}")))?;
 
         // Wait for response
         transport
             .receive()
             .await
-            .map_err(|e| Error::msg(format!("Transport error: {}", e)))
+            .map_err(|e| Error::msg(format!("Transport error: {e}")))
     }
 
     /// Read a file from the server filesystem
@@ -103,7 +103,7 @@ impl LpClient {
         match response.msg {
             ServerMsgBody::Filesystem(FsResponse::Read { data, error, .. }) => {
                 if let Some(err) = error {
-                    return Err(Error::msg(format!("Server error: {}", err)));
+                    return Err(Error::msg(format!("Server error: {err}")));
                 }
                 data.ok_or_else(|| Error::msg("No data in read response"))
             }
@@ -136,7 +136,7 @@ impl LpClient {
         match response.msg {
             ServerMsgBody::Filesystem(FsResponse::Write { error, .. }) => {
                 if let Some(err) = error {
-                    return Err(Error::msg(format!("Server error: {}", err)));
+                    return Err(Error::msg(format!("Server error: {err}")));
                 }
                 Ok(())
             }
@@ -167,7 +167,7 @@ impl LpClient {
         match response.msg {
             ServerMsgBody::Filesystem(FsResponse::DeleteFile { error, .. }) => {
                 if let Some(err) = error {
-                    return Err(Error::msg(format!("Server error: {}", err)));
+                    return Err(Error::msg(format!("Server error: {err}")));
                 }
                 Ok(())
             }
@@ -200,7 +200,7 @@ impl LpClient {
         match response.msg {
             ServerMsgBody::Filesystem(FsResponse::ListDir { entries, error, .. }) => {
                 if let Some(err) = error {
-                    return Err(Error::msg(format!("Server error: {}", err)));
+                    return Err(Error::msg(format!("Server error: {err}")));
                 }
                 Ok(entries)
             }
@@ -247,7 +247,7 @@ impl LpClient {
     ///
     /// * `Ok(())` if the project was unloaded successfully
     /// * `Err` if unloading failed or transport error occurred
-    #[allow(dead_code)] // Will be used in future commands
+    #[allow(dead_code, reason = "Will be used in future commands")]
     pub async fn project_unload(&self, handle: ProjectHandle) -> Result<()> {
         let request = ClientRequest::UnloadProject { handle };
 
@@ -308,7 +308,7 @@ impl LpClient {
     ///
     /// * `Ok(Vec<AvailableProject>)` - List of available projects
     /// * `Err` if listing failed or transport error occurred
-    #[allow(dead_code)] // Will be used in future commands
+    #[allow(dead_code, reason = "Will be used in future commands")]
     pub async fn project_list_available(&self) -> Result<Vec<AvailableProject>> {
         let request = ClientRequest::ListAvailableProjects;
 
@@ -329,7 +329,7 @@ impl LpClient {
     ///
     /// * `Ok(Vec<LoadedProject>)` - List of loaded projects
     /// * `Err` if listing failed or transport error occurred
-    #[allow(dead_code)] // Will be used in future commands
+    #[allow(dead_code, reason = "Will be used in future commands")]
     pub async fn project_list_loaded(&self) -> Result<Vec<LoadedProject>> {
         let request = ClientRequest::ListLoadedProjects;
 

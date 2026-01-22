@@ -76,7 +76,7 @@ impl LpFsView {
                 } else if relative_str.starts_with('/') {
                     relative_str
                 } else {
-                    return Some(LpPathBuf::from(format!("/{}", relative_str)));
+                    return Some(LpPathBuf::from(format!("/{relative_str}")));
                 };
                 Some(LpPathBuf::from(normalized))
             } else {
@@ -214,7 +214,7 @@ impl LpFs for LpFsView {
         let relative_prefix = if normalized_subdir.ends_with('/') {
             normalized_subdir.to_string()
         } else {
-            format!("{}/", normalized_subdir)
+            format!("{normalized_subdir}/")
         };
 
         // Construct full prefix in parent filesystem

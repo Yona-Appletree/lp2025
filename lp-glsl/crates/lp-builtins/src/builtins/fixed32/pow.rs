@@ -84,7 +84,6 @@ mod tests {
     #[cfg(test)]
     extern crate std;
     use super::*;
-    use crate::builtins::fixed32::test_helpers::test_fixed32_function_relative;
 
     /// Test pow with 2-arg function
     fn test_pow_helper(inputs: &[(f32, f32, f32)], tolerance: f32, min_tolerance: f32) {

@@ -12,7 +12,7 @@ use crate::semantic::types::Type as GlslType;
 use crate::semantic::types::Type;
 
 use alloc::string::String;
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 pub struct VarInfo {
     pub cranelift_vars: Vec<Variable>, // Changed from single Variable to support vectors

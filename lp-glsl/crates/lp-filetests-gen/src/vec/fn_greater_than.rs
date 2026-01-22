@@ -13,7 +13,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let bvec_type_name = format_bvec_type_name(dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/fn-greater-than", type_name);
+    let specifier = format!("vec/{type_name}/fn-greater-than");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -26,8 +26,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
         "// ============================================================================\n"
     ));
     content.push_str(&format!(
-        "// Greater Than: greaterThan({}, {}) -> {} (component-wise)\n",
-        type_name, type_name, bvec_type_name
+        "// Greater Than: greaterThan({type_name}, {type_name}) -> {bvec_type_name} (component-wise)\n"
     ));
     content.push_str(&format!(
         "// ============================================================================\n"
@@ -300,7 +299,11 @@ fn generate_test_zero(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => (vec![1, 0], vec![0, 1], vec![true, false]),
             Dimension::D3 => (vec![1, 0, 3], vec![0, 1, 2], vec![true, false, true]),
-            Dimension::D4 => (vec![1, 0, 3, 2], vec![0, 1, 2, 4], vec![true, false, true, false]),
+            Dimension::D4 => (
+                vec![1, 0, 3, 2],
+                vec![0, 1, 2, 4],
+                vec![true, false, true, false],
+            ),
         }
     } else {
         // a = [1, 0, 3, -1...], b = [0, 1, 2, 0...]
@@ -308,7 +311,11 @@ fn generate_test_zero(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => (vec![1, 0], vec![0, 1], vec![true, false]),
             Dimension::D3 => (vec![1, 0, 3], vec![0, 1, 2], vec![true, false, true]),
-            Dimension::D4 => (vec![1, 0, 3, -1], vec![0, 1, 2, 0], vec![true, false, true, false]),
+            Dimension::D4 => (
+                vec![1, 0, 3, -1],
+                vec![0, 1, 2, 0],
+                vec![true, false, true, false],
+            ),
         }
     };
 

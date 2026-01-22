@@ -126,7 +126,7 @@ fn worker_thread(
     replies: Sender<Reply>,
 ) -> thread::JoinHandle<()> {
     thread::Builder::new()
-        .name(format!("lp-test-worker-{}", thread_num))
+        .name(format!("lp-test-worker-{thread_num}"))
         .spawn(move || {
             // Set a custom panic hook for this worker thread that suppresses default output
             // since we catch panics with catch_unwind and convert them to test failures
@@ -166,7 +166,7 @@ fn worker_thread(
                             msg.to_string()
                         } else {
                             // Try to format the panic payload as debug string
-                            format!("{:?}", e)
+                            format!("{e:?}")
                         };
 
                         // Extract just the essential panic message (first line usually)
@@ -175,7 +175,7 @@ fn worker_thread(
                         // Count test cases even on panic so we can show stats
                         let panic_stats = crate::count_test_cases(path.as_path(), line_filter);
 
-                        (Err(anyhow::anyhow!("panicked: {}", short_msg)), panic_stats)
+                        (Err(anyhow::anyhow!("panicked: {short_msg}")), panic_stats)
                     }
                 };
 

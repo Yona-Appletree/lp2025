@@ -13,7 +13,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let bvec_type_name = format_bvec_type_name(dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/fn-less-than", type_name);
+    let specifier = format!("vec/{type_name}/fn-less-than");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -26,8 +26,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
         "// ============================================================================\n"
     ));
     content.push_str(&format!(
-        "// Less Than: lessThan({}, {}) -> {} (component-wise)\n",
-        type_name, type_name, bvec_type_name
+        "// Less Than: lessThan({type_name}, {type_name}) -> {bvec_type_name} (component-wise)\n"
     ));
     content.push_str(&format!(
         "// ============================================================================\n"
@@ -300,7 +299,11 @@ fn generate_test_zero(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => (vec![0, 1], vec![1, 0], vec![true, false]),
             Dimension::D3 => (vec![0, 1, 2], vec![1, 0, 3], vec![true, false, true]),
-            Dimension::D4 => (vec![0, 1, 2, 0], vec![1, 0, 3, 2], vec![true, false, true, true]),
+            Dimension::D4 => (
+                vec![0, 1, 2, 0],
+                vec![1, 0, 3, 2],
+                vec![true, false, true, true],
+            ),
         }
     } else {
         // a = [0, 1, 2, 0...], b = [1, 0, 3, -1...]
@@ -308,7 +311,11 @@ fn generate_test_zero(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => (vec![0, 1], vec![1, 0], vec![true, false]),
             Dimension::D3 => (vec![0, 1, 2], vec![1, 0, 3], vec![true, false, true]),
-            Dimension::D4 => (vec![0, 1, 2, 0], vec![1, 0, 3, -1], vec![true, false, true, false]),
+            Dimension::D4 => (
+                vec![0, 1, 2, 0],
+                vec![1, 0, 3, -1],
+                vec![true, false, true, false],
+            ),
         }
     };
 
@@ -342,7 +349,11 @@ fn generate_test_variables(vec_type: VecType, dimension: Dimension) -> String {
     let (a_values, b_values, expected) = match dimension {
         Dimension::D2 => (vec![10, 15], vec![12, 10], vec![true, false]),
         Dimension::D3 => (vec![10, 15, 8], vec![12, 10, 12], vec![true, false, true]),
-        Dimension::D4 => (vec![10, 15, 8, 12], vec![12, 10, 12, 8], vec![true, false, true, false]),
+        Dimension::D4 => (
+            vec![10, 15, 8, 12],
+            vec![12, 10, 12, 8],
+            vec![true, false, true, false],
+        ),
     };
 
     let a_constructor = format_vector_constructor(vec_type, dimension, &a_values);
@@ -375,7 +386,11 @@ fn generate_test_expressions(vec_type: VecType, dimension: Dimension) -> String 
     let (a_values, b_values, expected) = match dimension {
         Dimension::D2 => (vec![3, 7], vec![5, 5], vec![true, false]),
         Dimension::D3 => (vec![3, 7, 2], vec![5, 5, 4], vec![true, false, true]),
-        Dimension::D4 => (vec![3, 7, 2, 9], vec![5, 5, 4, 8], vec![true, false, true, false]),
+        Dimension::D4 => (
+            vec![3, 7, 2, 9],
+            vec![5, 5, 4, 8],
+            vec![true, false, true, false],
+        ),
     };
 
     let a_constructor = format_vector_constructor(vec_type, dimension, &a_values);
@@ -402,20 +417,15 @@ fn generate_test_in_expression(vec_type: VecType, dimension: Dimension) -> Strin
     // Special case for D4 uvec: return bool instead of bvec4 (following manual file)
     if matches!(vec_type, VecType::UVec) && matches!(dimension, Dimension::D4) {
         return format!(
-            "bool test_{}_less_than_in_expression() {{\n\
-    {} a = uvec4(1u, 5u, 3u, 7u);\n\
-    {} b = uvec4(2u, 3u, 4u, 5u);\n\
-    {} c = uvec4(3u, 7u, 1u, 9u);\n\
+            "bool test_{type_name}_less_than_in_expression() {{\n\
+    {type_name} a = uvec4(1u, 5u, 3u, 7u);\n\
+    {type_name} b = uvec4(2u, 3u, 4u, 5u);\n\
+    {type_name} c = uvec4(3u, 7u, 1u, 9u);\n\
     return lessThan(a, b) == lessThan(b, c);\n\
     // (true,false,true,false) == (true,true,false,true) = false\n\
 }}\n\
 \n\
-// run: test_{}_less_than_in_expression() == false\n",
-            type_name,
-            type_name,
-            type_name,
-            type_name,
-            type_name
+// run: test_{type_name}_less_than_in_expression() == false\n"
         );
     }
 

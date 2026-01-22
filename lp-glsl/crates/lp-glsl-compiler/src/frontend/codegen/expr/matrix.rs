@@ -6,7 +6,7 @@ use cranelift_codegen::ir::{InstBuilder, Value};
 
 use super::coercion;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 pub fn emit_matrix_binary<M: cranelift_module::Module>(
     ctx: &mut CodegenContext<'_, M>,
@@ -87,7 +87,7 @@ pub fn emit_matrix_binary<M: cranelift_module::Module>(
 
                 if cols != vec_size {
                     return Err(GlslError::new(ErrorCode::E0106,
-                        format!("matrix × vector dimension mismatch: {}×{} matrix requires {}-component vector", rows, cols, cols))
+                        format!("matrix × vector dimension mismatch: {rows}×{cols} matrix requires {cols}-component vector"))
                         .with_location(source_span_to_location(&span)));
                 }
 
@@ -118,7 +118,7 @@ pub fn emit_matrix_binary<M: cranelift_module::Module>(
 
                 if vec_size != rows {
                     return Err(GlslError::new(ErrorCode::E0106,
-                        format!("vector × matrix dimension mismatch: {}-component vector requires {}×{} matrix", vec_size, rows, cols))
+                        format!("vector × matrix dimension mismatch: {vec_size}-component vector requires {rows}×{cols} matrix"))
                         .with_location(source_span_to_location(&span)));
                 }
 
@@ -151,8 +151,7 @@ pub fn emit_matrix_binary<M: cranelift_module::Module>(
                     return Err(GlslError::new(
                         ErrorCode::E0106,
                         format!(
-                            "matrix × matrix dimension mismatch: {}×{} × {}×{} requires {} == {}",
-                            lhs_rows, lhs_cols, rhs_rows, rhs_cols, lhs_cols, rhs_rows
+                            "matrix × matrix dimension mismatch: {lhs_rows}×{lhs_cols} × {rhs_rows}×{rhs_cols} requires {lhs_cols} == {rhs_rows}"
                         ),
                     )
                     .with_location(source_span_to_location(&span)));
@@ -275,7 +274,7 @@ pub fn emit_matrix_binary<M: cranelift_module::Module>(
 
         _ => Err(GlslError::new(
             ErrorCode::E0106,
-            format!("operator {:?} not supported for matrices", op),
+            format!("operator {op:?} not supported for matrices"),
         )
         .with_location(source_span_to_location(&span))),
     }

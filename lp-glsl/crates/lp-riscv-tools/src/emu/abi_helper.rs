@@ -117,9 +117,9 @@ pub fn compute_return_locations(
                     use alloc::format;
                     #[cfg(feature = "std")]
                     use std::format;
-                    return Err(cranelift_codegen::CodegenError::Unsupported(
-                        format!("Invalid return location for return value {}: both reg and stack are None or both are Some", i).into(),
-                    ));
+                    return Err(cranelift_codegen::CodegenError::Unsupported(format!(
+                        "Invalid return location for return value {i}: both reg and stack are None or both are Some"
+                    )));
                 }
             }
         }
@@ -204,9 +204,9 @@ pub fn compute_arg_locations(
                     use alloc::format;
                     #[cfg(feature = "std")]
                     use std::format;
-                    return Err(cranelift_codegen::CodegenError::Unsupported(
-                        format!("Invalid argument location for argument {}: both reg and stack are None or both are Some", i).into(),
-                    ));
+                    return Err(cranelift_codegen::CodegenError::Unsupported(format!(
+                        "Invalid argument location for argument {i}: both reg and stack are None or both are Some"
+                    )));
                 }
             }
         }

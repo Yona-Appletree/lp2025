@@ -363,16 +363,14 @@ fn test_return_area_pointer_with_arguments() {
         }
         Err(e) => {
             // Current bug: invalid memory write at address 0x00000001 (a0 contains 1 instead of return area pointer)
-            let err_str = format!("{:?}", e);
+            let err_str = format!("{e:?}");
             assert!(
                 err_str.contains("InvalidMemoryAccess") && err_str.contains("address: 1"),
-                "Expected InvalidMemoryAccess at address 1 (bug: a0 contains first arg instead of return area pointer), got: {}",
-                err_str
+                "Expected InvalidMemoryAccess at address 1 (bug: a0 contains first arg instead of return area pointer), got: {err_str}"
             );
             // This test will fail until the bug is fixed
             panic!(
-                "BUG CONFIRMED: a0 contains first argument (1) instead of return area pointer. Error: {}",
-                err_str
+                "BUG CONFIRMED: a0 contains first argument (1) instead of return area pointer. Error: {err_str}"
             );
         }
     }
@@ -415,13 +413,12 @@ fn test_return_area_pointer_no_arguments() {
         }
         Err(e) => {
             // If this fails, it's likely because a0 is 0 or wrong
-            let err_str = format!("{:?}", e);
+            let err_str = format!("{e:?}");
             assert!(
                 err_str.contains("InvalidMemoryAccess")
                     || err_str.contains("Invalid memory write")
                     || err_str.contains("address: 0"),
-                "Expected invalid memory write error, got: {}",
-                err_str
+                "Expected invalid memory write error, got: {err_str}"
             );
         }
     }

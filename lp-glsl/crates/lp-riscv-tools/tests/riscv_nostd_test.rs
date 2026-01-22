@@ -22,7 +22,7 @@ fn test_riscv_nostd_hello_world() {
     // Wait for the test to complete with a 60 second timeout (build can take time)
     match rx.recv_timeout(Duration::from_secs(60)) {
         Ok(Ok(())) => {} // Success
-        Ok(Err(e)) => panic!("Test failed: {}", e),
+        Ok(Err(e)) => panic!("Test failed: {e}"),
         Err(mpsc::RecvTimeoutError::Timeout) => {
             panic!("Test timed out after 60 seconds");
         }
@@ -60,11 +60,11 @@ fn run_nostd_test() -> Result<(), String> {
         ])
         .current_dir(workspace_root)
         .output()
-        .map_err(|e| format!("Failed to build: {}", e))?;
+        .map_err(|e| format!("Failed to build: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Build failed:\n{}", stderr));
+        return Err(format!("Build failed:\n{stderr}"));
     }
     println!("   ✓ Build successful");
     println!();
@@ -73,7 +73,7 @@ fn run_nostd_test() -> Result<(), String> {
     println!("[2/4] Loading ELF binary...");
     let elf_path =
         workspace_root.join("target/riscv32imac-unknown-none-elf/release/embive-program");
-    let elf_data = std::fs::read(&elf_path).map_err(|e| format!("Failed to read ELF: {}", e))?;
+    let elf_data = std::fs::read(&elf_path).map_err(|e| format!("Failed to read ELF: {e}"))?;
 
     #[cfg(feature = "std")]
     let elf_info = load_elf(&elf_data)?;
@@ -96,7 +96,7 @@ fn run_nostd_test() -> Result<(), String> {
                 elf_info.code[i + 2],
                 elf_info.code[i + 3],
             ]);
-            println!("     0x{:04x}: 0x{:08x}", i, word);
+            println!("     0x{i:04x}: 0x{word:08x}");
         }
     }
     println!();
@@ -116,18 +116,18 @@ fn run_nostd_test() -> Result<(), String> {
             Ok(StepResult::Panic(panic_info)) => {
                 let msg = if let Some(ref file) = panic_info.file {
                     if let Some(line) = panic_info.line {
-                        format!("{}:{}", file, line)
+                        format!("{file}:{line}")
                     } else {
                         file.clone()
                     }
                 } else if let Some(line) = panic_info.line {
-                    format!("line {}", line)
+                    format!("line {line}")
                 } else {
                     "unknown location".to_string()
                 };
                 return Err(format!(
-                    "Guest panicked at PC 0x{:x}: {} ({})",
-                    panic_info.pc, panic_info.message, msg
+                    "Guest panicked at PC 0x{:x}: {} ({msg})",
+                    panic_info.pc, panic_info.message
                 ));
             }
             Ok(StepResult::Syscall(info)) => {
@@ -158,7 +158,7 @@ fn run_nostd_test() -> Result<(), String> {
                             "panic".to_string()
                         };
 
-                        return Err(format!("Guest panicked: {}", msg));
+                        return Err(format!("Guest panicked: {msg}"));
                     }
                     2 => {
                         // SYSCALL_WRITE
@@ -176,7 +176,7 @@ fn run_nostd_test() -> Result<(), String> {
                             }
 
                             let text = String::from_utf8_lossy(&bytes);
-                            print!("   {}", text);
+                            print!("   {text}");
                             std::io::Write::flush(&mut std::io::stdout()).unwrap();
                             output_lines.push(text.to_string());
                         }
@@ -197,7 +197,7 @@ fn run_nostd_test() -> Result<(), String> {
                 break;
             }
             Err(e) => {
-                return Err(format!("Emulator error: {:?}", e));
+                return Err(format!("Emulator error: {e:?}"));
             }
         }
     }
@@ -210,24 +210,21 @@ fn run_nostd_test() -> Result<(), String> {
     // Phase 1: Check for expected hello world message
     if !full_output.contains("Hello from RISC-V!") {
         return Err(format!(
-            "Expected 'Hello from RISC-V!' not found in output:\n{}",
-            full_output
+            "Expected 'Hello from RISC-V!' not found in output:\n{full_output}"
         ));
     }
     println!("   ✓ Found expected output: 'Hello from RISC-V!'");
 
     if !full_output.contains("no_std") {
         return Err(format!(
-            "Expected 'no_std' not found in output:\n{}",
-            full_output
+            "Expected 'no_std' not found in output:\n{full_output}"
         ));
     }
     println!("   ✓ Found 'no_std' mention");
 
     if !full_output.contains("Cranelift") {
         return Err(format!(
-            "Expected 'Cranelift' not found in output:\n{}",
-            full_output
+            "Expected 'Cranelift' not found in output:\n{full_output}"
         ));
     }
     println!("   ✓ Found 'Cranelift' mention");
@@ -235,8 +232,7 @@ fn run_nostd_test() -> Result<(), String> {
     // Phase 2: Check that program completed
     if !full_output.contains("Successfully executed") {
         return Err(format!(
-            "Expected success message not found in output:\n{}",
-            full_output
+            "Expected success message not found in output:\n{full_output}"
         ));
     }
     println!("   ✓ Program executed successfully");
@@ -247,7 +243,7 @@ fn run_nostd_test() -> Result<(), String> {
             println!("   ✓ Correct result received: 15 (expected for 5 * 3)");
         }
         Some(other) => {
-            return Err(format!("Incorrect result: expected 15, got {}", other));
+            return Err(format!("Incorrect result: expected 15, got {other}"));
         }
         None => {
             return Err("No result received from program".to_string());

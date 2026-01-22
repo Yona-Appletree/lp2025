@@ -23,7 +23,7 @@ pub fn ram_address_to_offset(addr: u64) -> usize {
 
 /// Convert a RAM offset to an absolute address.
 #[inline]
-#[allow(unused)]
+#[allow(unused, reason = "Utility function for address conversion")]
 pub fn ram_offset_to_address(offset: usize) -> u64 {
     RAM_START as u64 + offset as u64
 }

@@ -27,7 +27,7 @@ pub fn initialize_server(dir: &Path, init: bool) -> Result<ServerConfig> {
             let cmd = format_command(&format!("lp-cli serve {} --init", dir.display()));
             return Err(print_error_and_return(
                 &format!("No server.json found in {}", dir.display()),
-                &[&format!("To initialize a new server, run: {}", cmd)],
+                &[&format!("To initialize a new server, run: {cmd}")],
             ));
         }
     } else {

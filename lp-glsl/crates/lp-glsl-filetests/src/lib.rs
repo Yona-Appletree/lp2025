@@ -80,10 +80,7 @@ pub fn run_filetest_with_line_filter(
             .iter()
             .any(|directive| directive.line_number == line_number);
         if !has_matching_directive {
-            anyhow::bail!(
-                "line {} does not contain a valid run directive",
-                line_number
-            );
+            anyhow::bail!("line {line_number} does not contain a valid run directive");
         }
     }
 
@@ -203,7 +200,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
         let spec = &test_specs[0];
         let relative_path_str = relative_path(&spec.path, &filetests_dir);
         let display_path = if let Some(line) = spec.line_number {
-            format!("{}:{}", relative_path_str, line)
+            format!("{relative_path_str}:{line}")
         } else {
             relative_path_str
         };
@@ -219,10 +216,10 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                 } else if let Some(msg) = e.downcast_ref::<&'static str>() {
                     msg.to_string()
                 } else {
-                    format!("{:?}", e)
+                    format!("{e:?}")
                 };
                 (
-                    Err(anyhow::anyhow!("panicked: {}", panic_msg)),
+                    Err(anyhow::anyhow!("panicked: {panic_msg}")),
                     test_run::TestCaseStats::default(),
                 )
             }
@@ -232,7 +229,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
             Ok(()) => {
                 println!(
                     "{}",
-                    colors::colorize(&format!("✓ {}", display_path), colors::GREEN)
+                    colors::colorize(&format!("✓ {display_path}"), colors::GREEN)
                 );
                 let elapsed = start_time.elapsed();
                 println!(
@@ -243,7 +240,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
             }
             Err(_e) => {
                 // Extract test expression and line number from error message
-                let error_str = format!("{:#}", _e);
+                let error_str = format!("{_e:#}");
                 let (test_expr, line_num) =
                     extract_test_info_from_error(&error_str, spec.line_number);
                 let filename_only = Path::new(&display_path)
@@ -253,18 +250,18 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                     .to_string();
                 let failure_line = if let Some(expr) = test_expr {
                     if let Some(line) = line_num {
-                        format!("{}:{} {}", filename_only, line, expr)
+                        format!("{filename_only}:{line} {expr}")
                     } else {
-                        format!("{} {}", filename_only, expr)
+                        format!("{filename_only} {expr}")
                     }
                 } else {
                     filename_only
                 };
                 println!(
                     "{}",
-                    colors::colorize(&format!("✗ {}", failure_line), colors::RED)
+                    colors::colorize(&format!("✗ {failure_line}"), colors::RED)
                 );
-                println!("\n{:#}", _e);
+                println!("\n{_e:#}");
                 let elapsed = start_time.elapsed();
                 println!(
                     "\n{}",
@@ -350,7 +347,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                 let spec = &tests[reported_tests].spec;
                 let relative_path_str = relative_path(&spec.path, &filetests_dir);
                 let display_path = if let Some(line) = spec.line_number {
-                    format!("{}:{}", relative_path_str, line)
+                    format!("{relative_path_str}:{line}")
                 } else {
                     relative_path_str
                 };
@@ -395,12 +392,12 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                             String::new()
                         };
                         let path_colored = if colors::should_color() {
-                            format!("{}{} ", status_marker, counts_str)
+                            format!("{status_marker}{counts_str} ")
                                 + &format!("{}{}{}", colors::DIM, display_path, colors::RESET)
                         } else {
-                            format!("{}{} {}", status_marker, counts_str, display_path)
+                            format!("{status_marker}{counts_str} {display_path}")
                         };
-                        println!("{}", path_colored);
+                        println!("{path_colored}");
                         // Flush stdout to ensure output appears immediately
                         use std::io::Write;
                         let _ = std::io::stdout().flush();
@@ -425,12 +422,12 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                             String::new()
                         };
                         let path_colored = if colors::should_color() {
-                            format!("{}{} ", status_marker, counts_str)
+                            format!("{status_marker}{counts_str} ")
                                 + &format!("{}{}{}", colors::DIM, display_path, colors::RESET)
                         } else {
-                            format!("{}{} {}", status_marker, counts_str, display_path)
+                            format!("{status_marker}{counts_str} {display_path}")
                         };
-                        println!("{}", path_colored);
+                        println!("{path_colored}");
                         // Flush stdout to ensure output appears immediately
                         use std::io::Write;
                         let _ = std::io::stdout().flush();
@@ -494,7 +491,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
         for failed_test in &failed_tests {
             let relative_path = relative_path(&failed_test.path, &filetests_dir);
             let test_path = if let Some(line) = failed_test.line_number {
-                format!("{}:{}", relative_path, line)
+                format!("{relative_path}:{line}")
             } else {
                 relative_path
             };
@@ -506,7 +503,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
                     colors::RESET
                 );
             } else {
-                println!("scripts/glsl-filetests.sh {}", test_path);
+                println!("scripts/glsl-filetests.sh {test_path}");
             }
         }
     }
@@ -524,7 +521,7 @@ pub fn run(files: &[String]) -> anyhow::Result<()> {
     );
 
     if failed > 0 {
-        anyhow::bail!("{} test file(s) failed", failed);
+        anyhow::bail!("{failed} test file(s) failed");
     }
 
     Ok(())
@@ -569,7 +566,7 @@ fn expand_glob_patterns(pattern: &str, filetests_dir: &Path) -> Result<Vec<PathB
             }
             Err(e) => {
                 // Log warning but continue
-                eprintln!("Warning: glob pattern error: {}", e);
+                eprintln!("Warning: glob pattern error: {e}");
             }
         }
     }
@@ -657,14 +654,14 @@ fn extract_test_info_from_error(
                     .split_whitespace()
                     .next()
                     .unwrap_or("");
-                Some(format!("{} == {}", expr, expected))
+                Some(format!("{expr} == {expected}"))
             } else if let Some(op_pos) = run_line.rfind(" ~= ") {
                 let expr = run_line[..op_pos].trim();
                 let expected = run_line[op_pos + 4..]
                     .split_whitespace()
                     .next()
                     .unwrap_or("");
-                Some(format!("{} ~= {}", expr, expected))
+                Some(format!("{expr} ~= {expected}"))
             } else {
                 Some(run_line.to_string())
             }
@@ -691,11 +688,11 @@ fn format_results_summary(
     let time_str = if seconds < 1.0 {
         format!("{:.0}ms", elapsed.as_millis())
     } else if seconds < 60.0 {
-        format!("{:.2}s", seconds)
+        format!("{seconds:.2}s")
     } else {
         let mins = elapsed.as_secs() / 60;
         let remaining_secs = elapsed.as_secs_f64() - (mins * 60) as f64;
-        format!("{}m {:.2}s", mins, remaining_secs)
+        format!("{mins}m {remaining_secs:.2}s")
     };
 
     if colors::should_color() {
@@ -731,9 +728,9 @@ fn format_results_summary(
         );
 
         if total_test_cases > 0 {
-            format!("{}, {} in {}", test_cases_part, files_part, time_str)
+            format!("{test_cases_part}, {files_part} in {time_str}")
         } else {
-            format!("{} in {}", files_part, time_str)
+            format!("{files_part} in {time_str}")
         }
     } else {
         if total_test_cases > 0 {

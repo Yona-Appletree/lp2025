@@ -1,7 +1,6 @@
 //! Symbol map building for relocations.
 
 use super::memory::is_ram_address;
-use crate::debug;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -117,5 +116,5 @@ pub fn find_symbol_address(
             }
         }
     }
-    Err(format!("Symbol '{}' not found", symbol_name))
+    Err(format!("Symbol '{symbol_name}' not found"))
 }

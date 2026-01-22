@@ -20,7 +20,7 @@ pub fn validate_clif_module(module: &GlModule<ObjectModule>, isa: &dyn TargetIsa
                         pretty_verifier_error(&gl_func.function, None, errors)
                     )
                 })
-                .with_context(|| format!("failed to validate function '{}'", name))?;
+                .with_context(|| format!("failed to validate function '{name}'"))?;
         }
     }
 

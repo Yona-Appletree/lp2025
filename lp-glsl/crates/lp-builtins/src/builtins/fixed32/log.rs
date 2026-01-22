@@ -81,7 +81,7 @@ pub extern "C" fn __lp_fixed32_log(x: i32) -> i32 {
         count += 1;
         // Stop if delta is small enough (within 1) or we've done enough iterations
         // libfixmath checks: (delta > 1) || (delta < -1)
-        if count >= 10 || (delta_clamped <= 1 && delta_clamped >= -1) {
+        if count >= 10 || (-1..=1).contains(&delta_clamped) {
             break;
         }
     }

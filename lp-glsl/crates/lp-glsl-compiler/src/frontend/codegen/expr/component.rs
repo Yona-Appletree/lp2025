@@ -5,7 +5,7 @@ use crate::semantic::types::Type as GlslType;
 use cranelift_codegen::ir::{InstBuilder, TrapCode, Value, condcodes::IntCC, types};
 use glsl::syntax::{Expr, SourceSpan};
 
-use alloc::vec::Vec;
+use alloc::{format, vec, vec::Vec};
 use hashbrown::HashSet;
 
 /// Component naming sets for vector swizzles
@@ -33,7 +33,7 @@ pub fn emit_component_access<M: cranelift_module::Module>(
         let span = extract_span_from_expr(base_expr);
         let error = GlslError::new(
             ErrorCode::E0112,
-            format!("component access on non-vector type: {:?}", ty),
+            format!("component access on non-vector type: {ty:?}"),
         )
         .with_location(source_span_to_location(&span));
         return Err(ctx.add_span_to_error(error, &span));
@@ -90,7 +90,7 @@ pub fn emit_indexing<M: cranelift_module::Module>(
         let var_info = ctx.lookup_var_info(array_name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("array variable '{}' not found", array_name),
+                format!("array variable '{array_name}' not found"),
             )
             .with_location(source_span_to_location(span))
         })?;
@@ -98,7 +98,7 @@ pub fn emit_indexing<M: cranelift_module::Module>(
         let array_ptr = var_info.array_ptr.ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("variable '{}' is not an array", array_name),
+                format!("variable '{array_name}' is not an array"),
             )
             .with_location(source_span_to_location(span))
         })?;
@@ -393,8 +393,7 @@ pub fn emit_indexing<M: cranelift_module::Module>(
             return Err(GlslError::new(
                 ErrorCode::E0400,
                 format!(
-                    "cannot index into {:?} (only matrices and vectors can be indexed)",
-                    current_ty
+                    "cannot index into {current_ty:?} (only matrices and vectors can be indexed)"
                 ),
             )
             .with_location(source_span_to_location(span)));
@@ -429,10 +428,7 @@ pub fn parse_vector_swizzle(
     }
 
     let component_count = vec_ty.component_count().ok_or_else(|| {
-        GlslError::new(
-            ErrorCode::E0112,
-            format!("{:?} is not a vector type", vec_ty),
-        )
+        GlslError::new(ErrorCode::E0112, format!("{vec_ty:?} is not a vector type"))
     })?;
 
     // Determine which naming set is used and validate consistency
@@ -448,8 +444,7 @@ pub fn parse_vector_swizzle(
             let mut error = GlslError::new(
                 ErrorCode::E0111,
                 format!(
-                    "component '{}' not valid for {:?} (has only {} components)",
-                    ch, vec_ty, component_count
+                    "component '{ch}' not valid for {vec_ty:?} (has only {component_count} components)"
                 ),
             );
             if let Some(s) = span {
@@ -478,7 +473,7 @@ fn determine_naming_set(swizzle: &str) -> Result<NamingSet, GlslError> {
             _ => {
                 return Err(GlslError::new(
                     ErrorCode::E0113,
-                    format!("invalid swizzle character: '{}'", ch),
+                    format!("invalid swizzle character: '{ch}'"),
                 ));
             }
         }
@@ -489,10 +484,7 @@ fn determine_naming_set(swizzle: &str) -> Result<NamingSet, GlslError> {
     if sets_used > 1 {
         return Err(GlslError::new(
             ErrorCode::E0113,
-            format!(
-                "swizzle '{}' mixes component naming sets (xyzw/rgba/stpq)",
-                swizzle
-            ),
+            format!("swizzle '{swizzle}' mixes component naming sets (xyzw/rgba/stpq)"),
         ));
     }
 
@@ -515,7 +507,7 @@ fn parse_single_component(ch: char, naming_set: NamingSet) -> Result<usize, Glsl
             'w' => Ok(3),
             _ => Err(GlslError::new(
                 ErrorCode::E0113,
-                format!("invalid component '{}' for xyzw naming set", ch),
+                format!("invalid component '{ch}' for xyzw naming set"),
             )),
         },
         NamingSet::RGBA => match ch {
@@ -525,7 +517,7 @@ fn parse_single_component(ch: char, naming_set: NamingSet) -> Result<usize, Glsl
             'a' => Ok(3),
             _ => Err(GlslError::new(
                 ErrorCode::E0113,
-                format!("invalid component '{}' for rgba naming set", ch),
+                format!("invalid component '{ch}' for rgba naming set"),
             )),
         },
         NamingSet::STPQ => match ch {
@@ -535,7 +527,7 @@ fn parse_single_component(ch: char, naming_set: NamingSet) -> Result<usize, Glsl
             'q' => Ok(3),
             _ => Err(GlslError::new(
                 ErrorCode::E0113,
-                format!("invalid component '{}' for stpq naming set", ch),
+                format!("invalid component '{ch}' for stpq naming set"),
             )),
         },
     }

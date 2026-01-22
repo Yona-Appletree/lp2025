@@ -16,7 +16,7 @@ pub extern "C" fn __lp_fixed32_mod(x: i32, y: i32) -> i32 {
     // floor(x / y): In fixed-point Q16.16, floor is just shifting right by 16 then left by 16
     // This truncates the fractional part (rounds toward negative infinity for negative numbers)
     // Use arithmetic shift to preserve sign
-    let floored = (div_result as i32 >> 16) << 16;
+    let floored = (div_result >> 16) << 16;
 
     // y * floor(x / y) using mul builtin
     let y_times_floor = __lp_fixed32_mul(y, floored);

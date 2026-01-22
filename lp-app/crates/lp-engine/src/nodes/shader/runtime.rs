@@ -122,7 +122,7 @@ impl NodeRuntime for ShaderRuntime {
                         4,
                     )
                     .map_err(|e| Error::Other {
-                        message: format!("Shader execution failed: {}", e),
+                        message: format!("Shader execution failed: {e}"),
                     })?;
 
                 // Extract RGBA from vec4 result
@@ -189,7 +189,7 @@ impl NodeRuntime for ShaderRuntime {
             let texture_handle = ctx
                 .resolve_texture(&shader_config.texture_spec)
                 .map_err(|e| {
-                    self.compilation_error = Some(format!("Failed to resolve texture: {}", e));
+                    self.compilation_error = Some(format!("Failed to resolve texture: {e}"));
                     e
                 })?;
             self.texture_handle = Some(texture_handle);
@@ -254,7 +254,7 @@ impl ShaderRuntime {
         ctx: &dyn NodeInitContext,
     ) -> Result<(), Error> {
         let texture_handle = ctx.resolve_texture(&config.texture_spec).map_err(|e| {
-            self.compilation_error = Some(format!("Failed to resolve texture: {}", e));
+            self.compilation_error = Some(format!("Failed to resolve texture: {e}"));
             e
         })?;
         self.texture_handle = Some(texture_handle);
@@ -275,15 +275,17 @@ impl ShaderRuntime {
         } else {
             LpPathBuf::from(format!("/{}", glsl_path.as_str()))
         };
-        let source_bytes = fs.read_file(glsl_path_abs.as_path()).map_err(|e| Error::Io {
-            path: glsl_path.as_str().to_string(),
-            details: format!("Failed to read GLSL file: {:?}", e),
-        })?;
+        let source_bytes = fs
+            .read_file(glsl_path_abs.as_path())
+            .map_err(|e| Error::Io {
+                path: glsl_path.as_str().to_string(),
+                details: format!("Failed to read GLSL file: {e:?}"),
+            })?;
 
         let glsl_source =
             alloc::string::String::from_utf8(source_bytes).map_err(|e| Error::Parse {
                 file: glsl_path.as_str().to_string(),
-                error: format!("Invalid UTF-8 in GLSL file: {}", e),
+                error: format!("Invalid UTF-8 in GLSL file: {e}"),
             })?;
 
         // Store source for state extraction
@@ -310,11 +312,11 @@ impl ShaderRuntime {
                 Ok(())
             }
             Err(e) => {
-                self.compilation_error = Some(format!("{}", e));
+                self.compilation_error = Some(format!("{e}"));
                 self.executable = None;
                 Err(Error::InvalidConfig {
                     node_path: format!("shader-{}", self.node_handle.as_i32()),
-                    reason: format!("GLSL compilation failed: {}", e),
+                    reason: format!("GLSL compilation failed: {e}"),
                 })
             }
         }

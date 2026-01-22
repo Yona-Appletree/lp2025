@@ -5,6 +5,8 @@ use crate::frontend::codegen::context::CodegenContext;
 use crate::semantic::types::Type as GlslType;
 use glsl::syntax::{ArraySpecifier, ArraySpecifierDimension, SourceSpan};
 
+use alloc::format;
+
 use super::super::super::types::LValue;
 use super::helpers::{
     extract_base_vars_and_ty, process_matrix_dimension, process_vector_dimension, validate_index,
@@ -85,8 +87,7 @@ pub fn resolve_matrix_vector_indexing<M: cranelift_module::Module>(
             return Err(GlslError::new(
                 ErrorCode::E0400,
                 format!(
-                    "cannot index into {:?} (only arrays, matrices and vectors can be indexed)",
-                    current_ty
+                    "cannot index into {current_ty:?} (only arrays, matrices and vectors can be indexed)"
                 ),
             )
             .with_location(source_span_to_location(span)));

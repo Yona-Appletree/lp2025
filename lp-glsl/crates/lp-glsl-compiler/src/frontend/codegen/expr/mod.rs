@@ -70,7 +70,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
 
             _ => Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("expression not supported yet: {:?}", expr),
+                format!("expression not supported yet: {expr:?}"),
             )),
         }
     }

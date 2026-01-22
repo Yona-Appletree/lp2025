@@ -1,13 +1,13 @@
 use crate::backend::transform::fixed32::types::float_to_fixed16x16;
 
 /// Convert float to 16.16 fixed-point for comparison
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Test utility function")]
 fn float_to_fixed32(f: f32) -> i32 {
     float_to_fixed16x16(f)
 }
 
 /// Convert fixed-point back to float
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Test utility function")]
 fn fixed32_to_float(fixed: i32) -> f32 {
     fixed as f32 / 65536.0
 }
@@ -21,7 +21,7 @@ fn fixed32_to_float(fixed: i32) -> f32 {
 pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     // Print input CLIF
     eprintln!("\n=== CLIF IR (INPUT) ===");
-    eprintln!("{}", clif_input);
+    eprintln!("{clif_input}");
 
     // Parse CLIF
     let test_file =
@@ -44,7 +44,6 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
             .expect("Failed to add function to module");
     }
 
-    use crate::GlslExecutable;
     use crate::backend::codegen::emu::EmulatorOptions;
     use crate::backend::module::gl_module::GlModule;
     use crate::backend::target::Target;
@@ -57,10 +56,10 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     use std::prelude::rust_2015::{String, Vec}; // Print parsed CLIF (before transformation)
     eprintln!("\n=== CLIF IR (BEFORE transformation) ===");
     for (name, func) in &original_funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, func).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Apply fixed32 transform
@@ -73,10 +72,10 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
     eprintln!("\n=== CLIF IR (AFTER transformation) ===");
     for (name, _) in &original_funcs {
         if let Some(gl_func) = transformed_module.get_func(name) {
-            eprintln!("function {}:", name);
+            eprintln!("function {name}:");
             let mut buf = String::new();
             write_function(&mut buf, &gl_func.function).unwrap();
-            eprintln!("{}", buf);
+            eprintln!("{buf}");
         }
     }
 
@@ -94,18 +93,22 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
 
     // Call main function and get result
     eprintln!("\n=== Executing main function ===");
-    let result_i32 = executable
-        .call_i32("main", &[])
-        .expect("Failed to execute main function");
+    let result_i32 = match executable.call_i32("main", &[]) {
+        Ok(result) => result,
+        Err(e) => {
+            // On error, output emulator state and execution log like filetests do
+            if let Some(ref emulator_state) = executable.format_emulator_state() {
+                eprintln!("{emulator_state}");
+            }
+            panic!("Failed to execute main function: {e}");
+        }
+    };
 
     // Convert expected float to fixed-point
     let expected_fixed = float_to_fixed32(expected_float);
 
     eprintln!("\n=== Results ===");
-    eprintln!(
-        "Expected: {} (fixed-point) = {} (float)",
-        expected_fixed, expected_float
-    );
+    eprintln!("Expected: {expected_fixed} (fixed-point) = {expected_float} (float)");
     eprintln!(
         "Got:      {} (fixed-point) = {} (float)",
         result_i32,
@@ -114,13 +117,18 @@ pub fn run_fixed32_test(clif_input: &str, expected_float: f32) {
 
     // Compare results (allow small tolerance for rounding)
     let tolerance = 1; // 1 fixed-point unit ≈ 0.000015
-    assert!(
-        (result_i32 - expected_fixed).abs() <= tolerance,
-        "Expected fixed-point value {} (float {}), got {} (float {})\n\n\
-         See debug output above for CLIF before/after transformation.",
-        expected_fixed,
-        expected_float,
-        result_i32,
-        fixed32_to_float(result_i32)
-    );
+    if (result_i32 - expected_fixed).abs() > tolerance {
+        // On failure, output emulator state and execution log like filetests do
+        if let Some(ref emulator_state) = executable.format_emulator_state() {
+            eprintln!("{emulator_state}");
+        }
+        panic!(
+            "Expected fixed-point value {} (float {}), got {} (float {})\n\n\
+             See debug output above for CLIF before/after transformation.",
+            expected_fixed,
+            expected_float,
+            result_i32,
+            fixed32_to_float(result_i32)
+        );
+    }
 }

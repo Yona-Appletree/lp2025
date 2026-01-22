@@ -3,6 +3,8 @@ use glsl::syntax::JumpStatement;
 use crate::error::{ErrorCode, GlslError};
 use crate::frontend::codegen::context::CodegenContext;
 
+use alloc::format;
+
 /// Emit jump statement (dispatch to break, continue, return)
 pub fn emit_jump_stmt<M: cranelift_module::Module>(
     ctx: &mut CodegenContext<'_, M>,
@@ -21,7 +23,7 @@ pub fn emit_jump_stmt<M: cranelift_module::Module>(
         ),
         _ => Err(GlslError::new(
             ErrorCode::E0400,
-            format!("jump statement not supported: {:?}", jump),
+            format!("jump statement not supported: {jump:?}"),
         )),
     }
 }

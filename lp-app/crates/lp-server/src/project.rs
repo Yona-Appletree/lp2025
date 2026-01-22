@@ -34,7 +34,7 @@ impl Project {
         output_provider: Rc<RefCell<dyn OutputProvider>>,
     ) -> Result<Self, ServerError> {
         let runtime = ProjectRuntime::new(fs, output_provider)
-            .map_err(|e| ServerError::Core(format!("{}", e)))?;
+            .map_err(|e| ServerError::Core(format!("{e}")))?;
 
         Ok(Self {
             name,

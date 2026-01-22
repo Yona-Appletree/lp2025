@@ -110,7 +110,10 @@ impl AsyncLocalServerTransport {
     /// Receive a client message (async, blocking)
     ///
     /// Waits until a message is available or the connection is closed.
-    #[allow(dead_code)] // Will be used in future async server implementations
+    #[allow(
+        dead_code,
+        reason = "Will be used in future async server implementations"
+    )]
     pub async fn receive(&mut self) -> Result<Option<ClientMessage>, TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
@@ -120,7 +123,10 @@ impl AsyncLocalServerTransport {
     }
 
     /// Send a server message
-    #[allow(dead_code)] // Will be used in future async server implementations
+    #[allow(
+        dead_code,
+        reason = "Will be used in future async server implementations"
+    )]
     pub fn send(&mut self, msg: ServerMessage) -> Result<(), TransportError> {
         if self.closed {
             return Err(TransportError::ConnectionLost);
@@ -133,7 +139,10 @@ impl AsyncLocalServerTransport {
     }
 
     /// Close the transport
-    #[allow(dead_code)] // Will be used in future async server implementations
+    #[allow(
+        dead_code,
+        reason = "Will be used in future async server implementations"
+    )]
     pub fn close(&mut self) -> Result<(), TransportError> {
         if self.closed {
             return Ok(());

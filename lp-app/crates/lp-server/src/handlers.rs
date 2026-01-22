@@ -7,8 +7,8 @@ use crate::project_manager::ProjectManager;
 use alloc::{format, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
-    server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload}, AsLpPath, ClientMessage, LpPath, LpPathBuf,
-    ServerMessage,
+    AsLpPath, ClientMessage, LpPath, LpPathBuf, ServerMessage,
+    server::{AvailableProject, FsRequest, FsResponse, ServerMsgBody as ServerMessagePayload},
 };
 use lp_shared::fs::LpFs;
 use lp_shared::output::OutputProvider;
@@ -58,42 +58,40 @@ fn handle_fs_request(fs: &mut dyn LpFs, request: FsRequest) -> Result<FsResponse
             Err(e) => Ok(FsResponse::Read {
                 path,
                 data: None,
-                error: Some(format!("{}", e)),
+                error: Some(format!("{e}")),
             }),
         },
         FsRequest::Write { path, data } => match fs.write_file(path.as_path(), &data) {
             Ok(()) => Ok(FsResponse::Write { path, error: None }),
             Err(e) => Ok(FsResponse::Write {
                 path,
-                error: Some(format!("{}", e)),
+                error: Some(format!("{e}")),
             }),
         },
         FsRequest::DeleteFile { path } => match fs.delete_file(path.as_path()) {
             Ok(()) => Ok(FsResponse::DeleteFile { path, error: None }),
             Err(e) => Ok(FsResponse::DeleteFile {
                 path,
-                error: Some(format!("{}", e)),
+                error: Some(format!("{e}")),
             }),
         },
         FsRequest::DeleteDir { path } => match fs.delete_dir(path.as_path()) {
             Ok(()) => Ok(FsResponse::DeleteDir { path, error: None }),
             Err(e) => Ok(FsResponse::DeleteDir {
                 path,
-                error: Some(format!("{}", e)),
+                error: Some(format!("{e}")),
             }),
         },
         FsRequest::ListDir { path, recursive } => match fs.list_dir(path.as_path(), recursive) {
-            Ok(entries) => {
-                Ok(FsResponse::ListDir {
-                    path,
-                    entries,
-                    error: None,
-                })
-            }
+            Ok(entries) => Ok(FsResponse::ListDir {
+                path,
+                entries,
+                error: None,
+            }),
             Err(e) => Ok(FsResponse::ListDir {
                 path,
                 entries: Vec::new(),
-                error: Some(format!("{}", e)),
+                error: Some(format!("{e}")),
             }),
         },
     }
@@ -137,11 +135,11 @@ fn handle_project_request(
             let response = project
                 .runtime_mut()
                 .get_changes(since_frame, &detail_specifier)
-                .map_err(|e| ServerError::Core(format!("Failed to get changes: {}", e)))?;
+                .map_err(|e| ServerError::Core(format!("Failed to get changes: {e}")))?;
 
             let serializable_response = response
                 .to_serializable()
-                .map_err(|e| ServerError::Core(format!("Failed to serialize response: {}", e)))?;
+                .map_err(|e| ServerError::Core(format!("Failed to serialize response: {e}")))?;
 
             Ok(ServerMessagePayload::ProjectRequest {
                 response: serializable_response,

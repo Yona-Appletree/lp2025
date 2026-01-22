@@ -2,8 +2,7 @@
 
 use crate::error::{GlslError, source_span_to_location};
 use crate::frontend::semantic::types;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, format, vec::Vec};
 
 /// Parse array dimensions from an ArraySpecifier
 /// Returns a vector of dimension sizes (outermost-first)

@@ -6,8 +6,8 @@ use crate::error::{ErrorCode, GlslError};
 use crate::frontend::semantic::functions::{FunctionRegistry, FunctionSignature};
 use crate::frontend::src_loc::GlSourceMap;
 use crate::frontend::src_loc_manager::SourceLocManager;
-#[cfg(feature = "std")]
 use alloc::boxed::Box;
+use alloc::format;
 use alloc::string::String;
 use cranelift_jit::JITModule;
 use cranelift_module::Module;
@@ -52,13 +52,10 @@ impl GlModule<JITModule> {
                                             return Some(get_function_pointer(*builtin));
                                         }
                                     }
-                                    // Check host functions (only in std mode)
                                     #[cfg(feature = "std")]
-                                    {
-                                        for host in HostId::all() {
-                                            if host.name() == name {
-                                                return Some(get_host_function_pointer(*host));
-                                            }
+                                    for host in HostId::all() {
+                                        if host.name() == name {
+                                            return get_host_function_pointer(*host);
                                         }
                                     }
                                     None
@@ -206,8 +203,7 @@ impl<M: Module> GlModule<M> {
                 GlslError::new(
                     crate::error::ErrorCode::E0400,
                     format!(
-                        "Builtin function '{}' not found in module declarations. Ensure declare_builtins() was called.",
-                        name
+                        "Builtin function '{name}' not found in module declarations. Ensure declare_builtins() was called."
                     ),
                 )
             })?;
@@ -251,7 +247,7 @@ impl<M: Module> GlModule<M> {
         if func.signature != sig {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("Function signature mismatch for '{}'", name),
+                format!("Function signature mismatch for '{name}'"),
             ));
         }
 
@@ -262,9 +258,15 @@ impl<M: Module> GlModule<M> {
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare function '{}': {}", name, e),
+                    format!("Failed to declare function '{name}': {e}"),
                 )
             })?;
+
+        // IMPORTANT: Update the function's name to match the FuncId
+        // Cranelift uses the function name to match it with the FuncId during define_function
+        use cranelift_codegen::ir::UserFuncName;
+        let mut func_with_name = func;
+        func_with_name.name = UserFuncName::user(0, func_id.as_u32());
 
         // Store Function IR
         self.fns.insert(
@@ -273,7 +275,7 @@ impl<M: Module> GlModule<M> {
                 name: String::from(name),
                 clif_sig: sig,
                 func_id,
-                function: func,
+                function: func_with_name,
             },
         );
 
@@ -297,7 +299,7 @@ impl<M: Module> GlModule<M> {
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare function '{}': {}", name, e),
+                    format!("Failed to declare function '{name}': {e}"),
                 )
             })?;
 
@@ -364,9 +366,15 @@ impl<M: Module> GlModule<M> {
         use cranelift_module::Linkage;
 
         // 1. Transform all function signatures and create FuncId mappings
+        // IMPORTANT: Iterate in sorted order to ensure consistent FuncId assignment.
+        // Cranelift's ObjectModule maps FuncIds to symbol names based on declaration order,
+        // so we must declare functions in a deterministic order.
         let mut func_id_map = hashbrown::HashMap::new();
         let mut old_func_id_map = hashbrown::HashMap::new();
-        for (name, gl_func) in &fns {
+        use alloc::vec::Vec;
+        let mut sorted_fns: Vec<_> = fns.iter().collect();
+        sorted_fns.sort_by_key(|(name, _)| *name);
+        for (name, gl_func) in sorted_fns {
             let new_sig = transform.transform_signature(&gl_func.clif_sig);
             // Determine linkage - for now, use Local (can be enhanced later)
             let linkage = Linkage::Local;
@@ -376,10 +384,7 @@ impl<M: Module> GlModule<M> {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!(
-                            "Failed to declare function '{}' in transformed module: {}",
-                            name, e
-                        ),
+                        format!("Failed to declare function '{name}' in transformed module: {e}"),
                     )
                 })?;
             func_id_map.insert(name.clone(), func_id);
@@ -404,7 +409,10 @@ impl<M: Module> GlModule<M> {
         }
 
         // 2. Transform function bodies
-        for (name, gl_func) in fns {
+        // IMPORTANT: Transform in the SAME sorted order as declaration to ensure FuncId consistency
+        let mut sorted_fns_for_transform: Vec<_> = fns.into_iter().collect();
+        sorted_fns_for_transform.sort_by_key(|(name, _)| name.clone());
+        for (name, gl_func) in sorted_fns_for_transform {
             let mut transform_ctx = TransformContext {
                 module: &mut new_module,
                 func_id_map: func_id_map.clone(),
@@ -413,13 +421,38 @@ impl<M: Module> GlModule<M> {
             let transformed_func =
                 transform.transform_function(&gl_func.function, &mut transform_ctx)?;
 
-            // Use public API to add transformed function
+            // Get the FuncId that was assigned during declaration (step 1)
+            let func_id = *func_id_map.get(&name).ok_or_else(|| {
+                GlslError::new(
+                    ErrorCode::E0400,
+                    format!("Function '{name}' not found in func_id_map"),
+                )
+            })?;
+
+            // Update the function in place using the FuncId from declaration
+            // This ensures we use the same FuncId that was assigned during declaration
             let new_sig = transform.transform_signature(&gl_func.clif_sig);
-            // Determine linkage - for now, use Local (can be enhanced later)
-            let linkage = Linkage::Local;
+
+            // IMPORTANT: Update the function's name to match the FuncId
+            // Cranelift uses the function name to match it with the FuncId during define_function
+            use cranelift_codegen::ir::UserFuncName;
+            let mut transformed_func_with_name = transformed_func;
+            transformed_func_with_name.name = UserFuncName::user(0, func_id.as_u32());
+
             // Remove the placeholder that was created during declaration
             new_module.fns.remove(&name);
-            new_module.add_function(&name, linkage, new_sig, transformed_func)?;
+
+            // Store the transformed function with the correct FuncId
+            // Note: The function is already declared in the module, so we just update our internal state
+            new_module.fns.insert(
+                name.clone(),
+                GlFunc {
+                    name: name.clone(),
+                    clif_sig: new_sig,
+                    func_id,
+                    function: transformed_func_with_name,
+                },
+            );
         }
 
         Ok(new_module)
@@ -430,7 +463,7 @@ impl<M: Module> GlModule<M> {
 impl GlModule<JITModule> {
     /// Build executable from JIT module
     /// Returns a boxed GlslExecutable trait object for generic code
-    #[allow(unused)]
+    #[allow(unused, reason = "Method used via trait object")]
     pub fn build_executable(
         self,
     ) -> Result<alloc::boxed::Box<dyn crate::exec::executable::GlslExecutable>, GlslError> {
@@ -476,7 +509,7 @@ impl GlModule<JITModule> {
 impl GlModule<ObjectModule> {
     /// Build executable from Object module (for emulator)
     /// Returns a boxed GlslExecutable trait object for generic code
-    #[allow(unused)]
+    #[allow(unused, reason = "Method used via trait object")]
     pub fn build_executable(
         self,
         options: &crate::backend::codegen::emu::EmulatorOptions,

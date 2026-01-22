@@ -16,10 +16,7 @@ const DEFAULT_MAX_INSTRUCTIONS: u64 = 1_000_000;
 pub fn parse_target(target: &str) -> Result<(RunMode, DecimalFormat)> {
     let parts: Vec<&str> = target.split('.').collect();
     if parts.len() != 2 {
-        anyhow::bail!(
-            "invalid target format: expected '<arch>.<format>', got '{}'",
-            target
-        );
+        anyhow::bail!("invalid target format: expected '<arch>.<format>', got '{target}'");
     }
 
     let arch = parts[0];
@@ -31,13 +28,13 @@ pub fn parse_target(target: &str) -> Result<(RunMode, DecimalFormat)> {
             stack_size: DEFAULT_STACK_SIZE,
             max_instructions: DEFAULT_MAX_INSTRUCTIONS,
         },
-        _ => anyhow::bail!("unsupported architecture: {}", arch),
+        _ => anyhow::bail!("unsupported architecture: {arch}"),
     };
 
     let decimal_format = match format {
         "fixed32" => DecimalFormat::Fixed32,
         "float" => DecimalFormat::Float,
-        _ => anyhow::bail!("unsupported format: {}", format),
+        _ => anyhow::bail!("unsupported format: {format}"),
     };
 
     Ok((run_mode, decimal_format))

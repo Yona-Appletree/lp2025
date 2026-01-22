@@ -10,7 +10,7 @@ use core::cell::RefCell;
 struct ChannelState {
     pin: u32,
     byte_count: u32,
-    #[allow(dead_code)] // Stored for future protocol-specific handling
+    #[allow(dead_code, reason = "Stored for future protocol-specific handling")]
     format: OutputFormat,
     data: Vec<u8>,
 }
@@ -95,7 +95,7 @@ impl OutputProvider for MemoryOutputProvider {
         // Validate byte_count
         if byte_count == 0 {
             return Err(OutputError::InvalidConfig {
-                reason: format!("byte_count must be > 0, got {}", byte_count),
+                reason: format!("byte_count must be > 0, got {byte_count}"),
             });
         }
 

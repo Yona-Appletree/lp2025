@@ -16,7 +16,7 @@ const FIX16_ONE: i32 = 0x00010000; // 65536
 #[unsafe(no_mangle)]
 pub extern "C" fn __lp_fixed32_asin(x: i32) -> i32 {
     // Domain check: |x| > 1 returns 0 (libfixmath behavior)
-    if x > FIX16_ONE || x < -FIX16_ONE {
+    if !(-FIX16_ONE..=FIX16_ONE).contains(&x) {
         return 0;
     }
 

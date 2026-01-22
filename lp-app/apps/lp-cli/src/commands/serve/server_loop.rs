@@ -39,7 +39,7 @@ pub fn run_server_loop<T: ServerTransport>(mut server: LpServer, mut transport: 
                         return Ok(());
                     }
                     // Other transport errors - log and continue
-                    eprintln!("Transport error: {}", e);
+                    eprintln!("Transport error: {e}");
                     break;
                 }
             }
@@ -53,13 +53,13 @@ pub fn run_server_loop<T: ServerTransport>(mut server: LpServer, mut transport: 
                     for response in responses {
                         if let Message::Server(server_msg) = response {
                             if let Err(e) = transport.send(server_msg) {
-                                eprintln!("Failed to send response: {}", e);
+                                eprintln!("Failed to send response: {e}");
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("Server error: {}", e);
+                    eprintln!("Server error: {e}");
                     // Continue running despite errors
                 }
             }

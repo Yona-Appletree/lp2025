@@ -45,7 +45,10 @@ pub struct GlslEmulatorModule {
     // Source map for managing file locations
     pub(crate) source_map: GlSourceMap,
     // Track next buffer allocation address (allocated from start of RAM, growing upward)
-    #[allow(dead_code)] // Reserved for future use when manual buffer allocation is needed
+    #[allow(
+        dead_code,
+        reason = "Reserved for future use when manual buffer allocation is needed"
+    )]
     pub(crate) next_buffer_addr: u32,
 }
 
@@ -77,7 +80,7 @@ impl GlslEmulatorModule {
         self.function_addresses.get(name).copied().ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function '{}' not found in object file", name),
+                format!("Function '{name}' not found in object file"),
             )
         })
     }
@@ -91,7 +94,7 @@ impl GlslEmulatorModule {
         self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })
     }
@@ -122,7 +125,7 @@ impl GlslEmulatorModule {
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got I32", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got I32"),
                         ));
                     }
                 }
@@ -144,7 +147,7 @@ impl GlslEmulatorModule {
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got F32", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got F32"),
                         ));
                     }
                 }
@@ -158,7 +161,7 @@ impl GlslEmulatorModule {
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got Bool", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got Bool"),
                         ));
                     }
                 }
@@ -178,14 +181,17 @@ impl GlslEmulatorModule {
                         }
                         types::I32 => {
                             // Convert f32 to fixed-point i32
-                            let fixed =
-                                (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(DataValue::I32(fixed));
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec2 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec2 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -206,14 +212,17 @@ impl GlslEmulatorModule {
                         }
                         types::I32 => {
                             // Convert f32 to fixed-point i32
-                            let fixed =
-                                (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(DataValue::I32(fixed));
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec3 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec3 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -234,14 +243,17 @@ impl GlslEmulatorModule {
                         }
                         types::I32 => {
                             // Convert f32 to fixed-point i32
-                            let fixed =
-                                (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(DataValue::I32(fixed));
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec4 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec4 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -261,7 +273,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec2 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec2 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -281,7 +295,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec3 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec3 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -301,7 +317,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec4 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec4 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -321,7 +339,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec2 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec2 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -341,7 +361,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec3 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec3 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -361,7 +383,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec4 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec4 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -381,7 +405,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec2 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec2 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -401,7 +427,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec3 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec3 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -421,7 +449,9 @@ impl GlslEmulatorModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec4 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec4 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -449,7 +479,10 @@ impl GlslEmulatorModule {
     /// Allocate a buffer in the emulator's RAM and return its address.
     /// Buffers are allocated from the start of RAM (growing upward), leaving space
     /// for the stack at the end (growing downward).
-    #[allow(dead_code)] // Reserved for future use when manual buffer allocation is needed
+    #[allow(
+        dead_code,
+        reason = "Reserved for future use when manual buffer allocation is needed"
+    )]
     fn allocate_buffer_in_ram(&mut self, size: usize) -> Result<u32, GlslError> {
         // DEFAULT_RAM_START is 0x80000000 (from lp-riscv-tools/src/emu/memory.rs)
         const DEFAULT_RAM_START: u32 = 0x80000000;
@@ -473,8 +506,7 @@ impl GlslEmulatorModule {
             return Err(GlslError::new(
                 crate::error::ErrorCode::E0400,
                 format!(
-                    "Buffer allocation would exceed RAM size (need {} bytes at addr 0x{:x}, have {} bytes RAM with {} bytes reserved for stack)",
-                    aligned_size, buffer_addr, current_len, STACK_RESERVE
+                    "Buffer allocation would exceed RAM size (need {aligned_size} bytes at addr 0x{buffer_addr:x}, have {current_len} bytes RAM with {STACK_RESERVE} bytes reserved for stack)"
                 ),
             ));
         }
@@ -488,7 +520,7 @@ impl GlslEmulatorModule {
                 .map_err(|e| {
                     GlslError::new(
                         crate::error::ErrorCode::E0400,
-                        format!("Failed to initialize buffer at 0x{:x}: {:?}", addr, e),
+                        format!("Failed to initialize buffer at 0x{addr:x}: {e:?}"),
                     )
                 })?;
         }
@@ -511,38 +543,36 @@ impl GlslEmulatorModule {
         let full_message = if function_name.is_empty() {
             base_message.to_string()
         } else {
-            format!("{} (function: {})", base_message, function_name)
+            format!("{base_message} (function: {function_name})")
         };
         let mut error = GlslError::new(code, full_message);
 
         // Add CLIF IR if available (both before and after transformation)
         if let Some(ref original_clif) = self.original_clif {
             error = error.with_note(format!(
-                "=== CLIF IR (BEFORE transformation) ===\n{}",
-                original_clif
+                "=== CLIF IR (BEFORE transformation) ===\n{original_clif}"
             ));
         }
 
         if let Some(ref transformed_clif) = self.transformed_clif {
             error = error.with_note(format!(
-                "=== CLIF IR (AFTER transformation) ===\n{}",
-                transformed_clif
+                "=== CLIF IR (AFTER transformation) ===\n{transformed_clif}"
             ));
         }
 
         // Add VCode and disassembly if available (from compilation)
         if let Some(ref vcode) = self.vcode {
-            error = error.with_note(format!("=== VCode ===\n{}", vcode));
+            error = error.with_note(format!("=== VCode ===\n{vcode}"));
         }
 
         if let Some(ref disassembly) = self.disassembly {
-            error = error.with_note(format!("=== Disassembled ===\n{}", disassembly));
+            error = error.with_note(format!("=== Disassembled ===\n{disassembly}"));
         }
 
         // Fall back to runtime disassembly if stored disassembly not available
         if self.vcode.is_none() && self.disassembly.is_none() {
             if let Ok(disasm) = self.disassemble_binary() {
-                error = error.with_note(format!("=== Assembly Disassembly ===\n{}", disasm));
+                error = error.with_note(format!("=== Assembly Disassembly ===\n{disasm}"));
             }
         }
 
@@ -572,7 +602,7 @@ impl GlslEmulatorModule {
         for (idx, line) in source_lines.iter().enumerate() {
             let line_num = start_line + idx;
             if line_num == trap_line {
-                source_display.push_str(&format!("{:>3} | {}\n", line_num, line));
+                source_display.push_str(&format!("{line_num:>3} | {line}\n"));
                 // Bound check col_pos to prevent excessive string allocation
                 let col_pos = trap_column.saturating_sub(1).min(line.len()).min(200);
                 source_display.push_str(&format!(
@@ -580,7 +610,7 @@ impl GlslEmulatorModule {
                     " ".repeat(col_pos)
                 ));
             } else {
-                source_display.push_str(&format!("{:>3} | {}\n", line_num, line));
+                source_display.push_str(&format!("{line_num:>3} | {line}\n"));
             }
         }
         Some(String::from(source_display.trim_end()))
@@ -619,10 +649,7 @@ impl GlslEmulatorModule {
 
         let trap_name = trap_code_to_string(trap_code);
 
-        let mut error = GlslError::new(
-            ErrorCode::E0400,
-            format!("execution trapped: {}", trap_name),
-        );
+        let mut error = GlslError::new(ErrorCode::E0400, format!("execution trapped: {trap_name}"));
 
         // Try to find source location from SourceLoc
         // First, try the exact srcloc from trap_info
@@ -680,46 +707,44 @@ impl GlslEmulatorModule {
         }
 
         // Add trap details as notes
-        error = error.with_note(format!("Trap occurred at PC 0x{:08x}", pc));
+        error = error.with_note(format!("Trap occurred at PC 0x{pc:08x}"));
         if !func_name.is_empty() {
-            error = error.with_note(format!("Function: {}", func_name));
+            error = error.with_note(format!("Function: {func_name}"));
         }
 
         // Add CLIF IR (before and after transformation) if available
         if let Some(ref original_clif) = self.original_clif {
             error = error.with_note(format!(
-                "=== CLIF IR (BEFORE transformation) ===\n{}",
-                original_clif
+                "=== CLIF IR (BEFORE transformation) ===\n{original_clif}"
             ));
         }
 
         if let Some(ref transformed_clif) = self.transformed_clif {
             error = error.with_note(format!(
-                "=== CLIF IR (AFTER transformation) ===\n{}",
-                transformed_clif
+                "=== CLIF IR (AFTER transformation) ===\n{transformed_clif}"
             ));
         }
 
         // Add VCode and disassembly if available
         if let Some(ref vcode) = self.vcode {
-            error = error.with_note(format!("VCode:\n{}", vcode));
+            error = error.with_note(format!("VCode:\n{vcode}"));
         }
 
         if let Some(ref disassembly) = self.disassembly {
-            error = error.with_note(format!("Disassembled:\n{}", disassembly));
+            error = error.with_note(format!("Disassembled:\n{disassembly}"));
         }
 
         error
     }
 
     /// Safely format a function, avoiding panics from Display
-    #[allow(dead_code)] // Reserved for future use in error reporting
+    #[allow(dead_code, reason = "Reserved for future use in error reporting")]
     fn format_function_safely(&self, func: &cranelift_codegen::ir::Function) -> String {
         #[cfg(feature = "std")]
         {
             use std::panic;
             // Try full formatting first
-            match panic::catch_unwind(panic::AssertUnwindSafe(|| format!("{}", func))) {
+            match panic::catch_unwind(panic::AssertUnwindSafe(|| format!("{func}"))) {
                 Ok(s) => return s,
                 Err(_) => {
                     // Fall through to manual formatting
@@ -750,7 +775,7 @@ impl GlslEmulatorModule {
         // Add blocks and instructions
         result.push_str("\n");
         for block in func.layout.blocks() {
-            result.push_str(&format!("\n{}", block));
+            result.push_str(&format!("\n{block}"));
 
             // Block parameters
             let params = func.dfg.block_params(block);
@@ -798,7 +823,7 @@ impl GlslEmulatorModule {
                         if i > 0 {
                             result.push_str(", ");
                         }
-                        result.push_str(&format!("v{}", res));
+                        result.push_str(&format!("v{res}"));
                     }
                 }
             }
@@ -839,8 +864,7 @@ impl GlslEmulatorModule {
                     if zero_count > MAX_ZERO_RUN {
                         // Summarize long zero runs
                         disasm.push_str(&format!(
-                            "  {:08x}: ... ({} zero words skipped)\n",
-                            zero_start, zero_count
+                            "  {zero_start:08x}: ... ({zero_count} zero words skipped)\n"
                         ));
                     } else {
                         // Show short zero runs
@@ -859,8 +883,7 @@ impl GlslEmulatorModule {
                 // Use proper disassembly formatting
                 let inst_str = lp_riscv_tools::format_instruction(instruction);
                 disasm.push_str(&format!(
-                    "  {:08x}: {:08x}    {}\n",
-                    offset, instruction, inst_str
+                    "  {offset:08x}: {instruction:08x}    {inst_str}\n"
                 ));
             }
 
@@ -872,8 +895,7 @@ impl GlslEmulatorModule {
             let zero_count = (offset - zero_start) / 4;
             if zero_count > MAX_ZERO_RUN {
                 disasm.push_str(&format!(
-                    "  {:08x}: ... ({} zero words skipped)\n",
-                    zero_start, zero_count
+                    "  {zero_start:08x}: ... ({zero_count} zero words skipped)\n"
                 ));
             } else {
                 for i in 0..zero_count {
@@ -899,7 +921,7 @@ impl GlslEmulatorModule {
     }
 
     /// Find the source location (line number) of a function definition in the GLSL source
-    #[allow(dead_code)] // Reserved for future use in error reporting
+    #[allow(dead_code, reason = "Reserved for future use in error reporting")]
     fn find_function_source_location(
         &self,
         func_name: &str,
@@ -911,9 +933,9 @@ impl GlslEmulatorModule {
         // Search for function definition: "type func_name(" or "func_name("
         // This is a simple heuristic - we look for the function name followed by (
         let pattern = if func_name == "main" {
-            format!("{}()", func_name)
+            format!("{func_name}()")
         } else {
-            format!("{}(", func_name)
+            format!("{func_name}(")
         };
 
         // Find the first occurrence of the pattern
@@ -932,7 +954,7 @@ impl GlslEmulatorModule {
     }
 
     /// Extract source lines around a given line number for display
-    #[allow(dead_code)] // Reserved for future use in error reporting
+    #[allow(dead_code, reason = "Reserved for future use in error reporting")]
     fn extract_source_lines(
         &self,
         file_id: crate::frontend::src_loc::GlFileId,
@@ -1004,7 +1026,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 }
                 other => self.build_enhanced_error(
                     ErrorCode::E0400,
-                    &format!("Emulator execution failed: {}", other),
+                    &format!("Emulator execution failed: {other}"),
                     name,
                 ),
             })?;
@@ -1048,13 +1070,26 @@ impl GlslExecutable for GlslEmulatorModule {
             .call_function(func_address, &data_args, &sig)
             .map_err(|e| match e {
                 EmulatorError::Trap { code, pc, regs } => {
+                    crate::debug!(
+                        "Emulator trap calling '{}':\n{}",
+                        name,
+                        self.emulator.dump_state()
+                    );
                     self.format_trap_error_from_emulator_error(code, pc, &regs, name)
                 }
-                other => self.build_enhanced_error(
-                    ErrorCode::E0400,
-                    &format!("Emulator execution failed: {}", other),
-                    name,
-                ),
+                other => {
+                    crate::debug!(
+                        "Emulator error calling '{}': {}\n{}",
+                        name,
+                        other,
+                        self.emulator.dump_state()
+                    );
+                    self.build_enhanced_error(
+                        ErrorCode::E0400,
+                        &format!("Emulator execution failed: {other}"),
+                        name,
+                    )
+                }
             })?;
 
         // Extract i32 return value
@@ -1062,7 +1097,7 @@ impl GlslExecutable for GlslEmulatorModule {
             Some(cranelift_codegen::data_value::DataValue::I32(v)) => Ok(*v),
             _ => Err(GlslError::new(
                 ErrorCode::E0400,
-                "Expected i32 return value",
+                format!("Expected i32 return value, got: {results:?}"),
             )),
         }
     }
@@ -1107,7 +1142,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 }
                 other => self.build_enhanced_error(
                     ErrorCode::E0400,
-                    &format!("Emulator execution failed: {}", other),
+                    &format!("Emulator execution failed: {other}"),
                     name,
                 ),
             })?;
@@ -1163,7 +1198,7 @@ impl GlslExecutable for GlslEmulatorModule {
             .map_err(|e| {
                 self.build_enhanced_error(
                     ErrorCode::E0400,
-                    &format!("Emulator execution failed: {}", e),
+                    &format!("Emulator execution failed: {e}"),
                     name,
                 )
             })?;
@@ -1242,7 +1277,7 @@ impl GlslExecutable for GlslEmulatorModule {
                     }
                     other => self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", other),
+                        &format!("Emulator execution failed: {other}"),
                         name,
                     ),
                 })?;
@@ -1275,7 +1310,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 .map_err(|e| {
                     self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", e),
+                        &format!("Emulator execution failed: {e}"),
                         name,
                     )
                 })?;
@@ -1366,7 +1401,7 @@ impl GlslExecutable for GlslEmulatorModule {
                     }
                     other => self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", other),
+                        &format!("Emulator execution failed: {other}"),
                         name,
                     ),
                 })?;
@@ -1395,7 +1430,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 .map_err(|e| {
                     self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", e),
+                        &format!("Emulator execution failed: {e}"),
                         name,
                     )
                 })?;
@@ -1486,7 +1521,7 @@ impl GlslExecutable for GlslEmulatorModule {
                     }
                     other => self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", other),
+                        &format!("Emulator execution failed: {other}"),
                         name,
                     ),
                 })?;
@@ -1515,7 +1550,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 .map_err(|e| {
                     self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", e),
+                        &format!("Emulator execution failed: {e}"),
                         name,
                     )
                 })?;
@@ -1606,7 +1641,7 @@ impl GlslExecutable for GlslEmulatorModule {
                     }
                     other => self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", other),
+                        &format!("Emulator execution failed: {other}"),
                         name,
                     ),
                 })?;
@@ -1637,7 +1672,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 .map_err(|e| {
                     self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", e),
+                        &format!("Emulator execution failed: {e}"),
                         name,
                     )
                 })?;
@@ -1722,7 +1757,7 @@ impl GlslExecutable for GlslEmulatorModule {
                     }
                     other => self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", other),
+                        &format!("Emulator execution failed: {other}"),
                         name,
                     ),
                 })?;
@@ -1753,7 +1788,7 @@ impl GlslExecutable for GlslEmulatorModule {
                 .map_err(|e| {
                     self.build_enhanced_error(
                         ErrorCode::E0400,
-                        &format!("Emulator execution failed: {}", e),
+                        &format!("Emulator execution failed: {e}"),
                         name,
                     )
                 })?;
@@ -1788,14 +1823,15 @@ impl GlslExecutable for GlslEmulatorModule {
     #[cfg(feature = "std")]
     fn format_emulator_state(&self) -> Option<String> {
         let state_dump = self.emulator.dump_state();
-        let debug_info = self.emulator.format_debug_info(None, 100);
+        let current_pc = self.emulator.get_pc();
+        // Always show disassembly around current PC (like filetests do)
+        let debug_info = self.emulator.format_debug_info(Some(current_pc), 100);
         // Only include debug info section if there's actual content
         if debug_info.is_empty() {
-            Some(format!("\n=== Emulator State ===\n{}", state_dump))
+            Some(format!("\n=== Emulator State ===\n{state_dump}"))
         } else {
             Some(format!(
-                "\n=== Emulator State ===\n{}\n\n=== Debug Info ===\n{}",
-                state_dump, debug_info
+                "\n=== Emulator State ===\n{state_dump}\n\n=== Debug Info ===\n{debug_info}"
             ))
         }
     }
@@ -1889,9 +1925,7 @@ mod tests {
         // Allow some tolerance for fixed-point conversion
         assert!(
             (result_fixed - expected_fixed).abs() < 10,
-            "Expected fixed-point value around {}, got {}",
-            expected_fixed,
-            result_fixed
+            "Expected fixed-point value around {expected_fixed}, got {result_fixed}"
         );
 
         // Verify it's approximately correct as float
@@ -1917,9 +1951,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.0001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -1942,9 +1974,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -1971,9 +2001,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.001,
-            "Expected ~{}, got {}",
-            expected,
-            result_float
+            "Expected ~{expected}, got {result_float}"
         );
     }
 
@@ -1995,9 +2023,7 @@ mod tests {
         let result_float = fixed32_to_float(float_to_fixed32(result));
         assert!(
             (result_float - expected).abs() < 0.01,
-            "Expected sqrt(4.0) ≈ {}, got {}",
-            expected,
-            result_float
+            "Expected sqrt(4.0) ≈ {expected}, got {result_float}"
         );
     }
 }

@@ -42,11 +42,11 @@ mod tests {
         // Create temporary source file
         let temp_dir = current_dir.join("target").join("test-objects");
         fs::create_dir_all(&temp_dir).ok()?;
-        let source_path = temp_dir.join(std::format!("{}.rs", name));
+        let source_path = temp_dir.join(std::format!("{name}.rs"));
         fs::write(&source_path, source).ok()?;
 
         // Compile to object file
-        let obj_path = temp_dir.join(std::format!("{}.o", name));
+        let obj_path = temp_dir.join(std::format!("{name}.o"));
         let output = Command::new("rustc")
             .args(&[
                 "--target",
@@ -98,28 +98,27 @@ mod tests {
             }
         }
 
-        // Try both debug and release profiles
-        for profile in ["debug", "release"].iter() {
-            let exe_path = current_dir
-                .join("../../../../../../lp-app")
+        // Only use release builds (filetests-setup builds in release mode)
+        let profile = "release";
+        let exe_path = current_dir
+            .join("../../../../../../lp-app")
+            .join("target")
+            .join(target)
+            .join(profile)
+            .join("lp-builtins-app");
+
+        let exe_path = if exe_path.exists() {
+            exe_path
+        } else {
+            current_dir
                 .join("target")
                 .join(target)
                 .join(profile)
-                .join("lp-builtins-app");
+                .join("lp-builtins-app")
+        };
 
-            let exe_path = if exe_path.exists() {
-                exe_path
-            } else {
-                current_dir
-                    .join("target")
-                    .join(target)
-                    .join(profile)
-                    .join("lp-builtins-app")
-            };
-
-            if exe_path.exists() {
-                return std::fs::read(&exe_path).ok();
-            }
+        if exe_path.exists() {
+            return std::fs::read(&exe_path).ok();
         }
 
         None
@@ -195,7 +194,7 @@ mod tests {
         // Verify _init symbol was found
         if let Some(init_addr) = obj_info.init_address {
             assert!(init_addr > 0, "Init address should be valid");
-            println!("Object file _init() found at 0x{:x}", init_addr);
+            println!("Object file _init() found at 0x{init_addr:x}");
         } else {
             println!("No _init symbol found in object file (this is OK for some object files)");
         }
@@ -330,10 +329,7 @@ mod tests {
 
         // Verify last _init wins
         if let Some(init_addr) = obj2_info.init_address {
-            println!(
-                "Second object file's _init() at 0x{:x} (last one wins)",
-                init_addr
-            );
+            println!("Second object file's _init() at 0x{init_addr:x} (last one wins)");
         }
     }
 
@@ -546,7 +542,7 @@ mod tests {
 
                     // Handle halt result
                     if let StepResult::Halted = step_result {
-                        println!("Emulator halted at step {}", steps);
+                        println!("Emulator halted at step {steps}");
                         break;
                     }
 
@@ -554,13 +550,14 @@ mod tests {
                     last_a0 = emu.get_register(Gpr::A0);
 
                     // Check if we've jumped into __lp_fixed32_sqrt (function was called)
-                    if pc_after >= *sqrt_addr && pc_after < *sqrt_addr + 100 {
+                    // Use a wider range to catch the call (functions can be larger than 100 bytes)
+                    if pc_after >= *sqrt_addr && pc_after < *sqrt_addr + 1000 {
                         called_sqrt = true;
                     }
 
                     // Check if PC is at halt address (function returned via RET)
                     if pc_after == halt_address {
-                        println!("Function returned after {} steps", steps);
+                        println!("Function returned after {steps} steps");
                         break;
                     }
                 }
@@ -591,7 +588,7 @@ mod tests {
             }
         }
 
-        println!("Program executed successfully for {} steps", steps);
+        println!("Program executed successfully for {steps} steps");
         assert!(steps > 0, "Program should execute at least one instruction");
         assert!(called_sqrt, "__lp_fixed32_sqrt should have been called");
 

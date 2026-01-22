@@ -11,7 +11,7 @@ pub fn render_shader_panel(ui: &mut egui::Ui, entry: &ClientNodeEntry, state: &S
         ui.label(format!("Path: {:?}", entry.path));
         ui.label(format!("Status: {:?}", entry.status));
         if let Some(error) = &state.error {
-            ui.colored_label(egui::Color32::RED, format!("Error: {}", error));
+            ui.colored_label(egui::Color32::RED, format!("Error: {error}"));
         }
     });
 

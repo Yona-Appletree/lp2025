@@ -147,45 +147,76 @@ int main(int x, int y) {
         }
     };
 
-    // Compile GLSL to machine code
+    // Compile GLSL using normal JIT path
     info!("Step 2: Compiling GLSL to RISC-V machine code...");
     let mut compiler = Compiler::new();
-    let machine_code = match compiler.compile_to_code(source, &*isa) {
-        Ok(code) => {
-            info!("  ✓ Compilation successful: {} bytes", code.len());
-            code
+
+    // Create a Target from the ISA for JIT compilation
+    use lp_glsl_compiler::backend::target::Target;
+    let flags = isa.flags().clone();
+    let target = Target::HostJit {
+        arch: None, // Auto-detect from host (ESP32 = RISC-V32)
+        flags,
+        isa: None, // Will be created from target
+    };
+
+    // Compile to JIT module
+    let gl_module = match compiler.compile_to_gl_module_jit(source, target) {
+        Ok(module) => {
+            defmt::info!("  ✓ GLSL compilation successful");
+            module
         }
         Err(e) => {
-            // Log error details before panicking
-            // Display error code and message (defmt supports {} for strings)
-            info!("GLSL compilation failed!");
-            info!("Error: {}", e.message.as_str());
+            // Build error message string
+            use alloc::format;
+            let mut error_msg =
+                format!("GLSL compilation failed!\nError: {}\n", e.message.as_str());
 
-            // Display location if available
             if let Some(ref loc) = e.location {
-                info!("At line {}, column {}", loc.line, loc.column);
+                error_msg.push_str(&format!("At line {}, column {}\n", loc.line, loc.column));
             }
 
-            // Display span text if available (source code snippet)
             if let Some(ref span) = e.span_text {
-                info!("Source code: {}", span.as_str());
+                error_msg.push_str(&format!("Source code: {}\n", span.as_str()));
             }
 
-            // Display notes (these often contain detailed error information)
-            // Break into smaller chunks to avoid defmt string length limits
             if !e.notes.is_empty() {
-                info!("Error details:");
+                error_msg.push_str("Error details:\n");
                 for note in &e.notes {
-                    // Split note by newlines and display each line
                     for line in note.lines() {
                         if !line.trim().is_empty() {
-                            info!("  {}", line);
+                            error_msg.push_str(&format!("  {}\n", line));
                         }
                     }
                 }
             }
 
-            defmt::panic!("GLSL compilation failed - see details above");
+            defmt::panic!("{}", error_msg.as_str());
+        }
+    };
+
+    // Build JIT executable directly to get the concrete type with function pointers
+    use lp_glsl_compiler::backend::codegen::jit::build_jit_executable;
+    let jit_module = match build_jit_executable(gl_module) {
+        Ok(module) => {
+            info!("  ✓ JIT executable built");
+            module
+        }
+        Err(e) => {
+            info!("Failed to build executable: {}", e.message.as_str());
+            defmt::panic!("JIT executable build failed");
+        }
+    };
+
+    // Get the function pointer for "main"
+    let func_ptr = match jit_module.get_function_ptr("main") {
+        Ok(ptr) => {
+            info!("  ✓ Function pointer obtained");
+            ptr
+        }
+        Err(e) => {
+            info!("Failed to get function pointer: {}", e.message.as_str());
+            defmt::panic!("Function pointer not found");
         }
     };
 
@@ -198,7 +229,7 @@ int main(int x, int y) {
 
     // Cast to function pointer - shader takes x, y coordinates and returns pixel value
     type ShaderFn = extern "C" fn(i32, i32) -> i32;
-    let shader_fn: ShaderFn = unsafe { core::mem::transmute(machine_code.as_ptr()) };
+    let shader_fn: ShaderFn = unsafe { core::mem::transmute(func_ptr) };
 
     // Image dimensions: 64x64 pixels = 4096 pixels per frame
     const IMAGE_WIDTH: i32 = 64;

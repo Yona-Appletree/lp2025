@@ -79,8 +79,7 @@ impl LpFsMemory {
         for file_path in files.keys() {
             if file_path.as_str().starts_with(&dir_prefix_str) {
                 return Err(FsError::Filesystem(format!(
-                    "Path {:?} is a directory, use delete_dir_mut() instead",
-                    path
+                    "Path {path:?} is a directory, use delete_dir_mut() instead"
                 )));
             }
         }
@@ -280,7 +279,7 @@ impl LpFs for LpFsMemory {
                     if let Some(slash_pos) = remainder.find('/') {
                         // It's a subdirectory - add the directory path
                         let dir_name = &remainder[..slash_pos];
-                        let full_dir_path = format!("{}{}", prefix_str, dir_name);
+                        let full_dir_path = format!("{prefix_str}{dir_name}");
                         let full_dir_path_buf = LpPathBuf::from(full_dir_path.as_str());
                         if !entries.iter().any(|e| *e == full_dir_path_buf) {
                             entries.push(full_dir_path_buf);
@@ -304,13 +303,12 @@ impl LpFs for LpFsMemory {
         self.validate_path(normalized.as_path())?;
 
         // Check if it's a directory (by checking if any file starts with normalized + "/")
-        let dir_prefix_str = format!("{}/", normalized_str);
+        let dir_prefix_str = format!("{normalized_str}/");
         let mut files = self.files.borrow_mut();
         for file_path in files.keys() {
             if file_path.as_str().starts_with(&dir_prefix_str) {
                 return Err(FsError::Filesystem(format!(
-                    "Path {:?} is a directory, use delete_dir() instead",
-                    normalized_str
+                    "Path {normalized_str:?} is a directory, use delete_dir() instead"
                 )));
             }
         }
@@ -337,7 +335,7 @@ impl LpFs for LpFsMemory {
         let prefix = if normalized_str.ends_with('/') {
             normalized_str.to_string()
         } else {
-            format!("{}/", normalized_str)
+            format!("{normalized_str}/")
         };
 
         let mut files = self.files.borrow_mut();

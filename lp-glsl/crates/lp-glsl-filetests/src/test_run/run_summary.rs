@@ -59,9 +59,7 @@ pub fn run(
             stats.passed = 0;
             return Ok((
                 Err(anyhow::anyhow!(
-                    "Compilation failed for test file {}:\n\n{}",
-                    relative_path,
-                    e
+                    "Compilation failed for test file {relative_path}:\n\n{e}"
                 )),
                 stats,
             ));
@@ -138,7 +136,7 @@ pub fn run(
             }
             (Err(e), None) => {
                 // Got an error but didn't expect one - check if it's a trap
-                let error_str = format!("{:#}", e);
+                let error_str = format!("{e:#}");
                 let is_trap = error_str.contains("Trap:")
                     || error_str.contains("trap")
                     || error_str.contains("execution trapped");
@@ -162,11 +160,11 @@ pub fn run(
             }
             (Err(_e), Some(exp)) => {
                 // Expected a trap and got one - verify it matches
-                let error_str = format!("{:#}", _e);
+                let error_str = format!("{_e:#}");
 
                 // Check trap code if specified
                 if let Some(expected_code) = exp.trap_code {
-                    if !error_str.contains(&format!("user{}", expected_code)) {
+                    if !error_str.contains(&format!("user{expected_code}")) {
                         stats.failed += 1;
                         if first_error.is_none() {
                             first_error = Some(anyhow::anyhow!(

@@ -18,7 +18,7 @@ pub fn parse_trap_expectation(line: &str, line_number: usize) -> Result<Option<T
         let code = code_str
             .trim()
             .parse::<u8>()
-            .map_err(|e| anyhow::anyhow!("invalid trap code at line {}: {}", line_number, e))?;
+            .map_err(|e| anyhow::anyhow!("invalid trap code at line {line_number}: {e}"))?;
         Ok(Some(TrapExpectation {
             trap_code: Some(code),
             trap_message: None,

@@ -85,10 +85,7 @@ pub fn generate_uid(name: &str) -> String {
     let second = (seconds_today % 60) as u32;
 
     // Format: YYYY.MM.DD-HH.MM.SS-<name>
-    format!(
-        "{:04}.{:02}.{:02}-{:02}.{:02}.{:02}-{}",
-        year, month, day, hour, minute, second, name
-    )
+    format!("{year:04}.{month:02}.{day:02}-{hour:02}.{minute:02}.{second:02}-{name}")
 }
 
 /// Create project directory structure
@@ -129,7 +126,7 @@ pub fn create_project_structure(dir: &Path, name: Option<&str>, uid: Option<&str
     let project_json =
         serde_json::to_string_pretty(&config).context("Failed to serialize project.json")?;
     fs.write_file("/project.json".as_path(), project_json.as_bytes())
-        .map_err(|e| anyhow::anyhow!("Failed to write project.json: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write project.json: {e}"))?;
 
     // Create default template
     create_default_template(&fs)?;
@@ -153,7 +150,7 @@ pub fn create_default_template(fs: &dyn LpFs) -> Result<()> {
         "/src/main.texture/node.json".as_path(),
         texture_json.as_bytes(),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {e}"))?;
 
     // Create shader node
     let shader_config = ShaderConfig {
@@ -167,7 +164,7 @@ pub fn create_default_template(fs: &dyn LpFs) -> Result<()> {
         "/src/rainbow.shader/node.json".as_path(),
         shader_json.as_bytes(),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {e}"))?;
 
     // Create shader GLSL
     fs.write_file(
@@ -232,7 +229,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec4(max(vec3(0.0), min(vec3(1.0), rgb)), 1.0);
 }"#,
     )
-    .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {e}"))?;
 
     // Create output node
     let output_config = OutputConfig::GpioStrip { pin: 4 };
@@ -242,7 +239,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         "/src/strip.output/node.json".as_path(),
         output_json.as_bytes(),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {e}"))?;
 
     // Create fixture node
     let fixture_config = FixtureConfig {
@@ -264,7 +261,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         "/src/fixture.fixture/node.json".as_path(),
         fixture_json.as_bytes(),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {e}"))?;
 
     Ok(())
 }
@@ -282,10 +279,10 @@ pub fn print_success_message(dir: &Path, name: &str) {
     };
 
     let next_step_cmd =
-        messages::format_command(&format!("cd {} && lp-cli dev ws://localhost:2812/", name));
+        messages::format_command(&format!("cd {name} && lp-cli dev ws://localhost:2812/"));
 
     messages::print_success(
-        &format!("Project created successfully: {} (uid: {})", name, uid),
+        &format!("Project created successfully: {name} (uid: {uid})"),
         &[&next_step_cmd],
     );
 }
@@ -429,7 +426,7 @@ mod tests {
             "/src/main.texture/node.json".as_path(),
             texture_json.as_bytes(),
         )
-        .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write texture node.json: {e}"))?;
 
         // Create shader node
         let shader_config = ShaderConfig {
@@ -443,7 +440,7 @@ mod tests {
             "/src/rainbow.shader/node.json".as_path(),
             shader_json.as_bytes(),
         )
-        .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write shader node.json: {e}"))?;
 
         // Create shader GLSL
         fs.write_file_mut(
@@ -508,7 +505,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     return vec4(max(vec3(0.0), min(vec3(1.0), rgb)), 1.0);
 }"#,
         )
-        .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write shader main.glsl: {e}"))?;
 
         // Create output node
         let output_config = OutputConfig::GpioStrip { pin: 4 };
@@ -518,7 +515,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
             "/src/strip.output/node.json".as_path(),
             output_json.as_bytes(),
         )
-        .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write output node.json: {e}"))?;
 
         // Create fixture node
         let fixture_config = FixtureConfig {
@@ -540,7 +537,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
             "/src/strip.fixture/node.json".as_path(),
             fixture_json.as_bytes(),
         )
-        .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to write fixture node.json: {e}"))?;
 
         Ok(())
     }

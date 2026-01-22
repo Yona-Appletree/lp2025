@@ -62,8 +62,7 @@ pub fn copy_instruction(
         return Err(GlslError::new(
             crate::error::ErrorCode::E0301,
             alloc::format!(
-                "Fcmp instruction {:?} should be converted, not copied. This is an internal error.",
-                old_inst
+                "Fcmp instruction {old_inst:?} should be converted, not copied. This is an internal error."
             ),
         ));
     }
@@ -259,8 +258,7 @@ pub fn copy_instruction(
                 builder.ins().trapz(condition, *code);
             } else {
                 panic!(
-                    "CondTrap instruction with unexpected opcode {:?} in copy_instruction. This is an internal error - CondTrap should only be used with Trapnz or Trapz opcodes.",
-                    opcode
+                    "CondTrap instruction with unexpected opcode {opcode:?} in copy_instruction. This is an internal error - CondTrap should only be used with Trapnz or Trapz opcodes."
                 );
             }
             return Ok(());
@@ -321,12 +319,13 @@ pub fn copy_instruction(
                             GlslError::new(
                                 ErrorCode::E0301,
                                 format!(
-                                    "UserExternalNameRef {} not found in function's user_named_funcs",
-                                    old_user_ref
+                                    "UserExternalNameRef {old_user_ref} not found in function's user_named_funcs"
                                 ),
                             )
                         })?;
                     // Declare the imported user function in the new function
+                    // Note: FuncId remapping for transforms is handled at the transform level
+                    // (e.g., in identity/transform.rs and fixed32/converters/calls.rs)
                     let new_user_ref = builder
                         .func
                         .declare_imported_user_function(user_name.clone());
@@ -412,8 +411,7 @@ pub fn copy_instruction(
     let old_results: Vec<Value> = old_func.dfg.inst_results(old_inst).to_vec();
     if old_results.is_empty() {
         panic!(
-            "Instruction {:?} with format {:?} has no results but was not handled in copy_instruction. This is an internal error - all side-effect-only instructions must be explicitly handled.",
-            opcode, inst_data
+            "Instruction {opcode:?} with format {inst_data:?} has no results but was not handled in copy_instruction. This is an internal error - all side-effect-only instructions must be explicitly handled."
         );
     }
 
@@ -571,8 +569,7 @@ pub fn copy_instruction(
                     GlslError::new(
                         ErrorCode::E0301,
                         format!(
-                            "Stack slot {:?} not found in stack_slot_map when copying instruction {:?}. This indicates a bug in function copying - all stack slots must be copied before copying instructions.",
-                            stack_slot, opcode
+                            "Stack slot {stack_slot:?} not found in stack_slot_map when copying instruction {opcode:?}. This indicates a bug in function copying - all stack slots must be copied before copying instructions."
                         ),
                     )
                 })?
@@ -601,8 +598,7 @@ pub fn copy_instruction(
                     GlslError::new(
                         ErrorCode::E0301,
                         format!(
-                            "Stack slot {:?} not found in stack_slot_map when copying instruction {:?}. This indicates a bug in function copying - all stack slots must be copied before copying instructions.",
-                            stack_slot, opcode
+                            "Stack slot {stack_slot:?} not found in stack_slot_map when copying instruction {opcode:?}. This indicates a bug in function copying - all stack slots must be copied before copying instructions."
                         ),
                     )
                 })?
@@ -632,15 +628,13 @@ pub fn copy_instruction(
             // to handle them case-by-case or use a different approach.
             // For now, panic with a helpful message - this should be extended as needed.
             panic!(
-                "MultiAry instruction {:?} not yet supported in copy_instruction (Return is handled separately). This is an internal error - please add support for this instruction format.",
-                opcode
+                "MultiAry instruction {opcode:?} not yet supported in copy_instruction (Return is handled separately). This is an internal error - please add support for this instruction format."
             );
         }
         _ => {
             // For other instruction formats, panic (internal error - should never happen)
             panic!(
-                "Instruction {:?} with format {:?} not yet supported in copy_instruction. This is an internal error - all instruction formats should be handled. inst_data: {:?}",
-                opcode, inst_data, inst_data
+                "Instruction {opcode:?} with format {inst_data:?} not yet supported in copy_instruction. This is an internal error - all instruction formats should be handled. inst_data: {inst_data:?}"
             );
         }
     };

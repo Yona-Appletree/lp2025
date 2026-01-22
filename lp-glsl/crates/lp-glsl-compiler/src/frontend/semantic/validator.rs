@@ -99,7 +99,7 @@ fn validate_simple_statement(
         }
         _ => Err(GlslError::new(
             ErrorCode::E0400,
-            format!("unsupported statement type in validation: {:?}", stmt),
+            format!("unsupported statement type in validation: {stmt:?}"),
         )),
     }
 }
@@ -364,14 +364,12 @@ fn validate_jump(
                 let error = GlslError::new(
                     ErrorCode::E0116,
                     format!(
-                        "return type mismatch: expected `{:?}`, found `{:?}`",
-                        return_type, expr_type
+                        "return type mismatch: expected `{return_type:?}`, found `{expr_type:?}`"
                     ),
                 )
                 .with_location(source_span_to_location(&expr_span))
                 .with_note(format!(
-                    "function returns `{:?}` but expression has type `{:?}`",
-                    return_type, expr_type
+                    "function returns `{return_type:?}` but expression has type `{expr_type:?}`"
                 ));
                 return Err(add_span_text_to_error(error, Some(source), &expr_span));
             }
@@ -382,10 +380,7 @@ fn validate_jump(
             if *return_type != Type::Void {
                 return Err(GlslError::new(
                     ErrorCode::E0116,
-                    format!(
-                        "return type mismatch: expected `{:?}`, found `Void`",
-                        return_type
-                    ),
+                    format!("return type mismatch: expected `{return_type:?}`, found `Void`"),
                 ));
             }
             Ok(())

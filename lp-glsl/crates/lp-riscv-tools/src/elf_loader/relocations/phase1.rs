@@ -1,6 +1,5 @@
 //! Phase 1: Analyze relocations and identify GOT entries.
 
-use crate::debug;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -26,10 +25,10 @@ pub struct RelocationInfo {
     /// Address where relocation is applied (VMA + offset)
     pub address: u32,
     /// Section VMA
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Used for section address tracking")]
     pub section_vma: u64,
     /// Section LMA (for .data sections)
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Used for section load address tracking")]
     pub section_lma: u64,
 }
 

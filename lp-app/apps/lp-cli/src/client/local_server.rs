@@ -52,7 +52,7 @@ impl LocalServerTransport {
                 let runtime = match tokio::runtime::Runtime::new() {
                     Ok(r) => r,
                     Err(e) => {
-                        eprintln!("Failed to create tokio runtime for server: {}", e);
+                        eprintln!("Failed to create tokio runtime for server: {e}");
                         return;
                     }
                 };
@@ -61,7 +61,7 @@ impl LocalServerTransport {
                 let (server, _base_fs) = match create_server(None, true, None) {
                     Ok((s, fs)) => (s, fs),
                     Err(e) => {
-                        eprintln!("Failed to create server: {}", e);
+                        eprintln!("Failed to create server: {e}");
                         return;
                     }
                 };
@@ -78,7 +78,7 @@ impl LocalServerTransport {
                 // Mark as closed when server exits
                 closed_clone.store(true, Ordering::Relaxed);
             })
-            .map_err(|e| anyhow::anyhow!("Failed to spawn server thread: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to spawn server thread: {e}"))?;
 
         Ok(Self {
             server_handle: Some(server_handle),
@@ -97,7 +97,10 @@ impl LocalServerTransport {
     ///
     /// * `Ok(())` if the server was stopped successfully (or already closed)
     /// * `Err` if waiting for the thread failed
-    #[allow(dead_code)] // Will be used in future cleanup/shutdown scenarios
+    #[allow(
+        dead_code,
+        reason = "Will be used in future cleanup/shutdown scenarios"
+    )]
     pub fn close(&mut self) -> Result<()> {
         // Check if already closed
         if self.closed.load(Ordering::Relaxed) {

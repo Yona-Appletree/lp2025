@@ -7,7 +7,7 @@ use glsl::syntax::Expr;
 
 use super::coercion;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 pub fn emit_vector_constructor<M: cranelift_module::Module>(
     ctx: &mut CodegenContext<'_, M>,
@@ -230,7 +230,7 @@ pub fn emit_scalar_constructor<M: cranelift_module::Module>(
     if args.len() != 1 {
         return Err(GlslError::new(
             ErrorCode::E0115,
-            format!("`{}` constructor requires exactly one argument", type_name),
+            format!("`{type_name}` constructor requires exactly one argument"),
         )
         .with_location(source_span_to_location(&span)));
     }
@@ -250,10 +250,7 @@ pub fn emit_scalar_constructor<M: cranelift_module::Module>(
     } else {
         return Err(GlslError::new(
             ErrorCode::E0115,
-            format!(
-                "`{}` constructor requires at least one component",
-                type_name
-            ),
+            format!("`{type_name}` constructor requires at least one component"),
         )
         .with_location(source_span_to_location(&span)));
     };
@@ -274,7 +271,7 @@ pub fn emit_scalar_constructor<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0112,
-                format!("`{}` is not a scalar type", type_name),
+                format!("`{type_name}` is not a scalar type"),
             )
             .with_location(source_span_to_location(&span)));
         }

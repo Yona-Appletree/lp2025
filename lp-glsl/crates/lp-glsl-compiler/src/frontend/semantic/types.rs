@@ -1,5 +1,4 @@
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, format, vec::Vec};
 /// GLSL type system
 /// Phase 1: Only Int and Bool are fully supported
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -218,7 +217,7 @@ impl Type {
             }
             _ => Err(crate::error::GlslError::new(
                 crate::error::ErrorCode::E0109,
-                format!("Type not yet supported for codegen: {:?}", self),
+                format!("Type not yet supported for codegen: {self:?}"),
             )),
         }
     }

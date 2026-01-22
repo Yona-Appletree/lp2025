@@ -5,9 +5,9 @@ use crate::types::{Dimension, VecType};
 /// Format a literal value based on vector type.
 pub fn format_literal(value: i32, vec_type: VecType) -> String {
     match vec_type {
-        VecType::Vec => format!("{}.0", value),
-        VecType::IVec => format!("{}", value),
-        VecType::UVec => format!("{}u", value),
+        VecType::Vec => format!("{value}.0"),
+        VecType::IVec => format!("{value}"),
+        VecType::UVec => format!("{value}u"),
         VecType::BVec => {
             if value != 0 {
                 "true".to_string()
@@ -33,7 +33,7 @@ pub fn format_type_name(vec_type: VecType, dimension: Dimension) -> String {
         VecType::BVec => "bvec",
     };
 
-    format!("{}{}", prefix, dim_str)
+    format!("{prefix}{dim_str}")
 }
 
 /// Format the return type name for comparison functions (always bvec).
@@ -43,7 +43,7 @@ pub fn format_bvec_type_name(dimension: Dimension) -> String {
         Dimension::D3 => "3",
         Dimension::D4 => "4",
     };
-    format!("bvec{}", dim_str)
+    format!("bvec{dim_str}")
 }
 
 /// Generate a vector constructor call.

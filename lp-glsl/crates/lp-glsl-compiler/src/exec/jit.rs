@@ -10,12 +10,12 @@ use cranelift_codegen::ir::types;
 use hashbrown::HashMap;
 use lp_jit_util::{call_structreturn, call_structreturn_with_args};
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String, vec, vec::Vec};
 
 /// JIT-compiled GLSL module (executes on host or embedded)
 /// Works in both std and no_std (JITModule supports no_std)
 pub struct GlslJitModule {
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "JIT module stored for future use")]
     pub(crate) jit_module: cranelift_jit::JITModule,
     pub(crate) function_ptrs: HashMap<String, *const u8>,
     pub(crate) signatures: HashMap<String, FunctionSignature>,
@@ -26,18 +26,26 @@ pub struct GlslJitModule {
 }
 
 impl GlslJitModule {
+    /// Get function pointer by name
+    pub fn get_function_ptr(&self, name: &str) -> Result<*const u8, GlslError> {
+        use crate::error::ErrorCode;
+        self.function_ptrs
+            .get(name)
+            .copied()
+            .ok_or_else(|| GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found")))
+    }
+
     /// Validate that only "main" function is being called
     fn validate_main_only(&self, name: &str) -> Result<(), GlslError> {
         use crate::error::ErrorCode;
         if name != "main" {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("Only 'main' function is supported, got '{}'", name),
+                format!("Only 'main' function is supported, got '{name}'"),
             ));
         }
         Ok(())
     }
-
 
     // Helper to convert GlslValue to calling convention arguments for JIT
     // Vectors are expanded into multiple scalar arguments matching the calling convention
@@ -71,7 +79,7 @@ impl GlslJitModule {
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got I32", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got I32"),
                         ));
                     }
                 }
@@ -93,13 +101,14 @@ impl GlslJitModule {
                     types::F32 => args.push(v.to_bits() as u64),
                     types::I32 => {
                         // Convert f32 to fixed-point i32 (Q16.16 format)
-                        let fixed = (*v * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                        let fixed =
+                            (*v * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
                         args.push(fixed as u64);
                     }
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got F32", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got F32"),
                         ));
                     }
                 }
@@ -123,7 +132,7 @@ impl GlslJitModule {
                     _ => {
                         return Err(GlslError::new(
                             ErrorCode::E0400,
-                            format!("Type mismatch: expected {:?}, got Bool", param_ty),
+                            format!("Type mismatch: expected {param_ty:?}, got Bool"),
                         ));
                     }
                 }
@@ -147,13 +156,17 @@ impl GlslJitModule {
                         types::F32 => args.push(component.to_bits() as u64),
                         types::I32 => {
                             // Convert f32 to fixed-point i32 (Q16.16 format)
-                            let fixed = (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(fixed as u64);
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec2 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec2 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -178,13 +191,17 @@ impl GlslJitModule {
                         types::F32 => args.push(component.to_bits() as u64),
                         types::I32 => {
                             // Convert f32 to fixed-point i32 (Q16.16 format)
-                            let fixed = (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(fixed as u64);
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec3 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec3 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -209,13 +226,17 @@ impl GlslJitModule {
                         types::F32 => args.push(component.to_bits() as u64),
                         types::I32 => {
                             // Convert f32 to fixed-point i32 (Q16.16 format)
-                            let fixed = (*component * crate::frontend::codegen::constants::FIXED16X16_SCALE) as i32;
+                            let fixed = (*component
+                                * crate::frontend::codegen::constants::FIXED16X16_SCALE)
+                                as i32;
                             args.push(fixed as u64);
                         }
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for vec4 component, got F32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for vec4 component, got F32"
+                                ),
                             ));
                         }
                     }
@@ -242,7 +263,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec2 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec2 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -269,7 +292,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec3 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec3 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -296,7 +321,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for ivec4 component, got I32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for ivec4 component, got I32"
+                                ),
                             ));
                         }
                     }
@@ -323,7 +350,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec2 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec2 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -350,7 +379,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec3 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec3 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -377,7 +408,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for uvec4 component, got U32", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for uvec4 component, got U32"
+                                ),
                             ));
                         }
                     }
@@ -404,7 +437,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec2 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec2 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -431,7 +466,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec3 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec3 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -458,7 +495,9 @@ impl GlslJitModule {
                         _ => {
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Type mismatch: expected {:?} for bvec4 component, got Bool", param_ty),
+                                format!(
+                                    "Type mismatch: expected {param_ty:?} for bvec4 component, got Bool"
+                                ),
                             ));
                         }
                     }
@@ -491,14 +530,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -560,14 +599,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -624,14 +663,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -730,14 +769,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -800,14 +839,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -848,12 +887,12 @@ impl GlslExecutable for GlslJitModule {
         // Boolean values are stored as i8 but with 4-byte alignment (matching return statement codegen)
         let buffer_size = dim * 4;
         let mut buffer = vec![0u8; buffer_size];
-        
+
         if jit_args.is_empty() {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -861,7 +900,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call failed for bvec{}: {}", dim, e),
+                        format!("StructReturn call failed for bvec{dim}: {e}"),
                     )
                 })?;
             }
@@ -869,7 +908,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -878,7 +917,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call with args failed for bvec{}: {}", dim, e),
+                        format!("StructReturn call with args failed for bvec{dim}: {e}"),
                     )
                 })?;
             }
@@ -905,14 +944,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -952,12 +991,12 @@ impl GlslExecutable for GlslJitModule {
         // Use struct return for integer vectors (multiple i32s returned via pointer)
         let buffer_size = dim * 4; // Each i32 is 4 bytes
         let mut buffer = vec![0u8; buffer_size];
-        
+
         if jit_args.is_empty() {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -965,7 +1004,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call failed for ivec{}: {}", dim, e),
+                        format!("StructReturn call failed for ivec{dim}: {e}"),
                     )
                 })?;
             }
@@ -973,7 +1012,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -982,7 +1021,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call with args failed for ivec{}: {}", dim, e),
+                        format!("StructReturn call with args failed for ivec{dim}: {e}"),
                     )
                 })?;
             }
@@ -1015,14 +1054,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -1062,12 +1101,12 @@ impl GlslExecutable for GlslJitModule {
         // Use struct return for unsigned integer vectors (multiple i32s returned via pointer, interpreted as u32)
         let buffer_size = dim * 4; // Each i32/u32 is 4 bytes
         let mut buffer = vec![0u8; buffer_size];
-        
+
         if jit_args.is_empty() {
             unsafe {
                 call_structreturn(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     self.call_conv,
                     self.pointer_type,
@@ -1075,7 +1114,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call failed for uvec{}: {}", dim, e),
+                        format!("StructReturn call failed for uvec{dim}: {e}"),
                     )
                 })?;
             }
@@ -1083,7 +1122,7 @@ impl GlslExecutable for GlslJitModule {
             unsafe {
                 call_structreturn_with_args(
                     *func_ptr,
-                    buffer.as_mut_ptr() as *mut u8,
+                    buffer.as_mut_ptr(),
                     buffer_size,
                     &jit_args,
                     self.call_conv,
@@ -1092,7 +1131,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call with args failed for uvec{}: {}", dim, e),
+                        format!("StructReturn call with args failed for uvec{dim}: {e}"),
                     )
                 })?;
             }
@@ -1125,14 +1164,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -1177,9 +1216,10 @@ impl GlslExecutable for GlslJitModule {
         // Otherwise, check return registers if available
         let return_type = if uses_struct_return {
             // Check if any non-StructReturn parameter is I32 (indicates Fixed32 format)
-            let has_i32_params = sig.params.iter().skip(1).any(|p| {
-                p.purpose != ArgumentPurpose::StructReturn && p.value_type == types::I32
-            });
+            let has_i32_params =
+                sig.params.iter().skip(1).any(|p| {
+                    p.purpose != ArgumentPurpose::StructReturn && p.value_type == types::I32
+                });
             if has_i32_params {
                 types::I32 // Fixed-point
             } else {
@@ -1207,7 +1247,7 @@ impl GlslExecutable for GlslJitModule {
         if return_type == types::I32 {
             // Fixed-point: use i32 buffer, then convert to f32
             let mut i32_buffer = vec![0i32; dim];
-            
+
             if jit_args.is_empty() {
                 // No arguments case - use simpler call
                 unsafe {
@@ -1221,7 +1261,7 @@ impl GlslExecutable for GlslJitModule {
                     .map_err(|e| {
                         GlslError::new(
                             ErrorCode::E0400,
-                            format!("StructReturn call failed for vec{}: {}", dim, e),
+                            format!("StructReturn call failed for vec{dim}: {e}"),
                         )
                     })?;
                 }
@@ -1239,28 +1279,30 @@ impl GlslExecutable for GlslJitModule {
                     .map_err(|e| {
                         GlslError::new(
                             ErrorCode::E0400,
-                            format!("StructReturn call with args failed for vec{}: {}", dim, e),
+                            format!("StructReturn call with args failed for vec{dim}: {e}"),
                         )
                     })?;
                 }
             }
-            
+
             // Convert fixed-point i32 values to f32
             let mut f32_buffer = Vec::with_capacity(dim);
             for fixed_value in i32_buffer {
-                f32_buffer.push(fixed_value as f32 / crate::frontend::codegen::constants::FIXED16X16_SCALE);
+                f32_buffer.push(
+                    fixed_value as f32 / crate::frontend::codegen::constants::FIXED16X16_SCALE,
+                );
             }
             Ok(f32_buffer)
         } else {
             // Native float: use f32 buffer directly
             let mut buffer = vec![0.0f32; dim];
-            
+
             if jit_args.is_empty() {
                 // No arguments case - use simpler call
                 unsafe {
                     call_structreturn(
                         *func_ptr,
-                        buffer.as_mut_ptr() as *mut u8,
+                        buffer.as_mut_ptr(),
                         buffer_size,
                         self.call_conv,
                         self.pointer_type,
@@ -1268,7 +1310,7 @@ impl GlslExecutable for GlslJitModule {
                     .map_err(|e| {
                         GlslError::new(
                             ErrorCode::E0400,
-                            format!("StructReturn call failed for vec{}: {}", dim, e),
+                            format!("StructReturn call failed for vec{dim}: {e}"),
                         )
                     })?;
                 }
@@ -1277,7 +1319,7 @@ impl GlslExecutable for GlslJitModule {
                 unsafe {
                     call_structreturn_with_args(
                         *func_ptr,
-                        buffer.as_mut_ptr() as *mut u8,
+                        buffer.as_mut_ptr(),
                         buffer_size,
                         &jit_args,
                         self.call_conv,
@@ -1286,7 +1328,7 @@ impl GlslExecutable for GlslJitModule {
                     .map_err(|e| {
                         GlslError::new(
                             ErrorCode::E0400,
-                            format!("StructReturn call with args failed for vec{}: {}", dim, e),
+                            format!("StructReturn call with args failed for vec{dim}: {e}"),
                         )
                     })?;
                 }
@@ -1308,14 +1350,14 @@ impl GlslExecutable for GlslJitModule {
         self.validate_main_only(name)?;
 
         let func_ptr = self.function_ptrs.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("Function '{}' not found", name))
+            GlslError::new(ErrorCode::E0101, format!("Function '{name}' not found"))
         })?;
 
         // Get the actual Cranelift signature for this function
         let sig = self.cranelift_signatures.get(name).ok_or_else(|| {
             GlslError::new(
                 ErrorCode::E0101,
-                format!("Function signature for '{}' not found", name),
+                format!("Function signature for '{name}' not found"),
             )
         })?;
 
@@ -1356,7 +1398,7 @@ impl GlslExecutable for GlslJitModule {
         let count = rows * cols;
         let buffer_size = count * core::mem::size_of::<f32>();
         let mut buffer = vec![0.0f32; count];
-        
+
         if jit_args.is_empty() {
             unsafe {
                 call_structreturn(
@@ -1369,7 +1411,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call failed for mat{}x{}: {}", rows, cols, e),
+                        format!("StructReturn call failed for mat{rows}x{cols}: {e}"),
                     )
                 })?;
             }
@@ -1386,7 +1428,7 @@ impl GlslExecutable for GlslJitModule {
                 .map_err(|e| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!("StructReturn call with args failed for mat{}x{}: {}", rows, cols, e),
+                        format!("StructReturn call with args failed for mat{rows}x{cols}: {e}"),
                     )
                 })?;
             }
@@ -1418,7 +1460,7 @@ mod tests {
 
         let options = GlslOptions {
             run_mode: RunMode::HostJit,
-            decimal_format: DecimalFormat::Float,
+            decimal_format: DecimalFormat::Fixed32,
         };
 
         let mut executable = glsl_jit(source, options).expect("Compilation failed");
@@ -1438,7 +1480,7 @@ mod tests {
 
         let options = GlslOptions {
             run_mode: RunMode::HostJit,
-            decimal_format: DecimalFormat::Float,
+            decimal_format: DecimalFormat::Fixed32,
         };
 
         let mut executable = glsl_jit(source, options).expect("Compilation failed");
@@ -1456,11 +1498,12 @@ mod tests {
 
         let options = GlslOptions {
             run_mode: RunMode::HostJit,
-            decimal_format: DecimalFormat::Float,
+            decimal_format: DecimalFormat::Fixed32,
         };
 
         let mut executable = glsl_jit(source, options).expect("Compilation failed");
         let result = executable.call_f32("main", &[]).expect("Execution failed");
+        // Fixed32 format: allow tolerance for fixed-point conversion precision
         assert!((result - 3.14).abs() < 0.01);
     }
 
@@ -1474,7 +1517,7 @@ mod tests {
 
         let options = GlslOptions {
             run_mode: RunMode::HostJit,
-            decimal_format: DecimalFormat::Float,
+            decimal_format: DecimalFormat::Fixed32,
         };
 
         let mut executable = glsl_jit(source, options).expect("Compilation failed");

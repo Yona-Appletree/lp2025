@@ -31,7 +31,7 @@ pub async fn push_project_async(
     // List all files recursively in the project directory
     let entries = local_fs
         .list_dir("/".as_path(), true)
-        .map_err(|e| anyhow::anyhow!("Failed to list project files: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to list project files: {e}"))?;
 
     // Push each file to the server (skip directories)
     for entry_path in entries {
@@ -55,27 +55,29 @@ pub async fn push_project_async(
             Ok(data) => data,
             Err(e) => {
                 // If read fails and it's because it's a directory, skip it
-                if entry_str.ends_with('/') || local_fs.is_dir(entry_path.as_path()).unwrap_or(false) {
+                if entry_str.ends_with('/')
+                    || local_fs.is_dir(entry_path.as_path()).unwrap_or(false)
+                {
                     continue;
                 }
-                return Err(anyhow::anyhow!("Failed to read file {}: {}", entry_str, e));
+                return Err(anyhow::anyhow!("Failed to read file {entry_str}: {e}"));
             }
         };
 
         // Build server path: /projects/{project_uid}/{entry_path}
         // Remove leading '/' from entry_path for server path, then prepend /projects/{project_uid}/
-        let relative_path = if entry_str.starts_with('/') {
-            &entry_str[1..]
+        let relative_path = if let Some(stripped) = entry_str.strip_prefix('/') {
+            stripped
         } else {
             entry_str
         };
-        let server_path = format!("/projects/{}/{}", project_uid, relative_path);
+        let server_path = format!("/projects/{project_uid}/{relative_path}");
 
         // Write file to server
         client
             .fs_write(server_path.as_path(), data)
             .await
-            .with_context(|| format!("Failed to write file to server: {}", server_path))?;
+            .with_context(|| format!("Failed to write file to server: {server_path}"))?;
     }
 
     Ok(())

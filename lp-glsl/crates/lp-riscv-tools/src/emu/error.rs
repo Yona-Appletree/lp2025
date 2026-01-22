@@ -130,8 +130,7 @@ impl core::fmt::Display for EmulatorError {
                 ..
             } => write!(
                 f,
-                "Instruction limit exceeded: executed {} instructions (limit: {}) at PC 0x{:08x}",
-                executed, limit, pc
+                "Instruction limit exceeded: executed {executed} instructions (limit: {limit}) at PC 0x{pc:08x}"
             ),
             EmulatorError::InvalidMemoryAccess {
                 address,
@@ -147,8 +146,7 @@ impl core::fmt::Display for EmulatorError {
                 };
                 write!(
                     f,
-                    "Invalid memory {} at address 0x{:08x} (size: {} bytes) at PC 0x{:08x}",
-                    kind_str, address, size, pc
+                    "Invalid memory {kind_str} at address 0x{address:08x} (size: {size} bytes) at PC 0x{pc:08x}"
                 )
             }
             EmulatorError::InvalidInstruction {
@@ -158,8 +156,7 @@ impl core::fmt::Display for EmulatorError {
                 ..
             } => write!(
                 f,
-                "Invalid instruction 0x{:08x} at PC 0x{:08x}: {}",
-                instruction, pc, reason
+                "Invalid instruction 0x{instruction:08x} at PC 0x{pc:08x}: {reason}"
             ),
             EmulatorError::UnalignedAccess {
                 address,
@@ -168,9 +165,8 @@ impl core::fmt::Display for EmulatorError {
                 ..
             } => write!(
                 f,
-                "Unaligned memory access at address 0x{:08x} (requires {} byte alignment) at PC \
-                 0x{:08x}",
-                address, alignment, pc
+                "Unaligned memory access at address 0x{address:08x} (requires {alignment} byte alignment) at PC \
+                 0x{pc:08x}"
             ),
             EmulatorError::UnknownOpcode {
                 opcode,
@@ -179,27 +175,25 @@ impl core::fmt::Display for EmulatorError {
                 ..
             } => write!(
                 f,
-                "Unknown opcode 0x{:02x} in instruction 0x{:08x} at PC 0x{:08x}",
-                opcode, instruction, pc
+                "Unknown opcode 0x{opcode:02x} in instruction 0x{instruction:08x} at PC 0x{pc:08x}"
             ),
             EmulatorError::InvalidRegister { reg, pc, reason } => write!(
                 f,
-                "Invalid register access: {:?} at PC 0x{:08x}: {}",
-                reg, pc, reason
+                "Invalid register access: {reg:?} at PC 0x{pc:08x}: {reason}"
             ),
             EmulatorError::Trap { code, pc, .. } => {
                 let trap_name = trap_code_to_string(*code);
-                write!(f, "Trap: {} at PC 0x{:08x}", trap_name, pc)
+                write!(f, "Trap: {trap_name} at PC 0x{pc:08x}")
             }
             EmulatorError::Panic { info, pc, .. } => {
                 write!(f, "Panic at PC 0x{:08x}: {}", pc, info.message)?;
                 if let Some(ref file) = info.file {
-                    write!(f, "\n  at {}", file)?;
+                    write!(f, "\n  at {file}")?;
                     if let Some(line) = info.line {
-                        write!(f, ":{}", line)?;
+                        write!(f, ":{line}")?;
                     }
                 } else if let Some(line) = info.line {
-                    write!(f, "\n  at line {}", line)?;
+                    write!(f, "\n  at line {line}")?;
                 }
                 Ok(())
             }

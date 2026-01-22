@@ -1,7 +1,6 @@
 //! Section loading into memory buffers.
 
 use super::memory::{is_ram_address, is_rom_address, ram_address_to_offset};
-use crate::debug;
 use alloc::format;
 use alloc::string::{String, ToString};
 use object::{Object, ObjectSection, ObjectSymbol};
@@ -112,7 +111,7 @@ pub fn load_sections(obj: &object::File, rom: &mut [u8], _ram: &mut [u8]) -> Res
         // Get section data
         let data = section
             .data()
-            .map_err(|e| format!("Failed to read section '{}' data: {}", section_name, e))?;
+            .map_err(|e| format!("Failed to read section '{section_name}' data: {e}"))?;
 
         if data.is_empty() {
             continue;

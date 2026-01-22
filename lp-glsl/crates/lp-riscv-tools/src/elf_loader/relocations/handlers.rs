@@ -1,6 +1,5 @@
 //! Individual relocation type handlers.
 
-use crate::debug;
 use alloc::format;
 use alloc::string::String;
 use hashbrown::HashMap;
@@ -88,8 +87,7 @@ pub fn handle_got_hi20(ctx: &mut RelocationContext, reloc: &RelocationInfo) -> R
     let offset = reloc.offset as usize;
     if offset + 4 > ctx.buffer.len() {
         return Err(format!(
-            "GOT_HI20 relocation at offset {} requires 4 bytes",
-            offset
+            "GOT_HI20 relocation at offset {offset} requires 4 bytes"
         ));
     }
 
@@ -190,8 +188,7 @@ pub fn handle_pcrel_hi20(
     let offset = reloc.offset as usize;
     if offset + 4 > ctx.buffer.len() {
         return Err(format!(
-            "PCREL_HI20 relocation at offset {} requires 4 bytes",
-            offset
+            "PCREL_HI20 relocation at offset {offset} requires 4 bytes"
         ));
     }
 
@@ -258,8 +255,7 @@ pub fn handle_pcrel_lo12_i(
     let offset = reloc.offset as usize;
     if offset + 4 > ctx.buffer.len() {
         return Err(format!(
-            "PCREL_LO12_I relocation at offset {} requires 4 bytes",
-            offset
+            "PCREL_LO12_I relocation at offset {offset} requires 4 bytes"
         ));
     }
 
@@ -325,8 +321,7 @@ pub fn handle_pcrel_lo12_i(
 
         if auipc_buffer_offset >= ctx.buffer.len() || auipc_buffer_offset + 4 > ctx.buffer.len() {
             return Err(format!(
-                "Cannot read auipc instruction for PCREL_LO12_I: auipc would be at buffer offset {}",
-                auipc_buffer_offset
+                "Cannot read auipc instruction for PCREL_LO12_I: auipc would be at buffer offset {auipc_buffer_offset}"
             ));
         }
 
@@ -433,7 +428,7 @@ pub fn handle_pcrel_lo12_i(
 }
 
 /// Handle R_RISCV_32 (1): 32-bit absolute relocation (used for GOT entry initialization).
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Reserved for future GOT handling")]
 pub fn handle_abs32(
     ctx: &mut RelocationContext,
     reloc: &RelocationInfo,
@@ -444,8 +439,7 @@ pub fn handle_abs32(
     let offset = reloc.offset as usize;
     if offset + 4 > ctx.buffer.len() {
         return Err(format!(
-            "R_RISCV_32 relocation at offset {} requires 4 bytes",
-            offset
+            "R_RISCV_32 relocation at offset {offset} requires 4 bytes"
         ));
     }
 
@@ -500,8 +494,7 @@ mod tests {
         let effective_addr = auipc_result.wrapping_add(lo12);
         assert_eq!(
             effective_addr, symbol_addr,
-            "auipc_result=0x{:x}, lo12=0x{:x}, effective=0x{:x}, expected=0x{:x}",
-            auipc_result, lo12, effective_addr, symbol_addr
+            "auipc_result=0x{auipc_result:x}, lo12=0x{lo12:x}, effective=0x{effective_addr:x}, expected=0x{symbol_addr:x}"
         );
     }
 
@@ -559,8 +552,7 @@ mod tests {
             let effective_addr = auipc_result.wrapping_add(lo12);
             assert_eq!(
                 effective_addr, symbol_addr,
-                "Failed for auipc_pc=0x{:x}, symbol_addr=0x{:x}: auipc_result=0x{:x}, lo12=0x{:x}, effective=0x{:x}",
-                auipc_pc, symbol_addr, auipc_result, lo12, effective_addr
+                "Failed for auipc_pc=0x{auipc_pc:x}, symbol_addr=0x{symbol_addr:x}: auipc_result=0x{auipc_result:x}, lo12=0x{lo12:x}, effective=0x{effective_addr:x}"
             );
         }
     }

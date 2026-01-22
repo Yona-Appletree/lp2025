@@ -80,6 +80,9 @@ pub trait ClientTransport: Send {
     ///
     /// * `Ok(())` if the transport was closed successfully (or already closed)
     /// * `Err(TransportError)` if closing failed
-    #[allow(dead_code)] // Required trait method, will be used in cleanup scenarios
+    #[allow(
+        dead_code,
+        reason = "Required trait method, will be used in cleanup scenarios"
+    )]
     async fn close(&mut self) -> Result<(), TransportError>;
 }

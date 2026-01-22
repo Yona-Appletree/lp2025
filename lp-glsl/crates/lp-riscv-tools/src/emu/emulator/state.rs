@@ -62,6 +62,11 @@ impl Riscv32Emulator {
         self
     }
 
+    /// Set the maximum number of instructions to execute (mutating method).
+    pub fn set_max_instructions(&mut self, limit: u64) {
+        self.max_instructions = limit;
+    }
+
     /// Set the logging level.
     pub fn with_log_level(mut self, level: LogLevel) -> Self {
         self.log_level = level;

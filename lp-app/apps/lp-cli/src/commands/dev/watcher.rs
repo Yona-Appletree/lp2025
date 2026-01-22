@@ -14,7 +14,7 @@ pub struct FileWatcher {
     /// Receiver for file change events
     event_receiver: mpsc::UnboundedReceiver<FsChange>,
     /// Root path of the project (for path normalization)
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Stored for path normalization")]
     root_path: PathBuf,
     /// Watcher handle (kept alive to continue watching)
     _watcher: notify::RecommendedWatcher,
@@ -33,9 +33,9 @@ impl FileWatcher {
     /// * `Err` if watcher creation failed
     pub fn new(root_path: PathBuf) -> Result<Self> {
         // Canonicalize root path to handle symlinks (e.g., /private/var on macOS)
-        let canonical_root = root_path
-            .canonicalize()
-            .with_context(|| format!("Failed to canonicalize root path: {}", root_path.display()))?;
+        let canonical_root = root_path.canonicalize().with_context(|| {
+            format!("Failed to canonicalize root path: {}", root_path.display())
+        })?;
 
         // Create channel for events (use unbounded to avoid blocking in sync callback)
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -52,7 +52,7 @@ impl FileWatcher {
                         // Process event synchronously (we're in a blocking thread)
                         let root = root_path_clone.clone();
                         let tx = event_tx.clone();
-                        
+
                         // Process each path in the event
                         for path in event.paths {
                             // Skip if it's a directory (we only sync files)
@@ -69,7 +69,7 @@ impl FileWatcher {
                             let normalized_path = match Self::normalize_path_sync(&path, &root) {
                                 Ok(p) => p,
                                 Err(e) => {
-                                    eprintln!("Error normalizing path {:?}: {}", path, e);
+                                    eprintln!("Error normalizing path {path:?}: {e}");
                                     continue;
                                 }
                             };
@@ -104,7 +104,7 @@ impl FileWatcher {
                         }
                     }
                     Err(e) => {
-                        eprintln!("File watcher error: {}", e);
+                        eprintln!("File watcher error: {e}");
                     }
                 }
             },
@@ -179,10 +179,7 @@ impl FileWatcher {
         let relative = canonical_absolute
             .strip_prefix(&canonical_root)
             .with_context(|| {
-                format!(
-                    "Path {:?} is not within root {:?}",
-                    canonical_absolute, canonical_root
-                )
+                format!("Path {canonical_absolute:?} is not within root {canonical_root:?}")
             })?;
 
         // Convert to string with leading /
@@ -190,7 +187,7 @@ impl FileWatcher {
         if path_str.starts_with('/') {
             Ok(path_str)
         } else {
-            Ok(format!("/{}", path_str))
+            Ok(format!("/{path_str}"))
         }
     }
 
@@ -210,8 +207,8 @@ impl FileWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::time::Duration;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_filewatcher_creation() {
@@ -247,13 +244,13 @@ mod tests {
     async fn test_filewatcher_detects_modify() {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test.txt");
-        
+
         // Create file first
         std::fs::write(&test_file, b"initial").unwrap();
-        
+
         // Create watcher after file exists
         let mut watcher = FileWatcher::new(temp_dir.path().to_path_buf()).unwrap();
-        
+
         // Give watcher time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -280,13 +277,13 @@ mod tests {
     async fn test_filewatcher_detects_delete() {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test.txt");
-        
+
         // Create file first
         std::fs::write(&test_file, b"content").unwrap();
-        
+
         // Create watcher after file exists
         let mut watcher = FileWatcher::new(temp_dir.path().to_path_buf()).unwrap();
-        
+
         // Give watcher time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -297,7 +294,9 @@ mod tests {
         // Note: Some OSes may report delete events differently, so we may need to wait for multiple events
         let mut found_delete = false;
         for _ in 0..5 {
-            if let Ok(Some(change)) = tokio::time::timeout(Duration::from_secs(1), watcher.next_change()).await {
+            if let Ok(Some(change)) =
+                tokio::time::timeout(Duration::from_secs(1), watcher.next_change()).await
+            {
                 if change.path.as_str() == "/test.txt" {
                     if change.change_type == ChangeType::Delete {
                         found_delete = true;

@@ -15,13 +15,35 @@ members = [
     "lp-glsl/crates/lp-jit-util",
     "lp-glsl/crates/lp-riscv-shared",
     "lp-glsl/crates/lp-riscv-tools",
-    "lp-glsl/apps/esp32-glsl-jit",
     "lp-glsl/apps/lp-builtin-gen",
     "lp-glsl/apps/lp-builtins-app",
     "lp-glsl/apps/lp-test",
-    "lp-glsl/apps/test-structreturn",
+    "lp-glsl/apps/esp32-glsl-jit",
 ]
 resolver = "2"
+
+# Exclude lp-builtins-app and esp32-glsl-jit from default workspace builds (they're no_std, only build for RISC-V)
+# They're still in workspace members so they can use workspace dependencies
+# Build them explicitly with: just build-builtins or just esp32-build
+default-members = [
+    # lp-app workspace members
+    "lp-app/crates/lp-engine",
+    "lp-app/crates/lp-engine-client",
+    "lp-app/crates/lp-shared",
+    "lp-app/crates/lp-server",
+    "lp-app/apps/lp-cli",
+    "lp-app/crates/lp-model",
+    # lp-glsl workspace members (excluding lp-builtins-app)
+    "lp-glsl/crates/lp-builtins",
+    "lp-glsl/crates/lp-filetests-gen",
+    "lp-glsl/crates/lp-glsl-compiler",
+    "lp-glsl/crates/lp-glsl-filetests",
+    "lp-glsl/crates/lp-jit-util",
+    "lp-glsl/crates/lp-riscv-shared",
+    "lp-glsl/crates/lp-riscv-tools",
+    "lp-glsl/apps/lp-builtin-gen",
+    "lp-glsl/apps/lp-test",
+]
 
 [workspace.package]
 version = "40.0.0"
@@ -71,6 +93,7 @@ cranelift-interpreter = { git = "https://github.com/Yona-Appletree/lp-cranelift.
 target-lexicon = "0.13.0"
 hashbrown = { version = "0.15", default-features = false, features = ["alloc", "default-hasher"] }
 anyhow = { version = "1.0.100", default-features = false }
+log = { version = "0.4", default-features = false }
 regex = "1.9.1"
 glob = "0.3.3"
 object = { version = "0.37.3", default-features = false, features = ['read_core', 'elf'] }
@@ -83,11 +106,12 @@ serde_json = { version = "1.0.80", default-features = false, features = ["alloc"
 # This applies to all packages in the workspace
 lto = true
 
+# ESP32 app release profile optimizations (embedded target)
 [profile.release.package.esp32-glsl-jit]
-# Size optimizations for embedded target (ESP32-C3)
 # Strip debuginfo but keep symbols (needed for defmt/probe-rs) - saves ~1-1.5 MB
 strip = "debuginfo"
 # Optimize for size instead of speed - saves ~200-500 KB
 opt-level = "z"
 # Single codegen unit for better dead code elimination - saves ~50-100 KB
 codegen-units = 1
+# Note: lto is inherited from workspace [profile.release]

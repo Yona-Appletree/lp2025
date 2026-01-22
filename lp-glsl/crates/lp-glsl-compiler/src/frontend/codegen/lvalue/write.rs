@@ -4,6 +4,8 @@ use crate::error::{ErrorCode, GlslError};
 use crate::frontend::codegen::context::CodegenContext;
 use cranelift_codegen::ir::{InstBuilder, Value};
 
+use alloc::format;
+
 use super::super::expr::component;
 use super::types::LValue;
 
@@ -285,7 +287,7 @@ pub fn write_lvalue<M: cranelift_module::Module>(
                 } else {
                     Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("unsupported array element type: {:?}", element_ty),
+                        format!("unsupported array element type: {element_ty:?}"),
                     ))
                 }
             }

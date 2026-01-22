@@ -38,7 +38,7 @@ where
     // Dispatch to platform-specific implementation
     #[cfg(target_arch = "aarch64")]
     {
-        return match (call_conv, pointer_type) {
+        match (call_conv, pointer_type) {
             (CallConv::AppleAarch64, types::I64) => unsafe {
                 call_structreturn_arm64_apple(func_ptr, buffer as *mut u8, buffer_size)
             },
@@ -49,7 +49,7 @@ where
                 call_conv,
                 pointer_type,
             }),
-        };
+        }
     }
 
     #[cfg(target_arch = "riscv32")]
@@ -152,18 +152,28 @@ where
     // Dispatch to platform-specific implementation
     #[cfg(target_arch = "aarch64")]
     {
-        return match (call_conv, pointer_type) {
+        match (call_conv, pointer_type) {
             (CallConv::AppleAarch64, types::I64) => unsafe {
-                call_structreturn_arm64_apple_with_args(func_ptr, buffer as *mut u8, buffer_size, args)
+                call_structreturn_arm64_apple_with_args(
+                    func_ptr,
+                    buffer as *mut u8,
+                    buffer_size,
+                    args,
+                )
             },
             (CallConv::SystemV, types::I64) => unsafe {
-                call_structreturn_arm64_systemv_with_args(func_ptr, buffer as *mut u8, buffer_size, args)
+                call_structreturn_arm64_systemv_with_args(
+                    func_ptr,
+                    buffer as *mut u8,
+                    buffer_size,
+                    args,
+                )
             },
             _ => Err(JitCallError::UnsupportedCallingConvention {
                 call_conv,
                 pointer_type,
             }),
-        };
+        }
     }
 
     #[cfg(target_arch = "riscv32")]
@@ -201,7 +211,7 @@ unsafe fn call_structreturn_arm64_apple_with_args(
     // On AppleAarch64, StructReturn uses x8 register
     // Regular arguments go in x0-x7, then stack
     // We'll use inline assembly to set up the call
-    
+
     // Limit to reasonable number of arguments (8 register + some stack)
     if args.len() > 16 {
         return Err(JitCallError::UnsupportedCallingConvention {
@@ -214,10 +224,10 @@ unsafe fn call_structreturn_arm64_apple_with_args(
         // Prepare arguments: first 8 go in x0-x7, rest on stack
         // StructReturn pointer goes in x8
         // Function pointer goes in x9 (temp)
-        
+
         // For simplicity, we'll use a macro to generate the call based on argument count
         // This is a bit verbose but ensures correct calling convention
-        
+
         match args.len() {
             0 => {
                 asm!(
@@ -470,7 +480,7 @@ unsafe fn call_structreturn_riscv32_with_args(
     // RISC-V32 SystemV: StructReturn pointer is first argument (a0)
     // Regular arguments follow in a1-a7, then stack
     // We need to construct a function pointer with the right signature
-    
+
     // Limit to reasonable number of arguments
     if args.len() > 8 {
         return Err(JitCallError::UnsupportedCallingConvention {
@@ -500,29 +510,74 @@ unsafe fn call_structreturn_riscv32_with_args(
                 func(buffer, args[0] as u32, args[1] as u32, args[2] as u32);
             }
             4 => {
-                let func: extern "C" fn(*mut u8, u32, u32, u32, u32) = core::mem::transmute(func_ptr);
-                func(buffer, args[0] as u32, args[1] as u32, args[2] as u32, args[3] as u32);
+                let func: extern "C" fn(*mut u8, u32, u32, u32, u32) =
+                    core::mem::transmute(func_ptr);
+                func(
+                    buffer,
+                    args[0] as u32,
+                    args[1] as u32,
+                    args[2] as u32,
+                    args[3] as u32,
+                );
             }
             5 => {
-                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32) = core::mem::transmute(func_ptr);
-                func(buffer, args[0] as u32, args[1] as u32, args[2] as u32, args[3] as u32, args[4] as u32);
+                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32) =
+                    core::mem::transmute(func_ptr);
+                func(
+                    buffer,
+                    args[0] as u32,
+                    args[1] as u32,
+                    args[2] as u32,
+                    args[3] as u32,
+                    args[4] as u32,
+                );
             }
             6 => {
-                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32) = core::mem::transmute(func_ptr);
-                func(buffer, args[0] as u32, args[1] as u32, args[2] as u32, args[3] as u32, args[4] as u32, args[5] as u32);
+                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32) =
+                    core::mem::transmute(func_ptr);
+                func(
+                    buffer,
+                    args[0] as u32,
+                    args[1] as u32,
+                    args[2] as u32,
+                    args[3] as u32,
+                    args[4] as u32,
+                    args[5] as u32,
+                );
             }
             7 => {
-                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32, u32) = core::mem::transmute(func_ptr);
-                func(buffer, args[0] as u32, args[1] as u32, args[2] as u32, args[3] as u32, args[4] as u32, args[5] as u32, args[6] as u32);
+                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32, u32) =
+                    core::mem::transmute(func_ptr);
+                func(
+                    buffer,
+                    args[0] as u32,
+                    args[1] as u32,
+                    args[2] as u32,
+                    args[3] as u32,
+                    args[4] as u32,
+                    args[5] as u32,
+                    args[6] as u32,
+                );
             }
             _ => {
                 // 8 arguments: first 7 in a1-a7, 8th on stack (but we'll pass all 8)
-                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32, u32, u32) = core::mem::transmute(func_ptr);
-                func(buffer, args[0] as u32, args[1] as u32, args[2] as u32, args[3] as u32, args[4] as u32, args[5] as u32, args[6] as u32, args[7] as u32);
+                let func: extern "C" fn(*mut u8, u32, u32, u32, u32, u32, u32, u32, u32) =
+                    core::mem::transmute(func_ptr);
+                func(
+                    buffer,
+                    args[0] as u32,
+                    args[1] as u32,
+                    args[2] as u32,
+                    args[3] as u32,
+                    args[4] as u32,
+                    args[5] as u32,
+                    args[6] as u32,
+                    args[7] as u32,
+                );
             }
         }
     }
-    
+
     Ok(())
 }
 

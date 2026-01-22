@@ -22,12 +22,12 @@ pub enum TransportError {
 impl fmt::Display for TransportError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TransportError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            TransportError::Serialization(msg) => write!(f, "Serialization error: {msg}"),
             TransportError::Deserialization(msg) => {
-                write!(f, "Deserialization error: {}", msg)
+                write!(f, "Deserialization error: {msg}")
             }
             TransportError::ConnectionLost => write!(f, "Connection lost"),
-            TransportError::Other(msg) => write!(f, "Transport error: {}", msg),
+            TransportError::Other(msg) => write!(f, "Transport error: {msg}"),
         }
     }
 }

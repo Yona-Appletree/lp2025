@@ -38,7 +38,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
             SimpleStatement::Jump(jump) => self.emit_jump_stmt(jump),
             _ => Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("statement type not supported: {:?}", stmt),
+                format!("statement type not supported: {stmt:?}"),
             )),
         }
     }

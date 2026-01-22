@@ -95,7 +95,7 @@ fn emit_unary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("unary minus not supported for {:?}", operand_ty),
+                        format!("unary minus not supported for {operand_ty:?}"),
                     ));
                 }
             }
@@ -104,7 +104,7 @@ fn emit_unary_op<M: cranelift_module::Module>(
             if operand_ty != &GlslType::Bool {
                 return Err(GlslError::new(
                     ErrorCode::E0107,
-                    format!("logical NOT requires bool, got {:?}", operand_ty),
+                    format!("logical NOT requires bool, got {operand_ty:?}"),
                 ));
             }
             let zero = ctx.builder.ins().iconst(types::I8, 0);
@@ -127,7 +127,7 @@ fn emit_unary_op<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("unary operator not supported yet: {:?}", op),
+                format!("unary operator not supported yet: {op:?}"),
             ));
         }
     };

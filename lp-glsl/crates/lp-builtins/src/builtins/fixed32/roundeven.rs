@@ -16,7 +16,9 @@ pub extern "C" fn __lp_fixed32_roundeven(x: i32) -> i32 {
     }
 
     // Extract integer and fractional parts
-    let integer_part = x >> 16;
+    // For negative numbers, right shift rounds toward negative infinity, not toward zero
+    // So we need to adjust: add 0xFFFF before shifting to truncate toward zero
+    let integer_part = if x >= 0 { x >> 16 } else { (x + 0xFFFF) >> 16 };
     let fractional_part = x & 0xFFFF;
 
     // Check if we're at halfway point (fractional part == 0x8000 = 0.5)
@@ -38,15 +40,10 @@ pub extern "C" fn __lp_fixed32_roundeven(x: i32) -> i32 {
             }
         }
     } else {
-        // Normal rounding: add/subtract 0.5 and truncate
+        // Normal rounding: add 0.5 and truncate (works for both positive and negative)
         let half = 0x8000i32;
-        if x > 0 {
-            let added = x.wrapping_add(half);
-            (added >> 16) << 16
-        } else {
-            let subtracted = x.wrapping_sub(half);
-            (subtracted >> 16) << 16
-        }
+        let added = x.wrapping_add(half);
+        (added >> 16) << 16
     }
 }
 

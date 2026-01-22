@@ -114,7 +114,7 @@ fn emit_incdec<M: cranelift_module::Module>(
             _ => {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!("increment/decrement not supported for type {:?}", base_ty),
+                    format!("increment/decrement not supported for type {base_ty:?}"),
                 )
                 .with_location(source_span_to_location(&span)));
             }

@@ -2,9 +2,9 @@
 //!
 //! Defines request and response types for filesystem operations.
 
+use crate::LpPathBuf;
 use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
-use crate::LpPathBuf;
 
 /// Filesystem operation request
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,11 +36,20 @@ pub enum FsResponse {
         error: Option<String>,
     },
     /// Response to Write request
-    Write { path: LpPathBuf, error: Option<String> },
+    Write {
+        path: LpPathBuf,
+        error: Option<String>,
+    },
     /// Response to DeleteFile request
-    DeleteFile { path: LpPathBuf, error: Option<String> },
+    DeleteFile {
+        path: LpPathBuf,
+        error: Option<String>,
+    },
     /// Response to DeleteDir request
-    DeleteDir { path: LpPathBuf, error: Option<String> },
+    DeleteDir {
+        path: LpPathBuf,
+        error: Option<String>,
+    },
     /// Response to ListDir request
     ListDir {
         path: LpPathBuf,

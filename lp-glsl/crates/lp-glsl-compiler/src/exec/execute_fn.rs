@@ -21,17 +21,17 @@ pub fn execute_function(
     // Try to get the signature to determine return type
     let sig = executable
         .get_function_signature(name)
-        .ok_or_else(|| anyhow::anyhow!("function '{}' not found", name))?;
+        .ok_or_else(|| anyhow::anyhow!("function '{name}' not found"))?;
 
     // Helper to add emulator state to error if available
     fn format_error(e: crate::error::GlslError, executable: &dyn GlslExecutable) -> anyhow::Error {
         // Use {:#} format to preserve location and span_text formatting
         // Notes are already included in the Display implementation
-        let error_msg = format!("{:#}", e);
+        let error_msg = format!("{e:#}");
         if let Some(state) = executable.format_emulator_state() {
-            anyhow::anyhow!("{}{}", error_msg, state)
+            anyhow::anyhow!("{error_msg}{state}")
         } else {
-            anyhow::anyhow!("{}", error_msg)
+            anyhow::anyhow!("{error_msg}")
         }
     }
 

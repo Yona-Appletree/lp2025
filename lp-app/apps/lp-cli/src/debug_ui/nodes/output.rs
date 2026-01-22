@@ -25,10 +25,10 @@ pub fn render_output_panel(ui: &mut egui::Ui, entry: &ClientNodeEntry, state: &O
         for chunk in state.channel_data.chunks(16) {
             let hex: String = chunk
                 .iter()
-                .map(|b| format!("{:02x}", b))
+                .map(|b| format!("{b:02x}"))
                 .collect::<Vec<_>>()
                 .join(" ");
-            ui.label(format!("  {}", hex));
+            ui.label(format!("  {hex}"));
         }
     }
 }

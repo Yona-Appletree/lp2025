@@ -3,7 +3,7 @@
 //! This module provides a comprehensive system for managing source locations
 //! that supports multiple files, intrinsics, and synthetic sources.
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
 #[cfg(feature = "std")]
 use std::path::PathBuf;
@@ -273,12 +273,12 @@ impl GlSourceMap {
         for (idx, line) in source_lines.iter().enumerate() {
             let line_num = start_line + idx;
             if line_num == span.start_line {
-                source_display.push_str(&format!("{:>4} | {}\n", line_num, line));
+                source_display.push_str(&format!("{line_num:>4} | {line}\n"));
                 // Point to the column if it's valid
                 let col_pos = span.start_column.saturating_sub(1).min(line.len()).min(200);
                 source_display.push_str(&format!("     | {}^ here\n", " ".repeat(col_pos)));
             } else {
-                source_display.push_str(&format!("{:>4} | {}\n", line_num, line));
+                source_display.push_str(&format!("{line_num:>4} | {line}\n"));
             }
         }
         Some(String::from(source_display.trim_end()))
@@ -297,9 +297,9 @@ mod tests {
 
     // Mock SourceSpan for testing (since we can't import glsl-parser in tests easily)
     struct MockSourceSpan {
-        #[allow(dead_code)]
+        #[allow(dead_code, reason = "Mock struct fields for testing")]
         pub line: usize,
-        #[allow(dead_code)]
+        #[allow(dead_code, reason = "Mock struct fields for testing")]
         pub column: usize,
     }
 

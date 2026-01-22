@@ -7,7 +7,7 @@
 use crate::semantic::types::Type as GlslType;
 use cranelift_codegen::ir::Value;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 /// Represents an RValue (right-hand value) - a computed value
 ///

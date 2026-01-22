@@ -29,8 +29,7 @@ fn decode_c0(inst: u16, funct3: u16) -> Result<Inst, String> {
         0b010 => decode_c_lw(inst),       // C.LW
         0b110 => decode_c_sw(inst),       // C.SW
         _ => Err(format!(
-            "Unknown C0 instruction: funct3={:03b}, inst=0x{:04x}",
-            funct3, inst
+            "Unknown C0 instruction: funct3={funct3:03b}, inst=0x{inst:04x}"
         )),
     }
 }
@@ -58,8 +57,7 @@ fn decode_c2(inst: u16, funct3: u16) -> Result<Inst, String> {
         0b100 => decode_c_misc_cr(inst), // C.JR, C.MV, C.JALR, C.ADD
         0b110 => decode_c_swsp(inst),    // C.SWSP
         _ => Err(format!(
-            "Unknown C2 instruction: funct3={:03b}, inst=0x{:04x}",
-            funct3, inst
+            "Unknown C2 instruction: funct3={funct3:03b}, inst=0x{inst:04x}"
         )),
     }
 }
@@ -268,8 +266,7 @@ fn decode_c_misc_alu(inst: u16) -> Result<Inst, String> {
                 (0b100011, 0b10) => Ok(Inst::COr { rd, rs }),
                 (0b100011, 0b11) => Ok(Inst::CAnd { rd, rs }),
                 _ => Err(format!(
-                    "Unknown C.MISC_ALU instruction: funct6={:06b}, inst=0x{:04x}",
-                    funct6, inst
+                    "Unknown C.MISC_ALU instruction: funct6={funct6:06b}, inst=0x{inst:04x}"
                 )),
             }
         }
@@ -380,8 +377,7 @@ fn decode_c_misc_cr(inst: u16) -> Result<Inst, String> {
             })
         }
         _ => Err(format!(
-            "Unknown C.MISC_CR instruction: funct4={:04b}, rd_rs1={}, rs2={}, inst=0x{:04x}",
-            funct4, rd_rs1, rs2, inst
+            "Unknown C.MISC_CR instruction: funct4={funct4:04b}, rd_rs1={rd_rs1}, rs2={rs2}, inst=0x{inst:04x}"
         )),
     }
 }
