@@ -2,63 +2,102 @@
 # Common development tasks
 
 # Variables
-riscv_target := "riscv32imac-unknown-none-elf"
+rv32_target := "riscv32imac-unknown-none-elf"
+rv32_packages := "esp32-glsl-jit lp-builtins-app"
 lp_glsl_dir := "lp-glsl"
-esp32_app_dir := "lp-glsl/apps/esp32-glsl-jit"
-builtins_app_dir := "lp-glsl/apps/lp-builtins-app"
-builtins_exe := "target/{{riscv_target}}/release/lp-builtins-app"
 
 # Default recipe - show available commands
 default:
     @just --list
 
-# Build workspace (host target only, excludes ESP32 app)
-build:
-    cargo build
+# ============================================================================
+# Target setup
+# ============================================================================
 
-# Build workspace in release mode
-build-release:
-    cargo build --release
+# Ensure RISC-V target is installed
+install-rv32-target:
+    @if ! rustup target list --installed | grep -q "^{{rv32_target}}$"; then \
+        echo "Installing target {{rv32_target}}..."; \
+        rustup target add {{rv32_target}}; \
+    else \
+        echo "Target {{rv32_target}} already installed"; \
+    fi
 
 # Generate builtin boilerplate code
 generate-builtins:
     cargo run --bin lp-builtin-gen -p lp-builtin-gen
 
-# Ensure RISC-V target is installed
-install-target:
-    @if ! rustup target list --installed | grep -q "^{{riscv_target}}$"; then \
-        echo "Installing target {{riscv_target}}..."; \
-        rustup target add {{riscv_target}}; \
-    else \
-        echo "Target {{riscv_target}} already installed"; \
-    fi
+# ============================================================================
+# Build commands
+# ============================================================================
 
-# Build lp-builtins-app for emulator tests
+# Build host target packages (default workspace)
+build-host:
+    cargo build
+
+# Build host target packages in release mode
+build-host-release:
+    cargo build --release
+
+# Build RISC-V target packages
+# Note: esp32-glsl-jit is too large for debug builds, so it's built in release mode
+build-rv32: install-rv32-target
+    @echo "Building RISC-V packages ({{rv32_target}})..."
+    cargo build --target {{rv32_target}} -p lp-builtins-app
+    cargo build --target {{rv32_target}} -p esp32-glsl-jit --release
+
+# Build RISC-V target packages in release mode
+build-rv32-release: install-rv32-target
+    @echo "Building RISC-V packages in release mode ({{rv32_target}})..."
+    cargo build --target {{rv32_target}} -p esp32-glsl-jit -p lp-builtins-app --release
+
+# Build all packages (host and RISC-V)
+build: build-host build-rv32
+
+# Build all packages in release mode
+build-release: build-host-release build-rv32-release
+
+# Build lp-builtins-app with special flags for filetests
 # This is required before running tests that use the emulator
-# Note: lp-builtins-app is excluded from default-members but still in workspace
-build-builtins: generate-builtins install-target
-    @echo "Building lp-builtins-app for {{riscv_target}}..."
+filetests-setup: generate-builtins install-rv32-target
+    @echo "Building lp-builtins-app for filetests ({{rv32_target}})..."
     RUSTFLAGS="-C opt-level=1 -C panic=abort -C overflow-checks=off -C debuginfo=0 -C link-dead-code=off -C codegen-units=1" \
     cargo build \
-        --target {{riscv_target}} \
+        --target {{rv32_target}} \
         --package lp-builtins-app \
         --release
     @if command -v nm > /dev/null 2>&1; then \
-        LP_SYMBOLS=`nm target/{{riscv_target}}/release/lp-builtins-app 2>/dev/null | grep "__lp_" | wc -l | xargs`; \
+        LP_SYMBOLS=`nm target/{{rv32_target}}/release/lp-builtins-app 2>/dev/null | grep "__lp_" | wc -l | xargs`; \
         echo "✓ lp-builtins-app built with $LP_SYMBOLS built-ins"; \
     fi
 
-# Run all tests (builds builtins-app first if needed)
-test: build-builtins
-    cargo test
-
-# Run GLSL filetests specifically
-test-filetests: build-builtins
-    cargo test -p lp-glsl-filetests --test filetests
+# ============================================================================
+# Formatting
+# ============================================================================
 
 # Format code
 fmt:
     cargo fmt --all
+
+# Check formatting without modifying files
+fmt-check:
+    cargo fmt --all -- --check
+
+# ============================================================================
+# Linting
+# ============================================================================
+
+# Run clippy on host target packages
+clippy-host:
+    cargo clippy --workspace --exclude lp-builtins-app --exclude esp32-glsl-jit -- --no-deps -D warnings
+
+# Run clippy on RISC-V target packages (esp32-glsl-jit only, lp-builtins-app is mostly generated code)
+clippy-rv32: install-rv32-target
+    @echo "Running clippy on RISC-V packages ({{rv32_target}})..."
+    cargo clippy --target {{rv32_target}} -p esp32-glsl-jit -- --no-deps -D warnings
+
+# Run clippy on all packages (host and RISC-V)
+clippy: clippy-host clippy-rv32
 
 # Run clippy and auto-fix issues
 clippy-fix:
@@ -67,29 +106,34 @@ clippy-fix:
 # Format code and auto-fix clippy issues
 fix: fmt clippy-fix
 
-# Check formatting without modifying files
-fmt-check:
-    cargo fmt --all -- --check
+# ============================================================================
+# Testing
+# ============================================================================
 
-# Run clippy checks (exclude lp-builtins-app and esp32-glsl-jit as they're no_std, and exclude dependencies)
-clippy:
-    cargo clippy --workspace --exclude lp-builtins-app --exclude esp32-glsl-jit -- --no-deps -D warnings
+# Run all tests (requires filetests-setup)
+test: filetests-setup
+    cargo test
 
-# Run clippy on ESP32 app (requires RISC-V target)
-clippy-esp32: install-target
-    @echo "Running clippy on ESP32 app (riscv32imac-unknown-none-elf)..."
-    cargo clippy --target {{riscv_target}} -p esp32-glsl-jit -- --no-deps -D warnings
+# Run GLSL filetests specifically
+test-filetests: filetests-setup
+    cargo test -p lp-glsl-filetests --test filetests
 
-# Run clippy on all packages including embedded targets
-clippy-all: clippy clippy-esp32
+# ============================================================================
+# CI and validation
+# ============================================================================
 
-# Build ESP32 app (excluded from default-members, only builds for RISC-V)
-esp32-build:
-    @echo "Building ESP32 app (riscv32imac-unknown-none-elf)..."
-    cargo build --target {{riscv_target}} -p esp32-glsl-jit --release
+# Check code for linting, formatting, etc...
+check: fmt-check clippy
+
+# Validate code by checking and testing
+validate: check test
 
 # Full CI check: build, format check, clippy, and test
 ci: fmt-check clippy test
+
+# ============================================================================
+# Cleanup
+# ============================================================================
 
 # Clean build artifacts
 clean:
@@ -99,11 +143,9 @@ clean:
 clean-all: clean
     rm -rf {{lp_glsl_dir}}/target
 
-# Check code for linting, formatting, etc...
-check: fmt-check clippy
-
-# Validate code by checking and testing
-validate: check test
+# ============================================================================
+# Git workflows
+# ============================================================================
 
 # Push changes to origin and create/update PR
 push: check
