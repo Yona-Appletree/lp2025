@@ -1,23 +1,34 @@
 # LightPlayer Application
 
-LightPlayer is a framework for building and deploying interactive visualization applications
-using GLSL primarily for addressable LED control on embedded systems.
+LightPlayer is a framework for building and deploying interactive visual effects on microcontrollers and other embedded systems.
 
-It employs a client-server architecture, where the server runs the visualization on
-a headless machine (e.g. an esp32-c6 or raspberry pi), and the client communicates with
-the server via a network or serial connection.
+Effects are written as GLSL shaders a custom native compiler is used to allow running them on hardware without OpenGL, including microcontrollers.
 
-The server portion is portable, and is designed to be runnable from any OS for
-development, a headless host for larger deployments, or as bare-metal firmware
-on an embedded system.
+## Development Setup
 
-On machines without OpenGL support, such as embedded systems, the shaders are compiled to native
-code using the bespoke LightPlayer GLSL compiler which is built on a fork of Cranelift.
+To get started with development:
 
-# Workspace
+1. **Initialize the development environment:**
 
-This workspace contains the main LightPlayer application, including the device specific firmware,
-engine, server, and clients.
+   ```bash
+   scripts/dev-init.sh
+   ```
 
-It exists within cranelift temporarily during active development of the compiler, because managing
-multiple repositories is too cumbersome.
+   This will:
+   - Check for required tools (Rust, Cargo, rustup, just)
+   - Verify Rust version meets minimum requirements (1.90.0+)
+   - Install the RISC-V target (`riscv32imac-unknown-none-elf`) if needed
+   - Set up git hooks (pre-commit hook runs `just check`)
+
+2. **Required tools:**
+   - Rust toolchain (1.90.0 or later) - [Install Rust](https://rustup.rs/)
+   - `just` - Task runner: `cargo install just` or via package manager
+
+3. **Common development commands:**
+   - `just build` - Build all packages (host and RISC-V targets)
+   - `just check` - Run formatting and linting checks
+   - `just test` - Run all tests
+   - `just fmt` - Format code
+   - `just fix` - Format code and auto-fix clippy issues
+
+See `just --list` for all available commands.

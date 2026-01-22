@@ -44,7 +44,3 @@ jobs:
 
       - name: Validate
         run: just validate
-
-      - name: Build ESP32 app
-        run: just esp32-build
-        continue-on-error: true # ESP32 build may fail in CI if toolchain differs

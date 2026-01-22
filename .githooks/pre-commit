@@ -1,0 +1,9 @@
+#!/bin/bash
+# Pre-commit hook: run just check before committing
+
+set -e
+
+echo "Running pre-commit checks..."
+just check
+
+exit 0

@@ -36,6 +36,17 @@ fn main() {
         .join("lp-glsl/crates/lp-glsl-compiler/src/backend/transform/fixed32/converters/math.rs");
     generate_testcase_mapping(&math_rs_path, &builtins);
 
+    // Format generated files using cargo fmt
+    format_generated_files(
+        &workspace_root,
+        &[
+            &registry_path,
+            &builtin_refs_path,
+            &mod_rs_path,
+            &math_rs_path,
+        ],
+    );
+
     println!("Generated all builtin boilerplate files");
 }
 
@@ -169,6 +180,8 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("use cranelift_codegen::ir::{AbiParam, Signature, types};\n");
     output.push_str("use cranelift_codegen::isa::CallConv;\n");
     output.push_str("use cranelift_module::{Linkage, Module};\n\n");
+    output.push_str("#[cfg(not(feature = \"std\"))]\n");
+    output.push_str("use alloc::format;\n\n");
 
     // Generate enum
     output.push_str("/// Enum identifying builtin functions.\n");
@@ -336,9 +349,7 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("            .map_err(|e| {\n");
     output.push_str("                GlslError::new(\n");
     output.push_str("                    ErrorCode::E0400,\n");
-    output.push_str(
-        "                    format!(\"Failed to declare builtin '{}': {}\", name, e),\n",
-    );
+    output.push_str("                    format!(\"Failed to declare builtin '{name}': {e}\"),\n");
     output.push_str("                )\n");
     output.push_str("            })?;\n");
     output.push_str("    }\n\n");
@@ -555,4 +566,31 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
 
     let new_content = format!("{}{}{}", before, new_function, after);
     fs::write(path, new_content).expect("Failed to write math.rs");
+}
+
+fn format_generated_files(workspace_root: &Path, files: &[&Path]) {
+    use std::process::Command;
+
+    // Run cargo fmt on the generated files
+    let mut cmd = Command::new("cargo");
+    cmd.arg("fmt");
+    cmd.arg("--");
+
+    for file in files {
+        // Get relative path from workspace root
+        if let Ok(relative_path) = file.strip_prefix(workspace_root) {
+            cmd.arg(relative_path);
+        }
+    }
+
+    // Run from workspace root
+    let output = cmd
+        .current_dir(workspace_root)
+        .output()
+        .expect("Failed to run cargo fmt");
+
+    if !output.status.success() {
+        eprintln!("Warning: cargo fmt failed on generated files:");
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    }
 }

@@ -92,9 +92,10 @@ clippy-host:
     cargo clippy --workspace --exclude lp-builtins-app --exclude esp32-glsl-jit -- --no-deps -D warnings
 
 # Run clippy on RISC-V target packages (esp32-glsl-jit only, lp-builtins-app is mostly generated code)
+# Note: esp32-glsl-jit must be built in release mode (esp-hal requirement)
 clippy-rv32: install-rv32-target
     @echo "Running clippy on RISC-V packages ({{rv32_target}})..."
-    cargo clippy --target {{rv32_target}} -p esp32-glsl-jit -- --no-deps -D warnings
+    cargo clippy --target {{rv32_target}} -p esp32-glsl-jit --release -- --no-deps -D warnings
 
 # Run clippy on all packages (host and RISC-V)
 clippy: clippy-host clippy-rv32
@@ -125,11 +126,8 @@ test-filetests: filetests-setup
 # Check code for linting, formatting, etc...
 check: fmt-check clippy
 
-# Validate code by checking and testing
-validate: check test
-
 # Full CI check: build, format check, clippy, and test
-ci: fmt-check clippy test
+ci: check build test
 
 # ============================================================================
 # Cleanup

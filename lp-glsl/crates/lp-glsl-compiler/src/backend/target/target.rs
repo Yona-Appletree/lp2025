@@ -228,7 +228,6 @@ fn detect_host_triple() -> target_lexicon::Triple {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::format;
 
     #[test]
     fn test_riscv32_emulator_creation() {
