@@ -1,6 +1,5 @@
 //! GOT (Global Offset Table) entry tracking and management.
 
-use crate::debug;
 use alloc::string::String;
 use hashbrown::HashMap;
 
@@ -8,7 +7,7 @@ use hashbrown::HashMap;
 #[derive(Debug, Clone)]
 pub struct GotEntry {
     /// Symbol name
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Used for debugging and symbol resolution")]
     pub symbol_name: String,
     /// Address where the GOT entry is located
     pub address: u32,

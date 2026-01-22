@@ -3,7 +3,8 @@
 use crate::backend::transform::pipeline::{Transform, TransformContext};
 use crate::backend::transform::shared::{copy_instruction, transform_function_body};
 use crate::error::GlslError;
-use cranelift_codegen::ir::{Function, Signature};
+use alloc::{format, vec::Vec};
+use cranelift_codegen::ir::{Function, InstBuilder, Signature};
 
 /// Identity transform - copies functions exactly without modification
 pub struct IdentityTransform;
@@ -16,26 +17,139 @@ impl Transform for IdentityTransform {
     fn transform_function<M: cranelift_module::Module>(
         &self,
         old_func: &Function,
-        _ctx: &mut TransformContext<'_, M>,
+        ctx: &mut TransformContext<'_, M>,
     ) -> Result<Function, GlslError> {
         // Get transformed signature
         let new_sig = self.transform_signature(&old_func.signature);
 
+        // Capture func_id_map and old_func_id_map for FuncId remapping
+        let func_id_map = ctx.func_id_map.clone();
+        let old_func_id_map = ctx.old_func_id_map.clone();
+
         transform_function_body(
             old_func,
             new_sig,
-            // Instruction transformation: copy instructions exactly
+            // Instruction transformation: copy instructions exactly, but remap FuncIds
             move |old_func, old_inst, builder, value_map, stack_slot_map, block_map| {
-                copy_instruction(
-                    old_func,
-                    old_inst,
-                    builder,
-                    value_map,
-                    stack_slot_map,
-                    block_map,
-                    None,  // func_ref_map not used by copy_instruction
-                    |t| t, // Identity type mapping
-                )
+                // Handle Call instructions specially to remap FuncIds
+                use cranelift_codegen::ir::{ExtFuncData, InstructionData};
+                let inst_data = &old_func.dfg.insts[old_inst];
+                if let InstructionData::Call { func_ref, args, .. } = inst_data {
+                    let old_args = args.as_slice(&old_func.dfg.value_lists);
+                    let new_args: Vec<_> = old_args
+                        .iter()
+                        .map(|&v| {
+                            value_map.get(&v).copied().ok_or_else(|| {
+                                GlslError::new(
+                                    crate::error::ErrorCode::E0301,
+                                    format!("Value {v:?} not found in value_map"),
+                                )
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+
+                    let old_ext_func = &old_func.dfg.ext_funcs[*func_ref];
+                    let old_sig_ref = old_ext_func.signature;
+                    let old_sig = &old_func.dfg.signatures[old_sig_ref];
+                    let new_sig_ref = builder.func.import_signature(old_sig.clone());
+
+                    // Remap FuncId for User external names, and convert TestCase to User
+                    use cranelift_codegen::ir::ExternalName;
+                    let new_name = match &old_ext_func.name {
+                        ExternalName::TestCase(testcase_name) => {
+                            // Convert TestCase name to User name for ObjectModule compatibility
+                            // ObjectModule doesn't support TestCase names in relocations (unimplemented!)
+                            let func_name_str =
+                                core::str::from_utf8(testcase_name.raw()).map_err(|e| {
+                                    GlslError::new(
+                                        crate::error::ErrorCode::E0301,
+                                        format!("Invalid TestCase name encoding: {e}"),
+                                    )
+                                })?;
+                            // Look up the new FuncId for this function name
+                            let new_func_id = func_id_map.get(func_name_str).ok_or_else(|| {
+                                GlslError::new(
+                                    crate::error::ErrorCode::E0301,
+                                    format!("Function '{func_name_str}' not found in func_id_map"),
+                                )
+                            })?;
+                            // Create UserExternalName with the new FuncId
+                            let new_user_name = cranelift_codegen::ir::UserExternalName {
+                                namespace: 0,
+                                index: new_func_id.as_u32(),
+                            };
+                            let new_user_ref =
+                                builder.func.declare_imported_user_function(new_user_name);
+                            ExternalName::User(new_user_ref)
+                        }
+                        ExternalName::User(old_user_ref) => {
+                            let user_name = old_func
+                                .params
+                                .user_named_funcs()
+                                .get(*old_user_ref)
+                                .ok_or_else(|| {
+                                    GlslError::new(
+                                        crate::error::ErrorCode::E0301,
+                                        format!(
+                                            "UserExternalNameRef {old_user_ref} not found in function's user_named_funcs"
+                                        ),
+                                    )
+                                })?;
+                            // Map old FuncId -> function name -> new FuncId
+                            let old_func_id = cranelift_module::FuncId::from_u32(user_name.index);
+                            if let Some(func_name) = old_func_id_map.get(&old_func_id) {
+                                if let Some(new_func_id) = func_id_map.get(func_name) {
+                                    let new_user_name = cranelift_codegen::ir::UserExternalName {
+                                        namespace: user_name.namespace,
+                                        index: new_func_id.as_u32(),
+                                    };
+                                    let new_user_ref =
+                                        builder.func.declare_imported_user_function(new_user_name);
+                                    ExternalName::User(new_user_ref)
+                                } else {
+                                    // Fallback: use original if mapping not found
+                                    let new_user_ref = builder
+                                        .func
+                                        .declare_imported_user_function(user_name.clone());
+                                    ExternalName::User(new_user_ref)
+                                }
+                            } else {
+                                // Fallback: use original if mapping not found
+                                let new_user_ref = builder
+                                    .func
+                                    .declare_imported_user_function(user_name.clone());
+                                ExternalName::User(new_user_ref)
+                            }
+                        }
+                        _ => old_ext_func.name.clone(),
+                    };
+
+                    let new_ext_func = ExtFuncData {
+                        name: new_name,
+                        signature: new_sig_ref,
+                        colocated: old_ext_func.colocated,
+                    };
+                    let new_func_ref = builder.func.import_function(new_ext_func);
+                    let call_inst = builder.ins().call(new_func_ref, &new_args);
+                    let old_results: Vec<_> = old_func.dfg.inst_results(old_inst).to_vec();
+                    let new_results = builder.inst_results(call_inst);
+                    for (old_result, new_result) in old_results.iter().zip(new_results.iter()) {
+                        value_map.insert(*old_result, *new_result);
+                    }
+                    Ok(())
+                } else {
+                    // For non-call instructions, use copy_instruction
+                    copy_instruction(
+                        old_func,
+                        old_inst,
+                        builder,
+                        value_map,
+                        stack_slot_map,
+                        block_map,
+                        None,  // func_ref_map not used
+                        |t| t, // Identity type mapping
+                    )
+                }
             },
             // Type mapping: identity (no conversion)
         )

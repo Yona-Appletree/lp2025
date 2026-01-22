@@ -18,7 +18,7 @@ impl Riscv32Emulator {
     pub fn format_logs(&self) -> String {
         let mut result = String::new();
         for log in &self.log_buffer {
-            result.push_str(&format!("{}\n", log));
+            result.push_str(&format!("{log}\n"));
         }
         result
     }
@@ -126,10 +126,8 @@ impl Riscv32Emulator {
                     let zero_count = idx - zero_start;
                     if zero_count > MAX_ZERO_RUN {
                         // Summarize long zero runs
-                        result.push_str(&format!(
-                            "  ... ({} zero instructions skipped)\n",
-                            zero_count
-                        ));
+                        result
+                            .push_str(&format!("  ... ({zero_count} zero instructions skipped)\n"));
                     } else {
                         // Show short zero runs
                         for i in 0..zero_count {
@@ -148,7 +146,7 @@ impl Riscv32Emulator {
 
                 // Format non-zero instruction
                 let marker = marker_fn(pc);
-                result.push_str(&format!("{}{:3}: 0x{:08x}: {}\n", marker, idx, pc, disasm));
+                result.push_str(&format!("{marker}{idx:3}: 0x{pc:08x}: {disasm}\n"));
             }
         }
 
@@ -156,10 +154,7 @@ impl Riscv32Emulator {
         if let Some(zero_start) = zero_run_start {
             let zero_count = instructions.len() - zero_start;
             if zero_count > MAX_ZERO_RUN {
-                result.push_str(&format!(
-                    "  ... ({} zero instructions skipped)\n",
-                    zero_count
-                ));
+                result.push_str(&format!("  ... ({zero_count} zero instructions skipped)\n"));
             } else {
                 for i in 0..zero_count {
                     let zero_pc = instructions[zero_start + i].0;
@@ -180,13 +175,13 @@ impl Riscv32Emulator {
     ///
     /// # Arguments
     ///
-    /// * `highlight_pc` - Optional PC to highlight in disassembly (for errors)
+    /// * `highlight_pc` - Optional PC to highlight in disassembly (for errors or current position)
     /// * `log_count` - Number of recent logs to show (default 20)
     pub fn format_debug_info(&self, highlight_pc: Option<u32>, log_count: usize) -> String {
         let mut result = String::new();
         let code = self.memory.code();
 
-        // Show disassembly only when there's an error PC to highlight
+        // Show disassembly when there's a PC to highlight (error or current position)
         if let Some(error_pc) = highlight_pc {
             // Disassemble all instructions
             let mut instructions = Vec::new();
@@ -219,10 +214,7 @@ impl Riscv32Emulator {
                 for (idx, (pc, _inst_word, disasm)) in instructions[start..end].iter().enumerate() {
                     let actual_idx = start + idx;
                     let marker = if *pc == error_pc { ">>> " } else { "    " };
-                    result.push_str(&format!(
-                        "{}{:3}: 0x{:08x}: {}\n",
-                        marker, actual_idx, pc, disasm
-                    ));
+                    result.push_str(&format!("{marker}{actual_idx:3}: 0x{pc:08x}: {disasm}\n"));
                 }
 
                 if end < instructions.len() {
@@ -266,11 +258,7 @@ impl Riscv32Emulator {
                 // Writing to String never fails, so unwrap is safe
                 write!(
                     result,
-                    "[{:4}] 0x{:08x}: {:width$}",
-                    cycle,
-                    pc,
-                    disassembly,
-                    width = max_inst_width
+                    "[{cycle:4}] 0x{pc:08x}: {disassembly:max_inst_width$}"
                 )
                 .unwrap();
 
@@ -284,11 +272,11 @@ impl Riscv32Emulator {
                         rd_new,
                         ..
                     } => {
-                        write!(result, " ; {}: {} -> {}", rd, rd_old, rd_new).unwrap();
+                        write!(result, " ; {rd}: {rd_old} -> {rd_new}").unwrap();
                         if let Some(rs2_val) = rs2_val {
-                            write!(result, " (rs1={}, rs2={})", rs1_val, rs2_val).unwrap();
+                            write!(result, " (rs1={rs1_val}, rs2={rs2_val})").unwrap();
                         } else {
-                            write!(result, " (rs1={})", rs1_val).unwrap();
+                            write!(result, " (rs1={rs1_val})").unwrap();
                         }
                     }
                     InstLog::Load {
@@ -302,8 +290,7 @@ impl Riscv32Emulator {
                     } => {
                         write!(
                             result,
-                            " ; {}: {} -> {} (mem[0x{:08x}] = {}) (rs1={})",
-                            rd, rd_old, rd_new, addr, mem_val, rs1_val
+                            " ; {rd}: {rd_old} -> {rd_new} (mem[0x{addr:08x}] = {mem_val}) (rs1={rs1_val})"
                         )
                         .unwrap();
                     }
@@ -317,8 +304,7 @@ impl Riscv32Emulator {
                     } => {
                         write!(
                             result,
-                            " ; mem[0x{:08x}]: {} -> {} (rs1={}, rs2={})",
-                            addr, mem_old, mem_new, rs1_val, rs2_val
+                            " ; mem[0x{addr:08x}]: {mem_old} -> {mem_new} (rs1={rs1_val}, rs2={rs2_val})"
                         )
                         .unwrap();
                     }
@@ -333,25 +319,16 @@ impl Riscv32Emulator {
                             if let Some(target) = target_pc {
                                 write!(
                                     result,
-                                    " ; branch taken: 0x{:08x} -> 0x{:08x} (rs1={}, rs2={})",
-                                    pc, target, rs1_val, rs2_val
+                                    " ; branch taken: 0x{pc:08x} -> 0x{target:08x} (rs1={rs1_val}, rs2={rs2_val})"
                                 )
                                 .unwrap();
                             } else {
-                                write!(
-                                    result,
-                                    " ; branch taken (rs1={}, rs2={})",
-                                    rs1_val, rs2_val
-                                )
-                                .unwrap();
+                                write!(result, " ; branch taken (rs1={rs1_val}, rs2={rs2_val})")
+                                    .unwrap();
                             }
                         } else {
-                            write!(
-                                result,
-                                " ; branch not taken (rs1={}, rs2={})",
-                                rs1_val, rs2_val
-                            )
-                            .unwrap();
+                            write!(result, " ; branch not taken (rs1={rs1_val}, rs2={rs2_val})")
+                                .unwrap();
                         }
                     }
                     InstLog::Jump {
@@ -363,18 +340,17 @@ impl Riscv32Emulator {
                         if let Some(rd_new) = rd_new {
                             write!(
                                 result,
-                                " ; rd: {} -> {} jump: 0x{:08x} -> 0x{:08x}",
-                                rd_old, rd_new, pc, target_pc
+                                " ; rd: {rd_old} -> {rd_new} jump: 0x{pc:08x} -> 0x{target_pc:08x}"
                             )
                             .unwrap();
                         } else {
-                            write!(result, " ; jump: 0x{:08x} -> 0x{:08x}", pc, target_pc).unwrap();
+                            write!(result, " ; jump: 0x{pc:08x} -> 0x{target_pc:08x}").unwrap();
                         }
                     }
                     InstLog::Immediate {
                         rd, rd_old, rd_new, ..
                     } => {
-                        write!(result, " ; {}: {} -> {}", rd, rd_old, rd_new).unwrap();
+                        write!(result, " ; {rd}: {rd_old} -> {rd_new}").unwrap();
                     }
                     InstLog::System { kind, .. } => match kind {
                         SystemKind::Ecall => write!(result, " ; syscall").unwrap(),

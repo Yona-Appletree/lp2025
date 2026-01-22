@@ -170,7 +170,7 @@ impl ProjectRuntime {
                         kind,
                         config,
                         config_ver: self.frame_id,
-                        status: NodeStatus::InitError(format!("Failed to load: {}", e)),
+                        status: NodeStatus::InitError(format!("Failed to load: {e}")),
                         runtime: None,
                         state_ver: FrameId::default(),
                     };
@@ -224,13 +224,13 @@ impl ProjectRuntime {
                         .read_file(node_json_path.as_path())
                         .map_err(|e| Error::Io {
                             path: node_json_path.as_str().to_string(),
-                            details: format!("Failed to read: {:?}", e),
+                            details: format!("Failed to read: {e:?}"),
                         })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::texture::TextureConfig>(&data)
                             .map_err(|e| Error::Parse {
                                 file: node_json_path.as_str().to_string(),
-                                error: format!("Failed to parse texture config: {}", e),
+                                error: format!("Failed to parse texture config: {e}"),
                             })?,
                     )
                 } else {
@@ -249,13 +249,13 @@ impl ProjectRuntime {
                         .read_file(node_json_path.as_path())
                         .map_err(|e| Error::Io {
                             path: node_json_path.as_str().to_string(),
-                            details: format!("Failed to read: {:?}", e),
+                            details: format!("Failed to read: {e:?}"),
                         })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::fixture::FixtureConfig>(&data)
                             .map_err(|e| Error::Parse {
                                 file: node_json_path.as_str().to_string(),
-                                error: format!("Failed to parse fixture config: {}", e),
+                                error: format!("Failed to parse fixture config: {e}"),
                             })?,
                     )
                 } else {
@@ -274,13 +274,13 @@ impl ProjectRuntime {
                         .read_file(node_json_path.as_path())
                         .map_err(|e| Error::Io {
                             path: node_json_path.as_str().to_string(),
-                            details: format!("Failed to read: {:?}", e),
+                            details: format!("Failed to read: {e:?}"),
                         })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::shader::ShaderConfig>(&data)
                             .map_err(|e| Error::Parse {
                                 file: node_json_path.as_str().to_string(),
-                                error: format!("Failed to parse shader config: {}", e),
+                                error: format!("Failed to parse shader config: {e}"),
                             })?,
                     )
                 } else {
@@ -299,13 +299,13 @@ impl ProjectRuntime {
                         .read_file(node_json_path.as_path())
                         .map_err(|e| Error::Io {
                             path: node_json_path.as_str().to_string(),
-                            details: format!("Failed to read: {:?}", e),
+                            details: format!("Failed to read: {e:?}"),
                         })?;
                     Some(
                         serde_json::from_slice::<lp_model::nodes::output::OutputConfig>(&data)
                             .map_err(|e| Error::Parse {
                                 file: node_json_path.as_str().to_string(),
-                                error: format!("Failed to parse output config: {}", e),
+                                error: format!("Failed to parse output config: {e}"),
                             })?,
                     )
                 } else {
@@ -358,7 +358,7 @@ impl ProjectRuntime {
                             entry.runtime = Some(runtime);
                         }
                         Err(e) => {
-                            entry.status = NodeStatus::InitError(format!("{}", e));
+                            entry.status = NodeStatus::InitError(format!("{e}"));
                             entry.runtime = None;
                         }
                     }
@@ -486,7 +486,7 @@ impl ProjectRuntime {
             // Update status based on render result
             if let Some(entry) = self.nodes.get_mut(&handle) {
                 if let Err(e) = render_result {
-                    entry.status = NodeStatus::Error(format!("{}", e));
+                    entry.status = NodeStatus::Error(format!("{e}"));
                 }
             }
         }
@@ -527,7 +527,7 @@ impl ProjectRuntime {
 
             if let Err(e) = render_result {
                 if let Some(entry) = self.nodes.get_mut(&handle) {
-                    entry.status = NodeStatus::Error(format!("{}", e));
+                    entry.status = NodeStatus::Error(format!("{e}"));
                 }
             }
         }
@@ -683,8 +683,8 @@ impl ProjectRuntime {
                     let stripped_str = stripped.as_str();
                     if stripped_str == "/" {
                         ""
-                    } else if stripped_str.starts_with('/') {
-                        &stripped_str[1..]
+                    } else if let Some(stripped) = stripped_str.strip_prefix('/') {
+                        stripped
                     } else {
                         stripped_str
                     }
@@ -1111,7 +1111,10 @@ impl ProjectRuntime {
 /// Init context implementation
 struct InitContext<'a> {
     runtime: &'a ProjectRuntime,
-    #[allow(dead_code)] // Used for chroot filesystem creation, may be needed for future features
+    #[allow(
+        dead_code,
+        reason = "Used for chroot filesystem creation, may be needed for future features"
+    )]
     node_path: &'a LpPathBuf,
     node_fs: alloc::rc::Rc<core::cell::RefCell<dyn LpFs>>,
 }
@@ -1125,7 +1128,7 @@ impl<'a> InitContext<'a> {
             .chroot(node_dir.as_path())
             .map_err(|e| Error::Io {
                 path: node_dir.to_string(),
-                details: format!("Failed to chroot: {:?}", e),
+                details: format!("Failed to chroot: {e:?}"),
             })?;
 
         Ok(Self {

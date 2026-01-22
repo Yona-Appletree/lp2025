@@ -1,6 +1,5 @@
 //! ELF parsing and validation utilities.
 
-use crate::debug;
 use alloc::format;
 use alloc::string::String;
 use object::Object;
@@ -10,7 +9,7 @@ pub fn parse_elf(elf_data: &[u8]) -> Result<object::File<'_>, String> {
     debug!("=== Parsing ELF file ===");
     debug!("ELF size: {} bytes", elf_data.len());
 
-    let obj = object::File::parse(elf_data).map_err(|e| format!("Failed to parse ELF: {}", e))?;
+    let obj = object::File::parse(elf_data).map_err(|e| format!("Failed to parse ELF: {e}"))?;
 
     Ok(obj)
 }
@@ -26,8 +25,7 @@ pub fn validate_elf(obj: &object::File) -> Result<(), String> {
         }
         arch => {
             return Err(format!(
-                "Unsupported architecture: {:?}. Expected RISC-V 32-bit",
-                arch
+                "Unsupported architecture: {arch:?}. Expected RISC-V 32-bit"
             ));
         }
     }
@@ -39,8 +37,7 @@ pub fn validate_elf(obj: &object::File) -> Result<(), String> {
         }
         endian => {
             return Err(format!(
-                "Unsupported endianness: {:?}. Expected little-endian",
-                endian
+                "Unsupported endianness: {endian:?}. Expected little-endian"
             ));
         }
     }

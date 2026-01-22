@@ -5,8 +5,7 @@ pub fn generate_header(specifier: &str) -> String {
     format!(
         "// This file is GENERATED. Do not edit manually.\n\
          // To regenerate, run:\n\
-         //   lp-filetests-gen {} --write\n\
-         //\n",
-        specifier
+         //   lp-filetests-gen {specifier} --write\n\
+         //\n"
     )
 }

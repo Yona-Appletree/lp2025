@@ -10,7 +10,7 @@ fn test_fence_i_decode_encode() {
     let inst = decode_instruction(0x0010100f).expect("Failed to decode FENCE.I");
     match inst {
         Inst::FenceI => {}
-        _ => panic!("Expected FenceI, got {:?}", inst),
+        _ => panic!("Expected FenceI, got {inst:?}"),
     }
 
     // Test FENCE.I encoding
@@ -21,7 +21,7 @@ fn test_fence_i_decode_encode() {
     let decoded = decode_instruction(encoded).expect("Failed to decode encoded FENCE.I");
     match decoded {
         Inst::FenceI => {}
-        _ => panic!("Expected FenceI after round-trip, got {:?}", decoded),
+        _ => panic!("Expected FenceI after round-trip, got {decoded:?}"),
     }
 }
 
@@ -59,13 +59,13 @@ fn test_fence_vs_fence_i() {
     let fence = decode_instruction(0x0000000f).expect("Failed to decode FENCE");
     match fence {
         Inst::Fence => {}
-        _ => panic!("Expected Fence, got {:?}", fence),
+        _ => panic!("Expected Fence, got {fence:?}"),
     }
 
     let fence_i = decode_instruction(0x0010100f).expect("Failed to decode FENCE.I");
     match fence_i {
         Inst::FenceI => {}
-        _ => panic!("Expected FenceI, got {:?}", fence_i),
+        _ => panic!("Expected FenceI, got {fence_i:?}"),
     }
 
     // They should be different
@@ -82,7 +82,7 @@ fn test_atomic_instructions() {
             assert_eq!(rd, Gpr::A0);
             assert_eq!(rs1, Gpr::Zero);
         }
-        _ => panic!("Expected LrW, got {:?}", lr_w),
+        _ => panic!("Expected LrW, got {lr_w:?}"),
     }
 
     // SC.W: 0x1800252f (sc.w a0, zero, (zero))
@@ -93,7 +93,7 @@ fn test_atomic_instructions() {
             assert_eq!(rs1, Gpr::Zero);
             assert_eq!(rs2, Gpr::Zero);
         }
-        _ => panic!("Expected ScW, got {:?}", sc_w),
+        _ => panic!("Expected ScW, got {sc_w:?}"),
     }
 }
 
@@ -105,7 +105,7 @@ fn test_compressed_instructions() {
     let c_nop = decode_instruction(0x0001).expect("Failed to decode C.NOP");
     match c_nop {
         Inst::CNop => {}
-        _ => panic!("Expected CNop, got {:?}", c_nop),
+        _ => panic!("Expected CNop, got {c_nop:?}"),
     }
 }
 
@@ -130,7 +130,7 @@ fn test_division_by_zero() {
         match emu.step() {
             Ok(lp_riscv_tools::StepResult::Halted) => break,
             Ok(_) => continue,
-            Err(e) => panic!("Emulator error: {:?}", e),
+            Err(e) => panic!("Emulator error: {e:?}"),
         }
     }
 

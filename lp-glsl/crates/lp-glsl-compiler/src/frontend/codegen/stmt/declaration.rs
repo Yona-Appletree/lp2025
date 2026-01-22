@@ -87,8 +87,7 @@ pub fn emit_declaration<M: cranelift_module::Module>(
                             GlslError::new(
                                 ErrorCode::E0400,
                                 format!(
-                                    "array element type mismatch: expected {:?}, got {:?}",
-                                    element_ty, init_element_ty
+                                    "array element type mismatch: expected {element_ty:?}, got {init_element_ty:?}"
                                 ),
                             )
                         })?;
@@ -142,8 +141,7 @@ pub fn emit_declaration<M: cranelift_module::Module>(
                                     return Err(GlslError::new(
                                         ErrorCode::E0400,
                                         format!(
-                                            "unsupported array element type for zero initialization: {:?}",
-                                            element_ty
+                                            "unsupported array element type for zero initialization: {element_ty:?}"
                                         ),
                                     ));
                                 }
@@ -284,8 +282,7 @@ pub fn emit_declaration<M: cranelift_module::Module>(
                             GlslError::new(
                                 ErrorCode::E0400,
                                 format!(
-                                    "array element type mismatch: expected {:?}, got {:?}",
-                                    element_ty, init_element_ty
+                                    "array element type mismatch: expected {element_ty:?}, got {init_element_ty:?}"
                                 ),
                             )
                         })?;
@@ -347,8 +344,7 @@ pub fn emit_declaration<M: cranelift_module::Module>(
                                     return Err(GlslError::new(
                                         ErrorCode::E0400,
                                         format!(
-                                            "unsupported array element type for zero initialization: {:?}",
-                                            element_ty
+                                            "unsupported array element type for zero initialization: {element_ty:?}"
                                         ),
                                     ));
                                 }
@@ -467,8 +463,7 @@ pub fn emit_initializer<M: cranelift_module::Module>(
                             GlslError::new(
                                 ErrorCode::E0400,
                                 format!(
-                                    "array initializer type mismatch: expected {:?}, got {:?}",
-                                    expected_ty, item_ty
+                                    "array initializer type mismatch: expected {expected_ty:?}, got {item_ty:?}"
                                 ),
                             )
                         })?;

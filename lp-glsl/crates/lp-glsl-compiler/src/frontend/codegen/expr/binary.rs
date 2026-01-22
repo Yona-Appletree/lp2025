@@ -14,7 +14,7 @@ use super::coercion;
 use super::matrix;
 use super::vector;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 /// Emit code to compute a binary expression as an RValue
 pub fn emit_binary_rvalue<M: cranelift_module::Module>(
@@ -127,10 +127,7 @@ fn emit_scalar_binary<M: cranelift_module::Module>(
                 // This should have been caught by type checking, but handle gracefully
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!(
-                        "comparison between {:?} and {:?} not supported",
-                        lhs_ty, rhs_ty
-                    ),
+                    format!("comparison between {lhs_ty:?} and {rhs_ty:?} not supported"),
                 ));
             } else {
                 promote_numeric(lhs_ty, rhs_ty)
@@ -189,7 +186,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
             _ => {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!("add not supported for {:?}", operand_ty),
+                    format!("add not supported for {operand_ty:?}"),
                 ));
             }
         },
@@ -199,7 +196,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
             _ => {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!("sub not supported for {:?}", operand_ty),
+                    format!("sub not supported for {operand_ty:?}"),
                 ));
             }
         },
@@ -209,7 +206,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
             _ => {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!("mult not supported for {:?}", operand_ty),
+                    format!("mult not supported for {operand_ty:?}"),
                 ));
             }
         },
@@ -224,7 +221,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("div not supported for {:?}", operand_ty),
+                        format!("div not supported for {operand_ty:?}"),
                     ));
                 }
             }
@@ -239,10 +236,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!(
-                            "modulo not supported for {:?} (only integer types)",
-                            operand_ty
-                        ),
+                        format!("modulo not supported for {operand_ty:?} (only integer types)"),
                     ));
                 }
             }
@@ -261,7 +255,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("equal not supported for {:?}", operand_ty),
+                        format!("equal not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -281,7 +275,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("nonEqual not supported for {:?}", operand_ty),
+                        format!("nonEqual not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -297,7 +291,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("LT not supported for {:?}", operand_ty),
+                        format!("LT not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -313,7 +307,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("GT not supported for {:?}", operand_ty),
+                        format!("GT not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -335,7 +329,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("LTE not supported for {:?}", operand_ty),
+                        format!("LTE not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -361,7 +355,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!("GTE not supported for {:?}", operand_ty),
+                        format!("GTE not supported for {operand_ty:?}"),
                     ));
                 }
             };
@@ -409,7 +403,7 @@ fn emit_scalar_binary_op<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("binary operator not supported yet: {:?}", op),
+                format!("binary operator not supported yet: {op:?}"),
             ));
         }
     };

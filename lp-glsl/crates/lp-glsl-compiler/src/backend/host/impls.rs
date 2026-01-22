@@ -24,6 +24,6 @@ pub extern "C" fn __host_println(ptr: *const u8, len: usize) {
         let slice = core::slice::from_raw_parts(ptr, len);
         let msg = core::str::from_utf8_unchecked(slice);
         // Delegate to std::println!
-        std::println!("{}", msg);
+        std::println!("{msg}");
     }
 }

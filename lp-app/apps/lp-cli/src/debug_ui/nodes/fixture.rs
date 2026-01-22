@@ -9,7 +9,7 @@ use lp_model::{NodeHandle, NodeKind};
 pub fn fixture_color(handle: &NodeHandle) -> Color32 {
     // Generate distinct colors for different fixtures
     // Hash the handle to get a consistent number
-    let hash: u32 = format!("{:?}", handle).chars().map(|c| c as u32).sum();
+    let hash: u32 = format!("{handle:?}").chars().map(|c| c as u32).sum();
     let hue = (hash as f32 * 137.508) % 360.0; // Golden angle for distribution
     let (r, g, b) = hsv_to_rgb(hue / 360.0, 0.8, 0.9);
     Color32::from_rgb(r, g, b)

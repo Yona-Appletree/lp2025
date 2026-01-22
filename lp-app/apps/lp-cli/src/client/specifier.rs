@@ -65,25 +65,24 @@ impl HostSpecifier {
         }
 
         bail!(
-            "Invalid host specifier: '{}'. Supported formats: ws://host:port/, wss://host:port/, serial:auto, serial:/dev/ttyUSB1, local",
-            s
+            "Invalid host specifier: '{s}'. Supported formats: ws://host:port/, wss://host:port/, serial:auto, serial:/dev/ttyUSB1, local"
         )
     }
 
     /// Check if this is a websocket specifier
-    #[allow(dead_code)] // Useful helper method for future use
+    #[allow(dead_code, reason = "Useful helper method for future use")]
     pub fn is_websocket(&self) -> bool {
         matches!(self, HostSpecifier::WebSocket { .. })
     }
 
     /// Check if this is a serial specifier
-    #[allow(dead_code)] // Useful helper method for future use
+    #[allow(dead_code, reason = "Useful helper method for future use")]
     pub fn is_serial(&self) -> bool {
         matches!(self, HostSpecifier::Serial { .. })
     }
 
     /// Check if this is a local specifier
-    #[allow(dead_code)] // Useful helper method for future use
+    #[allow(dead_code, reason = "Useful helper method for future use")]
     pub fn is_local(&self) -> bool {
         matches!(self, HostSpecifier::Local)
     }
@@ -92,9 +91,9 @@ impl HostSpecifier {
 impl fmt::Display for HostSpecifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HostSpecifier::WebSocket { url } => write!(f, "{}", url),
+            HostSpecifier::WebSocket { url } => write!(f, "{url}"),
             HostSpecifier::Serial { port: None } => write!(f, "serial:auto"),
-            HostSpecifier::Serial { port: Some(port) } => write!(f, "serial:{}", port),
+            HostSpecifier::Serial { port: Some(port) } => write!(f, "serial:{port}"),
             HostSpecifier::Local => write!(f, "local"),
         }
     }

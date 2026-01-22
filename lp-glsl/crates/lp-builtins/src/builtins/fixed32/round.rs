@@ -5,8 +5,9 @@
 /// Compute round(x) - round to nearest integer, halfway cases away from zero
 ///
 /// In fixed-point Q16.16:
-/// - Add 0.5 (32768) for positive numbers, subtract 0.5 for negative
+/// - Add 0.5 (32768) for all numbers
 /// - Then truncate by shifting right 16 bits and left 16 bits
+/// - For negative numbers, adding 0.5 then truncating rounds away from zero correctly
 #[unsafe(no_mangle)]
 pub extern "C" fn __lp_fixed32_round(x: i32) -> i32 {
     if x == 0 {
@@ -21,9 +22,20 @@ pub extern "C" fn __lp_fixed32_round(x: i32) -> i32 {
         let added = x.wrapping_add(half);
         (added >> 16) << 16
     } else {
-        // For negative: subtract 0.5, then truncate
-        let subtracted = x.wrapping_sub(half);
-        (subtracted >> 16) << 16
+        // For negative: add 0.5, then truncate
+        let added = x.wrapping_add(half);
+        let result = (added >> 16) << 16;
+
+        // Special case: if we're at exactly halfway (-1.5, -2.5, etc.),
+        // adding 0.5 gives us exactly an integer, but we need to round away from zero
+        // (more negative). Check if original was at halfway point.
+        let fractional_part = x & 0xFFFF;
+        if fractional_part == half {
+            // At halfway: round away from zero (subtract 1 more)
+            result.wrapping_sub(0x10000) // Subtract 1.0 in fixed point
+        } else {
+            result
+        }
     }
 }
 

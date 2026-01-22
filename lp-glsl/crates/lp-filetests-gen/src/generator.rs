@@ -39,7 +39,7 @@ pub fn generate(args: &Args) -> Result<()> {
     if !args.write {
         println!("\nTo write these files, run:");
         let specifiers_str = args.specifiers.join(" ");
-        println!("  lp-filetests-gen {} --write", specifiers_str);
+        println!("  lp-filetests-gen {specifiers_str} --write");
     }
 
     Ok(())
@@ -85,7 +85,7 @@ fn generate_test_file(spec: &TestSpec, write: bool) -> Result<()> {
     } else {
         // Dry-run: print content
         println!("=== {} ===", output_path.display());
-        print!("{}", content);
+        print!("{content}");
         println!();
     }
 

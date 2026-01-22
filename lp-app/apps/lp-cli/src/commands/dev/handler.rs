@@ -3,8 +3,8 @@
 //! Orchestrates the dev command: connects to server, syncs project, and runs file watching and UI.
 
 use anyhow::{Context, Result};
-use lp_model::project::ProjectConfig;
 use lp_model::AsLpPath;
+use lp_model::project::ProjectConfig;
 use lp_shared::fs::{LpFs, LpFsStd};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -59,7 +59,12 @@ pub fn handle_dev(mut args: DevArgs) -> Result<()> {
     args.dir = std::env::current_dir()?
         .join(&args.dir)
         .canonicalize()
-        .with_context(|| format!("Failed to resolve project directory: {}", args.dir.display()))?;
+        .with_context(|| {
+            format!(
+                "Failed to resolve project directory: {}",
+                args.dir.display()
+            )
+        })?;
 
     // Validate local project
     let (project_uid, _project_name) = validate_local_project(&args.dir)?;
@@ -89,8 +94,8 @@ async fn handle_dev_async(
     host_spec: HostSpecifier,
 ) -> Result<()> {
     // Format host specifier for error messages before it's moved
-    let host_spec_str = format!("{:?}", host_spec);
-    
+    let host_spec_str = format!("{host_spec:?}");
+
     // Connect to server
     let transport = client_connect(host_spec).context("Failed to connect to server")?;
 
@@ -107,15 +112,10 @@ async fn handle_dev_async(
     // This ensures the project exists on the server before we try to load it
     push_project_async(&client, &*local_fs, &project_uid)
         .await
-        .with_context(|| {
-            format!(
-                "Failed to push project to server (host: {})",
-                host_spec_str
-            )
-        })?;
+        .with_context(|| format!("Failed to push project to server (host: {host_spec_str})"))?;
 
     // Load project on server
-    let project_path = format!("projects/{}", project_uid);
+    let project_path = format!("projects/{project_uid}");
     let project_handle = client
         .project_load(&project_path)
         .await
@@ -131,7 +131,7 @@ async fn handle_dev_async(
             Arc::new(LpFsStd::new(args.dir.clone()));
         tokio::spawn(async move {
             if let Err(e) = fs_loop(transport, project_dir, project_uid, local_fs_for_loop).await {
-                eprintln!("fs_loop error: {}", e);
+                eprintln!("fs_loop error: {e}");
             }
         })
     };
@@ -165,7 +165,7 @@ async fn handle_dev_async(
             options,
             Box::new(|_cc| Box::new(ui_state)),
         ) {
-            eprintln!("UI error: {}", e);
+            eprintln!("UI error: {e}");
         }
     }
 

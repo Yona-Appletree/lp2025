@@ -5,7 +5,7 @@ use crate::backend::transform::fixed32::converters::{get_first_result, map_value
 use crate::backend::transform::fixed32::signature::convert_signature;
 use crate::backend::transform::fixed32::types::FixedPointFormat;
 use crate::error::{ErrorCode, GlslError};
-use alloc::{string::String, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 use cranelift_codegen::ir::{
     AbiParam, ExtFuncData, ExternalName, FuncRef, Function, Inst, InstBuilder, InstructionData,
     SigRef, Signature, UserExternalName, Value, types,
@@ -63,8 +63,7 @@ pub(crate) fn map_external_function(
                     GlslError::new(
                         ErrorCode::E0400,
                         alloc::format!(
-                            "UserExternalNameRef {} not found in old function's user_named_funcs",
-                            old_user_ref
+                            "UserExternalNameRef {old_user_ref} not found in old function's user_named_funcs"
                         ),
                     )
                 })?;
@@ -83,7 +82,7 @@ pub(crate) fn map_external_function(
             let new_func_id = func_id_map.get(func_name).ok_or_else(|| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    alloc::format!("Function '{}' not found in func_id_map", func_name),
+                    alloc::format!("Function '{func_name}' not found in func_id_map"),
                 )
             })?;
 
@@ -275,10 +274,7 @@ pub(crate) fn convert_call(
                 let func_id = func_id_map.get(builtin_name).ok_or_else(|| {
                     GlslError::new(
                         ErrorCode::E0400,
-                        format!(
-                            "Builtin function '{}' not found in func_id_map",
-                            builtin_name
-                        ),
+                        format!("Builtin function '{builtin_name}' not found in func_id_map"),
                     )
                 })?;
 
@@ -333,9 +329,32 @@ pub(crate) fn convert_call(
 
                 // Handle TestCase vs User external names
                 let new_name = match &old_ext_func.name {
-                    ExternalName::TestCase(_) => {
-                        // Clone TestCase name directly (like identity transform)
-                        old_ext_func.name.clone()
+                    ExternalName::TestCase(testcase_name) => {
+                        // Convert TestCase name to User name for ObjectModule compatibility
+                        // ObjectModule doesn't support TestCase names in relocations (unimplemented!)
+                        // Extract function name from TestCase format (%name -> name)
+                        let func_name_str =
+                            core::str::from_utf8(testcase_name.raw()).map_err(|e| {
+                                GlslError::new(
+                                    ErrorCode::E0400,
+                                    format!("Invalid TestCase name encoding: {e}"),
+                                )
+                            })?;
+                        // Look up the new FuncId for this function name
+                        let new_func_id = func_id_map.get(func_name_str).ok_or_else(|| {
+                            GlslError::new(
+                                ErrorCode::E0400,
+                                format!("Function '{func_name_str}' not found in func_id_map"),
+                            )
+                        })?;
+                        // Create UserExternalName with the new FuncId
+                        let new_user_name = cranelift_codegen::ir::UserExternalName {
+                            namespace: 0,
+                            index: new_func_id.as_u32(),
+                        };
+                        let new_user_ref =
+                            builder.func.declare_imported_user_function(new_user_name);
+                        ExternalName::User(new_user_ref)
                     }
                     ExternalName::User(old_user_ref) => {
                         // Map User function reference to new FuncId
@@ -347,8 +366,7 @@ pub(crate) fn convert_call(
                                 GlslError::new(
                                     ErrorCode::E0400,
                                     format!(
-                                        "UserExternalNameRef {} not found in old function's user_named_funcs",
-                                        old_user_ref
+                                        "UserExternalNameRef {old_user_ref} not found in old function's user_named_funcs"
                                     ),
                                 )
                             })?;
@@ -365,7 +383,7 @@ pub(crate) fn convert_call(
                         let new_func_id = func_id_map.get(func_name).ok_or_else(|| {
                             GlslError::new(
                                 ErrorCode::E0400,
-                                format!("Function '{}' not found in func_id_map", func_name),
+                                format!("Function '{func_name}' not found in func_id_map"),
                             )
                         })?;
                         let new_user_name = UserExternalName {
@@ -426,7 +444,7 @@ pub(crate) fn convert_call(
     } else {
         return Err(GlslError::new(
             ErrorCode::E0301,
-            alloc::format!("Call instruction has unexpected format: {:?}", inst_data),
+            alloc::format!("Call instruction has unexpected format: {inst_data:?}"),
         ));
     }
 
@@ -491,10 +509,7 @@ pub(crate) fn convert_call_indirect(
     } else {
         return Err(GlslError::new(
             ErrorCode::E0301,
-            alloc::format!(
-                "CallIndirect instruction has unexpected format: {:?}",
-                inst_data
-            ),
+            alloc::format!("CallIndirect instruction has unexpected format: {inst_data:?}"),
         ));
     }
 

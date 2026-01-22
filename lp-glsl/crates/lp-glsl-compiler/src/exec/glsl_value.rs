@@ -5,6 +5,13 @@ use glsl::syntax::{Expr, JumpStatement, SimpleStatement, Statement};
 
 use alloc::{format, vec::Vec};
 
+/// Truncate f32 toward zero (no_std compatible)
+/// Casts to i32 which truncates toward zero, then to i64
+#[inline]
+fn trunc_f32(f: f32) -> i64 {
+    (f as i32) as i64
+}
+
 /// GLSL value types for function arguments
 ///
 /// ## Matrix Storage Format
@@ -55,25 +62,25 @@ impl GlslValue {
         // Wrap the literal in a minimal function to parse it
         // We'll try different return types to determine the literal type
         let wrappers = [
-            format!("int main() {{ return {}; }}", literal_str),
-            format!("uint main() {{ return {}; }}", literal_str),
-            format!("float main() {{ return {}; }}", literal_str),
-            format!("bool main() {{ return {}; }}", literal_str),
-            format!("vec2 main() {{ return {}; }}", literal_str),
-            format!("vec3 main() {{ return {}; }}", literal_str),
-            format!("vec4 main() {{ return {}; }}", literal_str),
-            format!("ivec2 main() {{ return {}; }}", literal_str),
-            format!("ivec3 main() {{ return {}; }}", literal_str),
-            format!("ivec4 main() {{ return {}; }}", literal_str),
-            format!("uvec2 main() {{ return {}; }}", literal_str),
-            format!("uvec3 main() {{ return {}; }}", literal_str),
-            format!("uvec4 main() {{ return {}; }}", literal_str),
-            format!("bvec2 main() {{ return {}; }}", literal_str),
-            format!("bvec3 main() {{ return {}; }}", literal_str),
-            format!("bvec4 main() {{ return {}; }}", literal_str),
-            format!("mat2 main() {{ return {}; }}", literal_str),
-            format!("mat3 main() {{ return {}; }}", literal_str),
-            format!("mat4 main() {{ return {}; }}", literal_str),
+            format!("int main() {{ return {literal_str}; }}"),
+            format!("uint main() {{ return {literal_str}; }}"),
+            format!("float main() {{ return {literal_str}; }}"),
+            format!("bool main() {{ return {literal_str}; }}"),
+            format!("vec2 main() {{ return {literal_str}; }}"),
+            format!("vec3 main() {{ return {literal_str}; }}"),
+            format!("vec4 main() {{ return {literal_str}; }}"),
+            format!("ivec2 main() {{ return {literal_str}; }}"),
+            format!("ivec3 main() {{ return {literal_str}; }}"),
+            format!("ivec4 main() {{ return {literal_str}; }}"),
+            format!("uvec2 main() {{ return {literal_str}; }}"),
+            format!("uvec3 main() {{ return {literal_str}; }}"),
+            format!("uvec4 main() {{ return {literal_str}; }}"),
+            format!("bvec2 main() {{ return {literal_str}; }}"),
+            format!("bvec3 main() {{ return {literal_str}; }}"),
+            format!("bvec4 main() {{ return {literal_str}; }}"),
+            format!("mat2 main() {{ return {literal_str}; }}"),
+            format!("mat3 main() {{ return {literal_str}; }}"),
+            format!("mat4 main() {{ return {literal_str}; }}"),
         ];
 
         for wrapper in &wrappers {
@@ -227,8 +234,7 @@ impl GlslValue {
         Err(GlslError::new(
             ErrorCode::E0400,
             format!(
-                "invalid literal: `{}` (must be an integer, float, boolean, vector, or matrix literal)",
-                literal_str
+                "invalid literal: `{literal_str}` (must be an integer, float, boolean, vector, or matrix literal)"
             ),
         ))
     }
@@ -515,7 +521,7 @@ fn parse_int_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<i32>, G
             }
             Expr::FloatConst(f, _) => {
                 // Convert float to int: truncate towards zero, clamp to i32 range
-                let truncated = f.trunc() as i64;
+                let truncated = trunc_f32(*f);
                 let clamped = if truncated < i32::MIN as i64 {
                     i32::MIN
                 } else if truncated > i32::MAX as i64 {
@@ -570,7 +576,7 @@ fn parse_int_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<i32>, G
                         let nested = parse_vector_constructor(args, nested_dim)?;
                         // Convert float components to int
                         for val in nested {
-                            let truncated = val.trunc() as i64;
+                            let truncated = trunc_f32(val);
                             let clamped = if truncated < i32::MIN as i64 {
                                 i32::MIN
                             } else if truncated > i32::MAX as i64 {
@@ -607,7 +613,7 @@ fn parse_int_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<i32>, G
                         }
                         Expr::FloatConst(f, _) => {
                             // Convert negative float to int
-                            let truncated = (-f).trunc() as i64;
+                            let truncated = trunc_f32(-f);
                             let clamped = if truncated < i32::MIN as i64 {
                                 i32::MIN
                             } else if truncated > i32::MAX as i64 {
@@ -669,7 +675,7 @@ fn parse_uint_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<u32>, 
             Expr::FloatConst(f, _) => {
                 // Convert float to uint: truncate towards zero, then cast to unsigned
                 // Negative values wrap around (e.g., -2.7 -> -2 -> 4294967294u)
-                let truncated = f.trunc() as i32;
+                let truncated = trunc_f32(*f) as i32;
                 let as_uint = truncated as u32;
                 components.push(as_uint);
             }
@@ -701,7 +707,7 @@ fn parse_uint_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<u32>, 
                         let nested = parse_vector_constructor(args, nested_dim)?;
                         // Convert float/int components to uint
                         for val in nested {
-                            let truncated = val.trunc() as i64;
+                            let truncated = trunc_f32(val);
                             let clamped = if truncated < 0 {
                                 0
                             } else if truncated > u32::MAX as i64 {
@@ -741,7 +747,7 @@ fn parse_uint_vector_constructor(args: &[Expr], dim: usize) -> Result<Vec<u32>, 
                         }
                         Expr::FloatConst(f, _) => {
                             // Convert negative float to uint: -5.7 → 4294967291 (wrapping)
-                            let truncated = (-f).trunc() as i64;
+                            let truncated = trunc_f32(-f);
                             let wrapped = if truncated >= 0 {
                                 (truncated as u32).wrapping_neg()
                             } else {
@@ -826,8 +832,7 @@ fn parse_matrix_constructor(args: &[Expr], dim: usize) -> Result<[[f32; 4]; 4], 
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
                                 format!(
-                                    "matrix column vector dimension mismatch: expected vec{}, got {}",
-                                    dim, vec_dim
+                                    "matrix column vector dimension mismatch: expected vec{dim}, got {vec_dim}"
                                 ),
                             ));
                         }

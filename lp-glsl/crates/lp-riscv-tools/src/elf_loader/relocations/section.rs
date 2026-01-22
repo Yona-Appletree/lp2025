@@ -1,6 +1,5 @@
 //! Section address resolution (VMA/LMA).
 
-use crate::debug;
 use alloc::string::{String, ToString};
 use hashbrown::HashMap;
 use object::{Object, ObjectSection, ObjectSymbol};

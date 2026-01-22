@@ -43,7 +43,7 @@ pub extern "C" fn __lp_fixed32_exp(x: i32) -> i32 {
     // Compute power series: term_n+1 = term_n * x / n
     for i in 2..30 {
         // Convert i to fixed point for division
-        let i_fixed = (i as i32) << 16;
+        let i_fixed = i << 16;
         term = __lp_fixed32_mul(term, __lp_fixed32_div(in_value, i_fixed));
         result += term;
 

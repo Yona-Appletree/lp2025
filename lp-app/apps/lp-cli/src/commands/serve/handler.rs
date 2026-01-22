@@ -23,7 +23,7 @@ pub fn handle_serve(args: ServeArgs) -> Result<()> {
 
     // Create websocket server transport on port 2812
     let transport = WebSocketServerTransport::new(2812)
-        .map_err(|e| anyhow::anyhow!("Failed to start websocket server: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to start websocket server: {e}"))?;
 
     println!("Server started on ws://localhost:2812/");
     println!("Press Ctrl+C to stop");

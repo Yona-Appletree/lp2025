@@ -161,7 +161,8 @@ block1:
     #[cfg(feature = "std")]
     #[cfg(feature = "emulator")]
     fn test_do_while() {
-        // Test do-while loop with continue - should return 1 (only first iteration adds to sum)
+        // Test do-while loop with continue - should return 10
+        // Iterations: i=0 (sum=0), i=1 (sum=1), i=2 (sum=3, continue), i=3 (sum=6, continue), i=4 (sum=10, continue), i=5 (exit)
         use crate::backend::transform::shared::transform_test_util::run_int32_test;
         run_int32_test(
             r#"
@@ -183,7 +184,7 @@ int main() {
     return test_continue_do_while_loop_after_first();
 }
 "#,
-            1, // Expected result: sum should be 1 (only first iteration adds 0+0=0, then i becomes 1, sum becomes 1, then continue skips rest)
+            10, // Expected result: 0+1+2+3+4 = 10
         );
     }
 }

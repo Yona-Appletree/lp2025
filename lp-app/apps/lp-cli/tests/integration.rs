@@ -11,8 +11,8 @@ use core::cell::RefCell;
 // NOTE: These integration tests use the old synchronous lp-client API which no longer exists.
 // They need to be rewritten to use the new async LpClient API. Marked as #[ignore] for now.
 
-use lp_model::Message;
 use lp_model::AsLpPath;
+use lp_model::Message;
 use lp_server::LpServer;
 use lp_shared::fs::{LpFs, LpFsMemory};
 use lp_shared::output::MemoryOutputProvider;
@@ -27,7 +27,9 @@ type ClientError = ();
 /// Returns `(server, client, client_transport, server_transport)` for
 /// synchronous message processing in tests.
 #[allow(dead_code, unused_variables)]
-fn setup_server_and_client(_fs: LpFsMemory) -> (LpServer, LpClient, LocalTransport, LocalTransport) {
+fn setup_server_and_client(
+    _fs: LpFsMemory,
+) -> (LpServer, LpClient, LocalTransport, LocalTransport) {
     todo!("Rewrite for async LpClient")
 }
 
@@ -59,10 +61,9 @@ fn create_test_project(fs: &mut LpFsMemory, name: &str, uid: &str) -> Result<(),
     // Create project.json
     let project_json = format!(
         r#"{{
-  "uid": "{}",
-  "name": "{}"
-}}"#,
-        uid, name
+  "uid": "{uid}",
+  "name": "{name}"
+}}"#
     );
     fs.write_file_mut("/project.json".as_path(), project_json.as_bytes())
         .map_err(|_| todo!())?;
@@ -110,10 +111,9 @@ fn test_create_command_structure() {
     // Create project.json
     let project_json = format!(
         r#"{{
-  "uid": "{}",
-  "name": "{}"
-}}"#,
-        project_uid, project_name
+  "uid": "{project_uid}",
+  "name": "{project_name}"
+}}"#
     );
     fs.write_file_mut("/project.json".as_path(), project_json.as_bytes())
         .unwrap();

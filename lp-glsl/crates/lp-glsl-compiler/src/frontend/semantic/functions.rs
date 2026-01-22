@@ -5,12 +5,7 @@ use crate::frontend::semantic::type_check::can_implicitly_convert;
 use crate::frontend::semantic::types::Type;
 use hashbrown::HashMap;
 
-use alloc::{string::String, vec::Vec};
-
-#[cfg(not(feature = "std"))]
-use alloc::format;
-#[cfg(feature = "std")]
-use std::format;
+use alloc::{format, string::String, vec::Vec};
 #[derive(Clone)]
 pub struct FunctionRegistry {
     functions: HashMap<String, Vec<FunctionSignature>>,
@@ -58,8 +53,8 @@ impl FunctionRegistry {
         arg_types: &[Type],
     ) -> Result<&FunctionSignature, GlslError> {
         let overloads = self.functions.get(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0101, format!("undefined function `{}`", name))
-                .with_note(format!("function `{}` is not defined", name))
+            GlslError::new(ErrorCode::E0101, format!("undefined function `{name}`"))
+                .with_note(format!("function `{name}` is not defined"))
         })?;
 
         // Try exact match first
@@ -78,11 +73,10 @@ impl FunctionRegistry {
 
         Err(GlslError::new(
             ErrorCode::E0114,
-            format!("no matching overload for function `{}`", name),
+            format!("no matching overload for function `{name}`"),
         )
         .with_note(format!(
-            "cannot find function `{}` that accepts arguments of type {:?}",
-            name, arg_types
+            "cannot find function `{name}` that accepts arguments of type {arg_types:?}"
         )))
     }
 

@@ -39,6 +39,6 @@ esp-bootloader-esp-idf = { version = "0.2.0", features = ["esp32c6"] }
 version = "1.11"
 default-features = false
 
-# Note: Release profile optimizations must be configured in lp-glsl/Cargo.toml
-# (workspace root) since package-level profiles are ignored
+# Note: Release profile optimizations are configured in workspace root Cargo.toml
+# under [profile.release.package.esp32-glsl-jit] to work when building from workspace root
 

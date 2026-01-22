@@ -1,6 +1,6 @@
 use crate::backend::transform::identity::IdentityTransform;
 use crate::backend::transform::pipeline::Transform;
-use cranelift_codegen::write_function;
+use alloc::string::ToString;
 use cranelift_module::Linkage;
 use cranelift_reader::{ParseOptions, parse_test};
 use std::prelude::rust_2015::{String, Vec};
@@ -25,13 +25,33 @@ fn normalize_clif(clif: &str) -> String {
 fn format_module<M: cranelift_module::Module>(
     module: &crate::backend::module::gl_module::GlModule<M>,
 ) -> String {
+    use crate::backend::util::clif_format::format_function;
+    use hashbrown::HashMap;
+
+    // Build mapping from func_id string to function name for updating external references
+    let mut name_mapping: HashMap<String, String> = HashMap::new();
+    for (name, gl_func) in &module.fns {
+        name_mapping.insert(gl_func.func_id.as_u32().to_string(), name.clone());
+    }
+
     let mut result = String::new();
     // Sort functions by name for deterministic output
     let mut funcs: Vec<_> = module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
-    for (_name, gl_func) in funcs {
-        write_function(&mut result, &gl_func.function).unwrap();
-        result.push('\n');
+    for (name, gl_func) in funcs {
+        // Use format_function to convert User names back to TestCase names for comparison
+        match format_function(&gl_func.function, name, &name_mapping) {
+            Ok(func_text) => {
+                result.push_str(&func_text);
+                result.push('\n');
+            }
+            Err(_) => {
+                // Fallback to write_function if format_function fails
+                use cranelift_codegen::write_function;
+                write_function(&mut result, &gl_func.function).unwrap();
+                result.push('\n');
+            }
+        }
     }
     result
 }
@@ -83,10 +103,9 @@ pub fn assert_identity_transform(message: &str, clif_input: &str) {
 
     assert_eq!(
         normalized_parsed, normalized_transformed,
-        "{}\n\
-     PARSED:\n{}\n\n\
-     TRANSFORMED:\n{}",
-        message, parsed_buf, transformed_buf
+        "{message}\n\
+     PARSED:\n{parsed_buf}\n\n\
+     TRANSFORMED:\n{transformed_buf}"
     );
 }
 
@@ -103,10 +122,9 @@ pub fn assert_nop_fixed32_transform(message: &str, clif_input: &str) {
 
     assert_eq!(
         normalized_parsed, normalized_transformed,
-        "{}\n\
-     PARSED:\n{}\n\n\
-     TRANSFORMED:\n{}",
-        message, parsed_buf, transformed_buf
+        "{message}\n\
+     PARSED:\n{parsed_buf}\n\n\
+     TRANSFORMED:\n{transformed_buf}"
     );
 }
 
@@ -116,22 +134,18 @@ fn build_and_run_module(
     gl_module: crate::backend::module::gl_module::GlModule<cranelift_object::ObjectModule>,
     transform_name: &str,
 ) -> i32 {
-    use crate::GlslExecutable;
     use crate::backend::codegen::emu::EmulatorOptions;
     use cranelift_codegen::write_function;
 
     // Print transformed CLIF
-    eprintln!(
-        "\n=== CLIF IR (AFTER {} transformation) ===",
-        transform_name
-    );
+    eprintln!("\n=== CLIF IR (AFTER {transform_name} transformation) ===");
     let mut funcs: Vec<_> = gl_module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
     for (name, gl_func) in funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, &gl_func.function).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Build executable
@@ -141,13 +155,13 @@ fn build_and_run_module(
         max_instructions: 10000,
     };
 
-    eprintln!("\n=== Building executable ({}) ===", transform_name);
+    eprintln!("\n=== Building executable ({transform_name}) ===");
     let mut executable = gl_module
         .build_executable(&options, None, None)
         .expect("Failed to build executable");
 
     // Call main function and get result
-    eprintln!("\n=== Executing main function ({}) ===", transform_name);
+    eprintln!("\n=== Executing main function ({transform_name}) ===");
     executable
         .call_i32("main", &[])
         .expect("Failed to execute main function")
@@ -166,7 +180,7 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Print input GLSL
     eprintln!("\n=== GLSL Source (INPUT) ===");
-    eprintln!("{}", glsl_source);
+    eprintln!("{glsl_source}");
 
     let target = Target::riscv32_emulator().unwrap();
     let mut compiler = GlslCompiler::new();
@@ -183,10 +197,10 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
     let mut funcs: Vec<_> = raw_module.fns.iter().collect();
     funcs.sort_by_key(|(name, _)| *name);
     for (name, gl_func) in funcs {
-        eprintln!("function {}:", name);
+        eprintln!("function {name}:");
         let mut buf = String::new();
         write_function(&mut buf, &gl_func.function).unwrap();
-        eprintln!("{}", buf);
+        eprintln!("{buf}");
     }
 
     // Run raw (no transform)
@@ -194,7 +208,7 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Compile GLSL for identity transform
     eprintln!("\n=== Compiling GLSL (identity transform) ===");
-    let mut identity_module = compiler
+    let identity_module = compiler
         .compile_to_gl_module_object(glsl_source, target.clone())
         .expect("Failed to compile GLSL");
     let identity_module = identity_module
@@ -204,7 +218,7 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Compile GLSL for fixed32 transform
     eprintln!("\n=== Compiling GLSL (fixed32 transform) ===");
-    let mut fixed32_module = compiler
+    let fixed32_module = compiler
         .compile_to_gl_module_object(glsl_source, target.clone())
         .expect("Failed to compile GLSL");
     let fixed32_transform = Fixed32Transform::new(FixedPointFormat::Fixed16x16);
@@ -215,34 +229,29 @@ pub fn run_int32_test(glsl_source: &str, expected_int: i32) {
 
     // Verify all results match expected value
     eprintln!("\n=== Results ===");
-    eprintln!("Expected: {}", expected_int);
-    eprintln!("Raw:      {}", raw_result);
-    eprintln!("Identity: {}", identity_result);
-    eprintln!("Fixed32:  {}", fixed32_result);
+    eprintln!("Expected: {expected_int}");
+    eprintln!("Raw:      {raw_result}");
+    eprintln!("Identity: {identity_result}");
+    eprintln!("Fixed32:  {fixed32_result}");
 
     assert_eq!(
         raw_result, expected_int,
-        "Raw execution failed: expected {}, got {}",
-        expected_int, raw_result
+        "Raw execution failed: expected {expected_int}, got {raw_result}"
     );
     assert_eq!(
         identity_result, expected_int,
-        "Identity transform failed: expected {}, got {}",
-        expected_int, identity_result
+        "Identity transform failed: expected {expected_int}, got {identity_result}"
     );
     assert_eq!(
         fixed32_result, expected_int,
-        "Fixed32 transform failed: expected {}, got {}",
-        expected_int, fixed32_result
+        "Fixed32 transform failed: expected {expected_int}, got {fixed32_result}"
     );
     assert_eq!(
         raw_result, identity_result,
-        "Raw and identity results differ: raw={}, identity={}",
-        raw_result, identity_result
+        "Raw and identity results differ: raw={raw_result}, identity={identity_result}"
     );
     assert_eq!(
         raw_result, fixed32_result,
-        "Raw and fixed32 results differ: raw={}, fixed32={}",
-        raw_result, fixed32_result
+        "Raw and fixed32 results differ: raw={raw_result}, fixed32={fixed32_result}"
     );
 }

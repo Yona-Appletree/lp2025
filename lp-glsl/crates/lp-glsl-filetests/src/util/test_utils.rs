@@ -22,13 +22,13 @@ pub fn create_riscv32_isa() -> Result<OwnedTargetIsa> {
     let mut flag_builder = settings::builder();
     flag_builder
         .set("is_pic", "false")
-        .map_err(|e| anyhow::anyhow!("failed to set is_pic: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("failed to set is_pic: {e}"))?;
     flag_builder
         .set("use_colocated_libcalls", "false")
-        .map_err(|e| anyhow::anyhow!("failed to set use_colocated_libcalls: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("failed to set use_colocated_libcalls: {e}"))?;
     flag_builder
         .set("enable_multi_ret_implicit_sret", "true")
-        .map_err(|e| anyhow::anyhow!("failed to set enable_multi_ret_implicit_sret: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("failed to set enable_multi_ret_implicit_sret: {e}"))?;
 
     let flags = settings::Flags::new(flag_builder);
     let triple = Triple {
@@ -41,5 +41,5 @@ pub fn create_riscv32_isa() -> Result<OwnedTargetIsa> {
 
     isa_builder(triple)
         .finish(flags)
-        .map_err(|e| anyhow::anyhow!("failed to create riscv32 ISA: {}", e))
+        .map_err(|e| anyhow::anyhow!("failed to create riscv32 ISA: {e}"))
 }

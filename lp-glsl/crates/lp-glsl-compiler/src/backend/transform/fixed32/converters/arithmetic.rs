@@ -10,6 +10,8 @@ use cranelift_codegen::ir::{Function, Inst, InstBuilder, condcodes::IntCC, types
 use cranelift_frontend::FunctionBuilder;
 use hashbrown::HashMap;
 
+use alloc::format;
+
 /// Convert Fadd to fixed-point addition with saturation
 pub(crate) fn convert_fadd(
     old_func: &Function,
@@ -140,10 +142,7 @@ pub(crate) fn convert_fmul(
     let func_id = func_id_map.get(builtin_name).ok_or_else(|| {
         GlslError::new(
             crate::error::ErrorCode::E0400,
-            format!(
-                "Builtin function '{}' not found in func_id_map",
-                builtin_name
-            ),
+            format!("Builtin function '{builtin_name}' not found in func_id_map"),
         )
     })?;
 

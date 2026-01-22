@@ -30,7 +30,7 @@ pub struct EmulatorOptions {
     /// Maximum memory size in bytes (RAM)
     pub max_memory: usize,
     /// Stack size in bytes (stored for future use)
-    #[allow(unused)]
+    #[allow(unused, reason = "Reserved for future stack size configuration")]
     pub stack_size: usize,
     /// Maximum instruction count before timeout
     pub max_instructions: u64,
@@ -57,7 +57,10 @@ pub fn build_emu_executable(
 
     // 1. Define all functions (compile them)
     // Collect function data first to avoid borrowing conflicts
-    let funcs: Vec<(
+    // IMPORTANT: Sort by name to ensure consistent FuncId-to-symbol mapping.
+    // Cranelift's ObjectModule maps FuncIds to symbol names based on definition order,
+    // so we must define functions in the same order they were declared (which should be sorted).
+    let mut funcs: Vec<(
         String,
         cranelift_codegen::ir::Function,
         cranelift_module::FuncId,
@@ -66,6 +69,7 @@ pub fn build_emu_executable(
         .iter()
         .map(|(name, gl_func)| (name.clone(), gl_func.function.clone(), gl_func.func_id))
         .collect();
+    funcs.sort_by_key(|(name, _, _)| name.clone());
 
     // Collect V-Code and disassembly for all functions
     #[cfg(feature = "std")]
@@ -101,7 +105,7 @@ pub fn build_emu_executable(
                 // TODO: This is a hacky way to get the verifier error and it should be improved
                 // Check if this is a verifier error by checking the error message
                 // If it is, verify the function again to get detailed error messages
-                let error_str = format!("{}", e);
+                let error_str = format!("{e}");
                 let error_msg = if error_str.contains("Verifier errors") {
                     // It's a verifier error - verify the function again to get detailed errors
                     use cranelift_codegen::verifier::verify_function;
@@ -128,10 +132,10 @@ pub fn build_emu_executable(
                         }
                     } else {
                         // Fallback if verification somehow succeeds
-                        format!("Failed to define function '{}': {}", name, e)
+                        format!("Failed to define function '{name}': {e}")
                     }
                 } else {
-                    format!("Failed to define function '{}': {}", name, e)
+                    format!("Failed to define function '{name}': {e}")
                 };
 
                 let mut error = GlslError::new(ErrorCode::E0400, error_msg);
@@ -141,23 +145,21 @@ pub fn build_emu_executable(
                 match (&original_clif, &transformed_clif) {
                     (Some(original), Some(transformed)) if original != transformed => {
                         error = error.with_note(format!(
-                            "=== CLIF IR (BEFORE transformation) ===\n{}",
-                            original
+                            "=== CLIF IR (BEFORE transformation) ===\n{original}"
                         ));
                         error = error.with_note(format!(
-                            "=== CLIF IR (AFTER transformation) ===\n{}",
-                            transformed
+                            "=== CLIF IR (AFTER transformation) ===\n{transformed}"
                         ));
                     }
                     (Some(ir), Some(_)) => {
                         // They're the same, just show one
-                        error = error.with_note(format!("=== CLIF IR ===\n{}", ir));
+                        error = error.with_note(format!("=== CLIF IR ===\n{ir}"));
                     }
                     (Some(ir), None) => {
-                        error = error.with_note(format!("=== CLIF IR ===\n{}", ir));
+                        error = error.with_note(format!("=== CLIF IR ===\n{ir}"));
                     }
                     (None, Some(ir)) => {
-                        error = error.with_note(format!("=== CLIF IR ===\n{}", ir));
+                        error = error.with_note(format!("=== CLIF IR ===\n{ir}"));
                     }
                     (None, None) => {
                         // No CLIF IR available
@@ -213,12 +215,12 @@ pub fn build_emu_executable(
 
                 // Store actual disassembly (RISC-V assembly)
                 if let Some(ref disasm_str) = disasm {
-                    all_disasm_parts.push(format!("// function {}:\n{}", name, disasm_str));
+                    all_disasm_parts.push(format!("// function {name}:\n{disasm_str}"));
                 }
 
                 // Store VCode separately (intermediate representation)
                 if let Some(ref vcode_str) = vcode {
-                    all_vcode_parts.push(format!("// function {}:\n{}", name, vcode_str));
+                    all_vcode_parts.push(format!("// function {name}:\n{vcode_str}"));
                 }
             }
         }
@@ -274,7 +276,7 @@ pub fn build_emu_executable(
     let product = gl_module.into_module().finish();
     let elf_bytes = product
         .emit()
-        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("Failed to emit ELF: {}", e)))?;
+        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("Failed to emit ELF: {e}")))?;
 
     // Debug: Check symbols BEFORE linking
     crate::debug!("=== Symbols BEFORE linking ===");
@@ -387,6 +389,11 @@ pub fn build_emu_executable(
         .with_log_level(LogLevel::Instructions);
 
     // 7. Run bootstrap init: initialize .bss/.data and optionally call user _init
+    // Temporarily increase instruction limit for bootstrap init (which can be longer)
+    let original_max_instructions = options.max_instructions;
+    let init_max_instructions = 10000u64.max(options.max_instructions * 10);
+    emulator.set_max_instructions(init_max_instructions);
+
     // Set up stack pointer (sp = x2) to point to high RAM
     let sp_value = 0x80000000u32.wrapping_add((ram_size as u32).wrapping_sub(16));
     emulator.set_register(Gpr::Sp, sp_value as i32);
@@ -472,6 +479,9 @@ pub fn build_emu_executable(
             }
         }
     }
+
+    // Restore original instruction limit for normal function execution
+    emulator.set_max_instructions(original_max_instructions);
 
     crate::debug!("Bootstrap init completed successfully");
 

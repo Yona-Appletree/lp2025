@@ -34,7 +34,7 @@ pub(crate) fn node_kind_from_path(path: &LpPathBuf) -> Result<NodeKind, Error> {
         "fixture" => Ok(NodeKind::Fixture),
         _ => Err(Error::InvalidConfig {
             node_path: path_str.to_string(),
-            reason: format!("Unknown node kind: {}", suffix),
+            reason: format!("Unknown node kind: {suffix}"),
         }),
     }
 }
@@ -53,12 +53,12 @@ pub fn load_from_filesystem(fs: &dyn LpFs) -> Result<ProjectConfig, Error> {
     let path = "/project.json";
     let data = fs.read_file(path.as_path()).map_err(|e| Error::Io {
         path: path.to_string(),
-        details: format!("Failed to read: {:?}", e),
+        details: format!("Failed to read: {e:?}"),
     })?;
 
     let config: ProjectConfig = serde_json::from_slice(&data).map_err(|e| Error::Parse {
         file: path.to_string(),
-        error: format!("{}", e),
+        error: format!("{e}"),
     })?;
 
     Ok(config)
@@ -69,7 +69,7 @@ pub fn discover_nodes(fs: &dyn LpFs) -> Result<Vec<LpPathBuf>, Error> {
     let path = "/src";
     let entries = fs.list_dir(path.as_path(), false).map_err(|e| Error::Io {
         path: path.to_string(),
-        details: format!("Failed to list directory: {:?}", e),
+        details: format!("Failed to list directory: {e:?}"),
     })?;
 
     let mut nodes = Vec::new();
@@ -83,16 +83,15 @@ pub fn discover_nodes(fs: &dyn LpFs) -> Result<Vec<LpPathBuf>, Error> {
 }
 
 /// Load a node's config from filesystem
-pub fn load_node(
-    fs: &dyn LpFs,
-    path: &LpPath,
-) -> Result<(LpPathBuf, Box<dyn NodeConfig>), Error> {
+pub fn load_node(fs: &dyn LpFs, path: &LpPath) -> Result<(LpPathBuf, Box<dyn NodeConfig>), Error> {
     let node_json_path = path.to_path_buf().join("node.json");
 
-    let data = fs.read_file(node_json_path.as_path()).map_err(|e| Error::Io {
-        path: node_json_path.as_str().to_string(),
-        details: format!("Failed to read: {:?}", e),
-    })?;
+    let data = fs
+        .read_file(node_json_path.as_path())
+        .map_err(|e| Error::Io {
+            path: node_json_path.as_str().to_string(),
+            details: format!("Failed to read: {e:?}"),
+        })?;
 
     // Determine node kind from path suffix
     let kind = node_kind_from_path(&path.to_path_buf())?;
@@ -103,7 +102,7 @@ pub fn load_node(
             let cfg: lp_model::nodes::texture::TextureConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
                     file: node_json_path.as_str().to_string(),
-                    error: format!("Failed to parse texture config: {}", e),
+                    error: format!("Failed to parse texture config: {e}"),
                 })?;
             Box::new(cfg)
         }
@@ -111,7 +110,7 @@ pub fn load_node(
             let cfg: lp_model::nodes::shader::ShaderConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
                     file: node_json_path.as_str().to_string(),
-                    error: format!("Failed to parse shader config: {}", e),
+                    error: format!("Failed to parse shader config: {e}"),
                 })?;
             Box::new(cfg)
         }
@@ -119,7 +118,7 @@ pub fn load_node(
             let cfg: lp_model::nodes::output::OutputConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
                     file: node_json_path.as_str().to_string(),
-                    error: format!("Failed to parse output config: {}", e),
+                    error: format!("Failed to parse output config: {e}"),
                 })?;
             Box::new(cfg)
         }
@@ -127,7 +126,7 @@ pub fn load_node(
             let cfg: lp_model::nodes::fixture::FixtureConfig = serde_json::from_slice(&data)
                 .map_err(|e| Error::Parse {
                     file: node_json_path.as_str().to_string(),
-                    error: format!("Failed to parse fixture config: {}", e),
+                    error: format!("Failed to parse fixture config: {e}"),
                 })?;
             Box::new(cfg)
         }

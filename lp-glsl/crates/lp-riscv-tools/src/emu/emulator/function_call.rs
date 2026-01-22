@@ -39,6 +39,10 @@ impl Riscv32Emulator {
         args: &[DataValue],
         signature: &Signature,
     ) -> Result<Vec<DataValue>, EmulatorError> {
+        // Clear log buffer for clean output on this function call
+        self.clear_logs();
+        self.instruction_count = 0;
+
         // Check if function uses StructReturn
         if has_struct_return(signature) {
             // StructReturn: caller must provide struct size
@@ -63,7 +67,7 @@ impl Riscv32Emulator {
                 EmulatorError::InvalidInstruction {
                     pc: self.pc,
                     instruction: 0,
-                    reason: format!("Failed to compute return locations: {:?}", e),
+                    reason: format!("Failed to compute return locations: {e:?}"),
                     regs: self.regs,
                 }
             })?;
@@ -76,7 +80,7 @@ impl Riscv32Emulator {
             .map_err(|e| EmulatorError::InvalidInstruction {
                 pc: self.pc,
                 instruction: 0,
-                reason: format!("Failed to compute argument locations: {:?}", e),
+                reason: format!("Failed to compute argument locations: {e:?}"),
                 regs: self.regs,
             })?;
 
@@ -199,7 +203,7 @@ impl Riscv32Emulator {
                 EmulatorError::InvalidInstruction {
                     pc: self.pc,
                     instruction: 0,
-                    reason: format!("Failed to compute argument locations: {:?}", e),
+                    reason: format!("Failed to compute argument locations: {e:?}"),
                     regs: self.regs,
                 }
             })?;
@@ -314,7 +318,7 @@ fn create_flags_with_multi_ret() -> Result<Flags, EmulatorError> {
         .map_err(|e| EmulatorError::InvalidInstruction {
             pc: 0,
             instruction: 0,
-            reason: format!("Failed to set flags: {:?}", e),
+            reason: format!("Failed to set flags: {e:?}"),
             regs: [0; 32],
         })?;
     Ok(Flags::new(builder))
@@ -413,8 +417,7 @@ fn setup_call_stack(
             pc: emulator.pc,
             instruction: 0,
             reason: format!(
-                "Not enough RAM for stack (need {} bytes, have {} bytes)",
-                total_stack_space, ram_size
+                "Not enough RAM for stack (need {total_stack_space} bytes, have {ram_size} bytes)"
             ),
             regs: emulator.regs,
         });
@@ -475,10 +478,7 @@ fn allocate_struct_return_buffer(
         return Err(EmulatorError::InvalidInstruction {
             pc: emulator.pc,
             instruction: 0,
-            reason: format!(
-                "Not enough RAM for struct return buffer (need {} bytes)",
-                aligned_size
-            ),
+            reason: format!("Not enough RAM for struct return buffer (need {aligned_size} bytes)"),
             regs: emulator.regs,
         });
     }
@@ -506,7 +506,7 @@ fn place_register_argument(
         return Err(EmulatorError::InvalidInstruction {
             pc: emulator.pc,
             instruction: 0,
-            reason: format!("Invalid register index: {}", reg_enc),
+            reason: format!("Invalid register index: {reg_enc}"),
             regs: emulator.regs,
         });
     }
@@ -521,7 +521,7 @@ fn place_register_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i8 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i8 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -533,7 +533,7 @@ fn place_register_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i16 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i16 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -545,7 +545,7 @@ fn place_register_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i32 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i32 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -565,7 +565,7 @@ fn place_register_argument(
                     return Err(EmulatorError::InvalidInstruction {
                         pc: emulator.pc,
                         instruction: 0,
-                        reason: format!("i64 only has 2 slots, got slot_idx {}", slot_idx),
+                        reason: format!("i64 only has 2 slots, got slot_idx {slot_idx}"),
                         regs: emulator.regs,
                     });
                 }
@@ -582,7 +582,7 @@ fn place_register_argument(
                     return Err(EmulatorError::InvalidInstruction {
                         pc: emulator.pc,
                         instruction: 0,
-                        reason: format!("i128 only has 4 slots, got slot_idx {}", slot_idx),
+                        reason: format!("i128 only has 4 slots, got slot_idx {slot_idx}"),
                         regs: emulator.regs,
                     });
                 }
@@ -621,8 +621,7 @@ fn place_stack_argument(
                         pc: emulator.pc,
                         instruction: 0,
                         reason: format!(
-                            "Failed to write i8 stack argument at 0x{:08x}: {}",
-                            stack_addr, e
+                            "Failed to write i8 stack argument at 0x{stack_addr:08x}: {e}"
                         ),
                         regs: emulator.regs,
                     })?;
@@ -630,7 +629,7 @@ fn place_stack_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i8 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i8 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -644,8 +643,7 @@ fn place_stack_argument(
                         pc: emulator.pc,
                         instruction: 0,
                         reason: format!(
-                            "Failed to write i16 stack argument at 0x{:08x}: {}",
-                            stack_addr, e
+                            "Failed to write i16 stack argument at 0x{stack_addr:08x}: {e}"
                         ),
                         regs: emulator.regs,
                     })?;
@@ -653,7 +651,7 @@ fn place_stack_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i16 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i16 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -665,8 +663,7 @@ fn place_stack_argument(
                         pc: emulator.pc,
                         instruction: 0,
                         reason: format!(
-                            "Failed to write i32 stack argument at 0x{:08x}: {}",
-                            stack_addr, e
+                            "Failed to write i32 stack argument at 0x{stack_addr:08x}: {e}"
                         ),
                         regs: emulator.regs,
                     }
@@ -675,7 +672,7 @@ fn place_stack_argument(
                 return Err(EmulatorError::InvalidInstruction {
                     pc: emulator.pc,
                     instruction: 0,
-                    reason: format!("i32 only has 1 slot, got slot_idx {}", slot_idx),
+                    reason: format!("i32 only has 1 slot, got slot_idx {slot_idx}"),
                     regs: emulator.regs,
                 });
             }
@@ -695,7 +692,7 @@ fn place_stack_argument(
                     return Err(EmulatorError::InvalidInstruction {
                         pc: emulator.pc,
                         instruction: 0,
-                        reason: format!("i64 only has 2 slots, got slot_idx {}", slot_idx),
+                        reason: format!("i64 only has 2 slots, got slot_idx {slot_idx}"),
                         regs: emulator.regs,
                     });
                 }
@@ -708,8 +705,7 @@ fn place_stack_argument(
                     pc: emulator.pc,
                     instruction: 0,
                     reason: format!(
-                        "Failed to write i64 slot {} stack argument at 0x{:08x}: {}",
-                        slot_idx, stack_addr, e
+                        "Failed to write i64 slot {slot_idx} stack argument at 0x{stack_addr:08x}: {e}"
                     ),
                     regs: emulator.regs,
                 })?;
@@ -725,7 +721,7 @@ fn place_stack_argument(
                     return Err(EmulatorError::InvalidInstruction {
                         pc: emulator.pc,
                         instruction: 0,
-                        reason: format!("i128 only has 4 slots, got slot_idx {}", slot_idx),
+                        reason: format!("i128 only has 4 slots, got slot_idx {slot_idx}"),
                         regs: emulator.regs,
                     });
                 }
@@ -738,8 +734,7 @@ fn place_stack_argument(
                     pc: emulator.pc,
                     instruction: 0,
                     reason: format!(
-                        "Failed to write i128 slot {} stack argument at 0x{:08x}: {}",
-                        slot_idx, stack_addr, e
+                        "Failed to write i128 slot {slot_idx} stack argument at 0x{stack_addr:08x}: {e}"
                     ),
                     regs: emulator.regs,
                 })?;
@@ -803,7 +798,7 @@ fn extract_register_return_value(
         return Err(EmulatorError::InvalidInstruction {
             pc: emulator.pc,
             instruction: 0,
-            reason: format!("Invalid register index: {}", reg_enc),
+            reason: format!("Invalid register index: {reg_enc}"),
             regs: emulator.regs,
         });
     }
@@ -825,10 +820,7 @@ fn extract_stack_return_value(
             .map_err(|e| EmulatorError::InvalidInstruction {
                 pc: emulator.pc,
                 instruction: 0,
-                reason: format!(
-                    "Failed to read stack return value at 0x{:08x}: {}",
-                    stack_addr, e
-                ),
+                reason: format!("Failed to read stack return value at 0x{stack_addr:08x}: {e}"),
                 regs: emulator.regs,
             })?;
     Ok(word_value as u32)
@@ -986,8 +978,7 @@ fn extract_struct_return_value(
                     pc: emulator.pc,
                     instruction: 0,
                     reason: format!(
-                        "Failed to read struct return value word {} at 0x{:08x}: {}",
-                        i, addr, e
+                        "Failed to read struct return value word {i} at 0x{addr:08x}: {e}"
                     ),
                     regs: emulator.regs,
                 })?;

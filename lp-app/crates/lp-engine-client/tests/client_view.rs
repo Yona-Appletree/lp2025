@@ -2,7 +2,7 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use lp_engine_client::ClientProjectView;
-use lp_model::{project::api::ProjectResponse, FrameId, NodeHandle};
+use lp_model::{FrameId, NodeHandle, project::api::ProjectResponse};
 
 #[test]
 fn test_client_view_creation() {

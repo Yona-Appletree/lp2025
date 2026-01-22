@@ -97,20 +97,20 @@ impl DebugUiState {
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("Failed to apply changes: {}", e);
+                                    eprintln!("Failed to apply changes: {e}");
                                     self.sync_in_progress = false;
                                 }
                             }
                         }
                         Err(e) => {
-                            eprintln!("Failed to convert response: {}", e);
+                            eprintln!("Failed to convert response: {e}");
                             self.sync_in_progress = false;
                         }
                     }
                 }
                 Ok(Err(e)) => {
                     // Sync failed
-                    eprintln!("Sync error: {}", e);
+                    eprintln!("Sync error: {e}");
                     self.sync_in_progress = false;
                 }
                 Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {

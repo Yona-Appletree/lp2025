@@ -52,10 +52,10 @@ pub fn client_connect(spec: HostSpecifier) -> Result<Box<dyn ClientTransport>> {
             // WebSocketClientTransport::new is async, but client_connect is sync
             // We need to use tokio runtime to connect
             let rt = tokio::runtime::Runtime::new()
-                .map_err(|e| anyhow::anyhow!("Failed to create tokio runtime: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to create tokio runtime: {e}"))?;
             let transport = rt
                 .block_on(WebSocketClientTransport::new(&url))
-                .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", url, e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to connect to {url}: {e}"))?;
             Ok(Box::new(transport))
         }
         HostSpecifier::Serial { .. } => {
@@ -96,7 +96,7 @@ mod tests {
         let result = client_connect(spec);
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(format!("{}", e).contains("not yet implemented"));
+            assert!(format!("{e}").contains("not yet implemented"));
         }
     }
 }

@@ -23,7 +23,7 @@ pub fn expand_specifiers(specifiers: &[String]) -> Result<Vec<TestSpec>> {
     }
 
     // Deduplicate specs
-    all_specs.sort_by(|a, b| format!("{:?}", a).cmp(&format!("{:?}", b)));
+    all_specs.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
     all_specs.dedup_by(|a, b| {
         a.category == b.category && a.vec_type == b.vec_type && a.dimension == b.dimension
     });
@@ -72,8 +72,7 @@ fn expand_single_specifier(specifier: &str, filetests_dir: &Path) -> Result<Vec<
 
     // If we get here, it's neither a valid specifier nor a directory
     bail!(
-        "Invalid specifier: {}. Expected format: vec/vec4/fn-equal, vec/vec4, or a directory path",
-        specifier
+        "Invalid specifier: {specifier}. Expected format: vec/vec4/fn-equal, vec/vec4, or a directory path"
     );
 }
 
@@ -100,7 +99,7 @@ fn extract_spec_from_gen_file(file_path: &str, filetests_dir: &Path) -> Result<V
     };
 
     let rel_path =
-        rel_path.ok_or_else(|| anyhow::anyhow!("Could not make path relative: {}", file_path))?;
+        rel_path.ok_or_else(|| anyhow::anyhow!("Could not make path relative: {file_path}"))?;
 
     // Extract specifier from path like "vec/vec4/fn-equal.gen.glsl"
     // -> "vec/vec4/fn-equal"
@@ -170,8 +169,7 @@ fn parse_specifier(specifier: &str) -> Result<Vec<TestSpec>> {
                 generate_all_vec_specs()
             } else {
                 bail!(
-                    "Invalid specifier: {}. Expected format: vec/vec4/fn-equal or vec/vec3",
-                    specifier
+                    "Invalid specifier: {specifier}. Expected format: vec/vec4/fn-equal or vec/vec3"
                 );
             }
         }
@@ -188,15 +186,11 @@ fn parse_specifier(specifier: &str) -> Result<Vec<TestSpec>> {
                     generate_all_specs_for_type_and_dimension(vec_type, dimension)
                 } else {
                     bail!(
-                        "Invalid dimension or type: {}. Expected vec2, vec3, vec4, ivec2, etc.",
-                        second
+                        "Invalid dimension or type: {second}. Expected vec2, vec3, vec4, ivec2, etc."
                     );
                 }
             } else {
-                bail!(
-                    "Invalid specifier: {}. Expected format: vec/vec4/fn-equal",
-                    specifier
-                );
+                bail!("Invalid specifier: {specifier}. Expected format: vec/vec4/fn-equal");
             }
         }
         3 => {
@@ -212,7 +206,7 @@ fn parse_specifier(specifier: &str) -> Result<Vec<TestSpec>> {
             }])
         }
         _ => {
-            bail!("Invalid specifier: {}. Too many path components", specifier);
+            bail!("Invalid specifier: {specifier}. Too many path components");
         }
     }
 }
@@ -241,11 +235,11 @@ fn parse_type_and_dimension(s: &str) -> Result<(VecType, Dimension)> {
     } else if s.starts_with("vec") {
         VecType::Vec
     } else {
-        bail!("Invalid vector type prefix in: {}", s);
+        bail!("Invalid vector type prefix in: {s}");
     };
 
-    let dimension = parse_dimension(s)
-        .ok_or_else(|| anyhow::anyhow!("Could not parse dimension from: {}", s))?;
+    let dimension =
+        parse_dimension(s).ok_or_else(|| anyhow::anyhow!("Could not parse dimension from: {s}"))?;
 
     Ok((vec_type, dimension))
 }
@@ -404,8 +398,8 @@ mod tests {
     fn test_expand_specifier_vec4() {
         // Test expanding "vec/vec4" - should generate all categories for vec4 only
         let specs = parse_specifier("vec/vec4").unwrap();
-        // Should have 5 categories × 1 vector type (vec4) = 5 specs
-        assert_eq!(specs.len(), 5);
+        // Should have 10 categories × 1 vector type (vec4) = 10 specs
+        assert_eq!(specs.len(), 10);
         assert!(specs.iter().all(|s| s.dimension == Dimension::D4));
         assert!(specs.iter().all(|s| s.vec_type == VecType::Vec));
     }
@@ -424,15 +418,15 @@ mod tests {
     fn test_expand_specifier_all_vec() {
         // Test expanding "vec" - should generate all tests
         let specs = parse_specifier("vec").unwrap();
-        // Should have 5 categories × 3 vector types × 3 dimensions = 45 specs
-        assert_eq!(specs.len(), 45);
+        // Should have 10 categories × 3 vector types × 3 dimensions = 90 specs
+        assert_eq!(specs.len(), 90);
     }
 
     #[test]
     fn test_expand_specifier_ivec3() {
         // Test expanding "vec/ivec3" - should generate all categories for ivec3
         let specs = parse_specifier("vec/ivec3").unwrap();
-        assert_eq!(specs.len(), 5); // 5 categories
+        assert_eq!(specs.len(), 10); // 10 categories
         assert!(specs.iter().all(|s| s.vec_type == VecType::IVec));
         assert!(specs.iter().all(|s| s.dimension == Dimension::D3));
     }

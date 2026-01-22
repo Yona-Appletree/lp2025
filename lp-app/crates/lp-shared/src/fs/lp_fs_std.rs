@@ -2,16 +2,11 @@
 
 use crate::error::FsError;
 use crate::fs::{
+    LpFs,
     fs_event::{ChangeType, FsChange, FsVersion},
     lp_fs_view::LpFsView,
-    LpFs,
 };
-use alloc::{
-    format,
-    rc::Rc,
-    string::ToString,
-    vec::Vec,
-};
+use alloc::{format, rc::Rc, string::ToString, vec::Vec};
 use core::cell::RefCell;
 use hashbrown::HashMap;
 use lp_model::path::{LpPath, LpPathBuf};
@@ -42,7 +37,7 @@ impl LpFsStd {
     pub fn new(root_path: PathBuf) -> Self {
         // Ensure the root directory exists
         if let Err(e) = fs::create_dir_all(&root_path) {
-            log::warn!("Failed to create root directory {:?}: {}", root_path, e);
+            log::warn!("Failed to create root directory {root_path:?}: {e}");
         }
         Self {
             root_path,
@@ -94,7 +89,7 @@ impl LpFsStd {
         let canonical_root = self
             .root_path
             .canonicalize()
-            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {}", e)))?;
+            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {e}")))?;
 
         if !canonical_path.starts_with(&canonical_root) {
             return Err(FsError::InvalidPath(format!(
@@ -159,8 +154,7 @@ impl LpFsStd {
             if component == ".." {
                 if depth == 0 {
                     return Err(FsError::InvalidPath(format!(
-                        "Path {:?} would escape root directory",
-                        path
+                        "Path {path:?} would escape root directory"
                     )));
                 }
                 depth -= 1;
@@ -179,29 +173,26 @@ impl LpFsStd {
         results: &mut Vec<LpPathBuf>,
     ) -> Result<(), FsError> {
         let entries = fs::read_dir(dir_path).map_err(|e| {
-            FsError::Filesystem(format!("Failed to read directory {:?}: {}", dir_path, e))
+            FsError::Filesystem(format!("Failed to read directory {dir_path:?}: {e}"))
         })?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| {
-                FsError::Filesystem(format!("Failed to read directory entry: {}", e))
-            })?;
+            let entry = entry
+                .map_err(|e| FsError::Filesystem(format!("Failed to read directory entry: {e}")))?;
 
             let entry_path = entry.path();
 
             // Canonicalize the entry path
             let canonical_entry = entry_path.canonicalize().map_err(|e| {
                 FsError::Filesystem(format!(
-                    "Failed to canonicalize entry path {:?}: {}",
-                    entry_path, e
+                    "Failed to canonicalize entry path {entry_path:?}: {e}"
                 ))
             })?;
 
             // Build the relative path from canonical root
             let relative_path = canonical_entry.strip_prefix(canonical_root).map_err(|_| {
                 FsError::Filesystem(format!(
-                    "Failed to compute relative path from root: entry={:?}, root={:?}",
-                    canonical_entry, canonical_root
+                    "Failed to compute relative path from root: entry={canonical_entry:?}, root={canonical_root:?}"
                 ))
             })?;
 
@@ -224,7 +215,7 @@ impl LpFs for LpFsStd {
     fn read_file(&self, path: &LpPath) -> Result<Vec<u8>, FsError> {
         let full_path = self.resolve_and_validate(path)?;
         fs::read(&full_path)
-            .map_err(|e| FsError::Filesystem(format!("Failed to read file {:?}: {}", full_path, e)))
+            .map_err(|e| FsError::Filesystem(format!("Failed to read file {full_path:?}: {e}")))
     }
 
     fn write_file(&self, path: &LpPath, data: &[u8]) -> Result<(), FsError> {
@@ -233,14 +224,12 @@ impl LpFs for LpFsStd {
         if let Some(parent) = full_path.parent() {
             if let Err(e) = fs::create_dir_all(parent) {
                 return Err(FsError::Filesystem(format!(
-                    "Failed to create directory {:?}: {}",
-                    parent, e
+                    "Failed to create directory {parent:?}: {e}"
                 )));
             }
         }
-        fs::write(&full_path, data).map_err(|e| {
-            FsError::Filesystem(format!("Failed to write file {:?}: {}", full_path, e))
-        })
+        fs::write(&full_path, data)
+            .map_err(|e| FsError::Filesystem(format!("Failed to write file {full_path:?}: {e}")))
     }
 
     fn file_exists(&self, path: &LpPath) -> Result<bool, FsError> {
@@ -272,8 +261,7 @@ impl LpFs for LpFsStd {
         // Check if it's actually a directory
         if !full_path.is_dir() {
             return Err(FsError::Filesystem(format!(
-                "Path {:?} is not a directory",
-                normalized_str
+                "Path {normalized_str:?} is not a directory"
             )));
         }
 
@@ -281,7 +269,7 @@ impl LpFs for LpFsStd {
         let canonical_root = self
             .root_path
             .canonicalize()
-            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {}", e)))?;
+            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {e}")))?;
 
         let mut results = Vec::new();
 
@@ -291,12 +279,12 @@ impl LpFs for LpFsStd {
         } else {
             // Non-recursive: only immediate children
             let entries = fs::read_dir(&full_path).map_err(|e| {
-                FsError::Filesystem(format!("Failed to read directory {:?}: {}", full_path, e))
+                FsError::Filesystem(format!("Failed to read directory {full_path:?}: {e}"))
             })?;
 
             for entry in entries {
                 let entry = entry.map_err(|e| {
-                    FsError::Filesystem(format!("Failed to read directory entry: {}", e))
+                    FsError::Filesystem(format!("Failed to read directory entry: {e}"))
                 })?;
 
                 let entry_path = entry.path();
@@ -304,8 +292,7 @@ impl LpFs for LpFsStd {
                 // Canonicalize the entry path
                 let canonical_entry = entry_path.canonicalize().map_err(|e| {
                     FsError::Filesystem(format!(
-                        "Failed to canonicalize entry path {:?}: {}",
-                        entry_path, e
+                        "Failed to canonicalize entry path {entry_path:?}: {e}"
                     ))
                 })?;
 
@@ -313,8 +300,7 @@ impl LpFs for LpFsStd {
                 let relative_path =
                     canonical_entry.strip_prefix(&canonical_root).map_err(|_| {
                         FsError::Filesystem(format!(
-                            "Failed to compute relative path from root: entry={:?}, root={:?}",
-                            canonical_entry, canonical_root
+                            "Failed to compute relative path from root: entry={canonical_entry:?}, root={canonical_root:?}"
                         ))
                     })?;
 
@@ -342,14 +328,12 @@ impl LpFs for LpFsStd {
         // Check if it's a file (not a directory)
         if full_path.is_dir() {
             return Err(FsError::Filesystem(format!(
-                "Path {:?} is a directory, use delete_dir() instead",
-                normalized_str
+                "Path {normalized_str:?} is a directory, use delete_dir() instead"
             )));
         }
 
-        fs::remove_file(&full_path).map_err(|e| {
-            FsError::Filesystem(format!("Failed to delete file {:?}: {}", full_path, e))
-        })
+        fs::remove_file(&full_path)
+            .map_err(|e| FsError::Filesystem(format!("Failed to delete file {full_path:?}: {e}")))
     }
 
     fn delete_dir(&self, path: &LpPath) -> Result<(), FsError> {
@@ -366,14 +350,13 @@ impl LpFs for LpFsStd {
         // Check if it's a directory
         if !full_path.is_dir() {
             return Err(FsError::Filesystem(format!(
-                "Path {:?} is not a directory, use delete_file() instead",
-                normalized_str
+                "Path {normalized_str:?} is not a directory, use delete_file() instead"
             )));
         }
 
         // Delete recursively
         fs::remove_dir_all(&full_path).map_err(|e| {
-            FsError::Filesystem(format!("Failed to delete directory {:?}: {}", full_path, e))
+            FsError::Filesystem(format!("Failed to delete directory {full_path:?}: {e}"))
         })
     }
 
@@ -407,7 +390,7 @@ impl LpFs for LpFsStd {
         let canonical_current_root = self
             .root_path
             .canonicalize()
-            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {}", e)))?;
+            .map_err(|e| FsError::Filesystem(format!("Failed to canonicalize root path: {e}")))?;
 
         if !canonical_new_root.starts_with(&canonical_current_root) {
             return Err(FsError::InvalidPath(format!(
@@ -433,7 +416,10 @@ impl LpFs for LpFsStd {
             changes: Mutex::new(self.changes.lock().unwrap().clone()),
         }));
 
-        Ok(Rc::new(RefCell::new(LpFsView::new(parent_rc, prefix.as_path()))))
+        Ok(Rc::new(RefCell::new(LpFsView::new(
+            parent_rc,
+            prefix.as_path(),
+        ))))
     }
 
     fn current_version(&self) -> FsVersion {

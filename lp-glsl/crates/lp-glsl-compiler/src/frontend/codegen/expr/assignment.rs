@@ -8,7 +8,7 @@ use crate::semantic::types::Type as GlslType;
 use cranelift_codegen::ir::Value;
 use glsl::syntax::Expr;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 /// Emit assignment expression as RValue
 ///
@@ -111,7 +111,7 @@ pub fn emit_assignment_typed<M: cranelift_module::Module>(
             } else {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!("unsupported array element type: {:?}", element_ty),
+                    format!("unsupported array element type: {element_ty:?}"),
                 ));
             }
         }
@@ -234,7 +234,7 @@ fn emit_compound_assignment_typed<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("unsupported compound assignment operator: {:?}", op),
+                format!("unsupported compound assignment operator: {op:?}"),
             ));
         }
     };

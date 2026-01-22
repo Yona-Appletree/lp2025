@@ -2,7 +2,6 @@
 
 extern crate alloc;
 
-use crate::debug;
 use ::object::{Object, ObjectSection};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -13,6 +12,21 @@ use super::super::relocations::{
     BufferSlice, SectionAddressInfo, analyze_relocations, apply_relocations_phase2,
 };
 use super::sections::ObjectSectionPlacement;
+
+/// Normalize a section name by mapping subsections to their parent section.
+/// For example, `.text._init` -> `.text`, `.data.foo` -> `.data`.
+fn normalize_section_name(section_name: &str) -> String {
+    // If the section name contains a dot after the first dot, it's likely a subsection
+    // Map it to the parent section (everything before the second dot)
+    if let Some(second_dot) = section_name[1..].find('.') {
+        // Found a second dot, extract parent section name
+        let parent_end = 1 + second_dot;
+        section_name[..parent_end].to_string()
+    } else {
+        // No second dot, return as-is
+        section_name.to_string()
+    }
+}
 
 /// Apply relocations for object file.
 ///
@@ -171,15 +185,25 @@ pub fn apply_object_relocations(
         // Object files have section addresses starting at 0, so we can use section_vma from relocation
         let original_section_addr = reloc.section_vma;
 
+        // Normalize section name (e.g., ".text._init" -> ".text") for lookup
+        let normalized_section_name = normalize_section_name(&reloc.section_name);
+
         // Get the adjusted section address and adjust the relocation
         let mut adjusted_reloc = reloc.clone();
-        if let Some(adjusted_info) = adjusted_section_addrs.get(&reloc.section_name) {
+        if let Some(adjusted_info) = adjusted_section_addrs.get(&normalized_section_name) {
             // Calculate the adjustment: new_section_addr - original_section_addr
             let adjustment = adjusted_info.vma.wrapping_sub(original_section_addr);
 
             // Adjust the relocation address
             adjusted_reloc.address =
                 (adjusted_reloc.address as u64).wrapping_add(adjustment) as u32;
+            // Update section name to normalized version for phase 2 lookup
+            adjusted_reloc.section_name = normalized_section_name;
+        } else {
+            debug!(
+                "Warning: Section '{}' (normalized: '{}') not found in section address map",
+                reloc.section_name, normalized_section_name
+            );
         }
 
         adjusted_relocations.push(adjusted_reloc);

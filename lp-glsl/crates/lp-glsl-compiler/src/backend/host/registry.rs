@@ -46,11 +46,12 @@ impl HostId {
 ///
 /// Returns the function pointer that can be registered with JITModule.
 #[cfg(feature = "std")]
-pub fn get_host_function_pointer(host: HostId) -> *const u8 {
+pub fn get_host_function_pointer(host: HostId) -> Option<*const u8> {
     use crate::backend::host::impls;
+
     match host {
-        HostId::Debug => impls::__host_debug as *const u8,
-        HostId::Println => impls::__host_println as *const u8,
+        HostId::Debug => Some(impls::__host_debug as *const u8),
+        HostId::Println => Some(impls::__host_println as *const u8),
     }
 }
 
@@ -58,9 +59,8 @@ pub fn get_host_function_pointer(host: HostId) -> *const u8 {
 ///
 /// Returns None since host functions require std.
 #[cfg(not(feature = "std"))]
-pub fn get_host_function_pointer(_host: HostId) -> *const u8 {
-    // Return a null pointer - host functions don't work in no_std
-    core::ptr::null()
+pub fn get_host_function_pointer(_host: HostId) -> Option<*const u8> {
+    None
 }
 
 /// Declare host functions as external symbols.
@@ -76,7 +76,7 @@ pub fn declare_host_functions<M: Module>(module: &mut M) -> Result<(), GlslError
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare host function '{}': {}", name, e),
+                    format!("Failed to declare host function '{name}': {e}"),
                 )
             })?;
     }

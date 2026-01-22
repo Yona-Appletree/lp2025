@@ -2,11 +2,8 @@
 
 use crate::frontend::semantic::types::Type;
 
-use alloc::vec::Vec;
-
 use alloc::string::{String, ToString};
-
-use alloc::format;
+use alloc::{format, vec, vec::Vec};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuiltinSignature {
@@ -633,7 +630,7 @@ pub fn lookup_builtin(name: &str) -> Option<Vec<BuiltinSignature>> {
 /// Type check a built-in function call and return the result type
 pub fn check_builtin_call(name: &str, arg_types: &[Type]) -> Result<Type, String> {
     let signatures =
-        lookup_builtin(name).ok_or_else(|| format!("Unknown built-in function: {}", name))?;
+        lookup_builtin(name).ok_or_else(|| format!("Unknown built-in function: {name}"))?;
 
     // Try each overload
     for sig in &signatures {
@@ -642,10 +639,7 @@ pub fn check_builtin_call(name: &str, arg_types: &[Type]) -> Result<Type, String
         }
     }
 
-    Err(format!(
-        "No matching overload for {}({:?})",
-        name, arg_types
-    ))
+    Err(format!("No matching overload for {name}({arg_types:?})"))
 }
 
 /// Try to match a function signature with provided argument types
@@ -658,7 +652,7 @@ fn try_match_signature(sig: &BuiltinSignature, arg_types: &[Type]) -> Result<Typ
     // Check each parameter type
     for (i, (param_ty, arg_ty)) in sig.param_types.iter().zip(arg_types).enumerate() {
         if !matches_param_type(param_ty, arg_ty) {
-            return Err(format!("Parameter {} type mismatch", i));
+            return Err(format!("Parameter {i} type mismatch"));
         }
     }
 
@@ -681,15 +675,13 @@ fn try_match_signature(sig: &BuiltinSignature, arg_types: &[Type]) -> Result<Typ
                         4 => Type::Mat4,
                         _ => {
                             return Err(format!(
-                                "outerProduct: unsupported vector size {}",
-                                vec1_size
+                                "outerProduct: unsupported vector size {vec1_size}"
                             ));
                         }
                     }
                 } else {
                     return Err(format!(
-                        "outerProduct: vector sizes must match for square matrices (got {} and {})",
-                        vec1_size, vec2_size
+                        "outerProduct: vector sizes must match for square matrices (got {vec1_size} and {vec2_size})"
                     ));
                 }
             } else {
@@ -762,8 +754,7 @@ fn validate_gentype_consistency(
                 if let Some(ref expected) = expected_type {
                     if arg != expected {
                         return Err(format!(
-                            "GenType parameter type mismatch: expected {:?}, got {:?}",
-                            expected, arg
+                            "GenType parameter type mismatch: expected {expected:?}, got {arg:?}"
                         ));
                     }
                 } else {

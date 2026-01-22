@@ -3,7 +3,10 @@
 //! This module provides structured error types with source locations,
 //! error codes, and helpful diagnostics inspired by Rust's error reporting.
 
-#![allow(dead_code)] // Allow during development
+#![allow(
+    dead_code,
+    reason = "Allow during development - error types may not all be used yet"
+)]
 
 use alloc::{format, string::String, vec::Vec};
 
@@ -215,7 +218,7 @@ impl fmt::Display for GlslError {
         // Add location if available
         if let Some(ref loc) = self.location {
             if !loc.is_unknown() {
-                write!(f, "\n --> {}", loc)?;
+                write!(f, "\n --> {loc}")?;
             }
         }
 
@@ -223,11 +226,11 @@ impl fmt::Display for GlslError {
         if let Some(ref text) = self.span_text {
             // span_text already contains formatted lines with line numbers and carets
             // Add one blank line after the code snippet
-            write!(f, "\n{}\n", text)?;
+            write!(f, "\n{text}\n")?;
         } else if let Some(ref loc) = self.location {
             // If we have location but no span_text, show just the location
             if !loc.is_unknown() {
-                writeln!(f, "\n --> {}", loc)?;
+                writeln!(f, "\n --> {loc}")?;
             }
         }
 
@@ -238,12 +241,12 @@ impl fmt::Display for GlslError {
             &self.notes[..]
         };
         for note in notes_to_show {
-            write!(f, "\nnote: {}", note)?;
+            write!(f, "\nnote: {note}")?;
         }
 
         // Add spec reference
         if let Some(ref spec_ref) = self.spec_ref {
-            write!(f, "\n  = spec: {}", spec_ref)?;
+            write!(f, "\n  = spec: {spec_ref}")?;
         }
 
         Ok(())
@@ -259,23 +262,20 @@ impl GlslError {
     /// Create an undefined variable error.
     pub fn undefined_variable(name: impl Into<String>) -> Self {
         let name = name.into();
-        Self::new(ErrorCode::E0100, format!("undefined variable `{}`", name))
+        Self::new(ErrorCode::E0100, format!("undefined variable `{name}`"))
     }
 
     /// Create an undefined function error.
     pub fn undefined_function(name: impl Into<String>) -> Self {
         let name = name.into();
-        Self::new(ErrorCode::E0101, format!("undefined function `{}`", name))
+        Self::new(ErrorCode::E0101, format!("undefined function `{name}`"))
     }
 
     /// Create a type mismatch error.
     pub fn type_mismatch(expected: impl fmt::Debug, found: impl fmt::Debug) -> Self {
         Self::new(
             ErrorCode::E0102,
-            format!(
-                "type mismatch: expected `{:?}`, found `{:?}`",
-                expected, found
-            ),
+            format!("type mismatch: expected `{expected:?}`, found `{found:?}`"),
         )
     }
 
@@ -295,7 +295,7 @@ impl GlslError {
         let type_name = type_name.into();
         Self::new(
             ErrorCode::E0109,
-            format!("type `{}` is not supported", type_name),
+            format!("type `{type_name}` is not supported"),
         )
     }
 }

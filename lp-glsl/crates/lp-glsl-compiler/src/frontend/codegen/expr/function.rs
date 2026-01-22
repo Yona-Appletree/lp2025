@@ -9,7 +9,7 @@ use glsl::syntax::Expr;
 use super::coercion;
 use super::constructor;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 /// Emit code to compute a function call as an RValue
 pub fn emit_function_call_rvalue<M: cranelift_module::Module>(
@@ -210,8 +210,7 @@ fn validate_function_call<M: cranelift_module::Module>(
             let error = GlslError::new(
                 ErrorCode::E0400,
                 format!(
-                    "function parameter mismatch: expected {} block parameters, got 0",
-                    expected_count
+                    "function parameter mismatch: expected {expected_count} block parameters, got 0"
                 ),
             )
             .with_location(crate::error::source_span_to_location(call_span))
@@ -314,10 +313,7 @@ fn prepare_call_arguments<M: cranelift_module::Module>(
             if arg_val_idx >= arg_vals_flat.len() {
                 return Err(GlslError::new(
                     ErrorCode::E0400,
-                    format!(
-                        "Not enough argument values for parameter {}",
-                        glsl_param_idx
-                    ),
+                    format!("Not enough argument values for parameter {glsl_param_idx}"),
                 ));
             }
 
@@ -471,8 +467,8 @@ fn emit_user_function_call<M: cranelift_module::Module>(
         return_vals.len(),
         func_sig.return_type
     );
-    for (i, val) in return_vals.iter().enumerate() {
-        crate::debug!("  return_vals[{}] = {:?}", i, val);
+    for (_i, _val) in return_vals.iter().enumerate() {
+        crate::debug!("  return_vals[{}] = {:?}", _i, _val);
     }
 
     // Step 7: Package return values
@@ -482,8 +478,8 @@ fn emit_user_function_call<M: cranelift_module::Module>(
         packaged_vals.len(),
         packaged_ty
     );
-    for (i, val) in packaged_vals.iter().enumerate() {
-        crate::debug!("  packaged_vals[{}] = {:?}", i, val);
+    for (_i, _val) in packaged_vals.iter().enumerate() {
+        crate::debug!("  packaged_vals[{}] = {:?}", _i, _val);
     }
     Ok((packaged_vals, packaged_ty))
 }

@@ -144,7 +144,7 @@ impl Riscv32Emulator {
                 // Read panic message from memory
                 let message =
                     read_memory_string(&self.memory, msg_ptr, msg_len).unwrap_or_else(|_| {
-                        format!("<failed to read panic message from 0x{:x}>", msg_ptr)
+                        format!("<failed to read panic message from 0x{msg_ptr:x}>")
                     });
 
                 // Read file name from memory (if pointer is not null)

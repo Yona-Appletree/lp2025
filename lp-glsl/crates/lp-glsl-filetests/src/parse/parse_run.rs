@@ -24,10 +24,7 @@ pub fn parse_run_directive(line: &str, line_number: usize) -> Result<RunDirectiv
         let expected = line[pos + 4..].trim();
         (ComparisonOp::Approx, expr, expected)
     } else {
-        anyhow::bail!(
-            "invalid run directive format at line {}: expected '==' or '~='",
-            line_number
-        );
+        anyhow::bail!("invalid run directive format at line {line_number}: expected '==' or '~='");
     };
 
     // Strip comments from expected value (comments start with //)
@@ -48,7 +45,7 @@ pub fn parse_run_directive(line: &str, line_number: usize) -> Result<RunDirectiv
 
             let tolerance = if let Some(tol_str) = tolerance_str {
                 Some(tol_str.parse::<f32>().map_err(|e| {
-                    anyhow::anyhow!("invalid tolerance value at line {}: {}", line_number, e)
+                    anyhow::anyhow!("invalid tolerance value at line {line_number}: {e}")
                 })?)
             } else {
                 None

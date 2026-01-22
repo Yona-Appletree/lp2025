@@ -9,7 +9,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let type_name = format_type_name(vec_type, dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/op-add", type_name);
+    let specifier = format!("vec/{type_name}/op-add");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -22,8 +22,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
         "// ============================================================================\n"
     ));
     content.push_str(&format!(
-        "// Add: {} + {} -> {} (component-wise)\n",
-        type_name, type_name, type_name
+        "// Add: {type_name} + {type_name} -> {type_name} (component-wise)\n"
     ));
     content.push_str(&format!(
         "// ============================================================================\n"
@@ -107,23 +106,14 @@ fn generate_test_positive_positive(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_positive_positive() {{\n\
+        "{type_name} test_{type_name}_add_positive_positive() {{\n\
     // Addition with positive vectors (component-wise)\n\
-    {} a = {};\n\
-    {} b = {};\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_positive_positive() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_positive_positive() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -159,22 +149,13 @@ fn generate_test_positive_negative(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_positive_negative() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_positive_negative() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_positive_negative() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_positive_negative() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -210,22 +191,13 @@ fn generate_test_negative_negative(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_negative_negative() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_negative_negative() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_negative_negative() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_negative_negative() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -250,22 +222,13 @@ fn generate_test_zero(vec_type: VecType, dimension: Dimension) -> String {
     let b_constructor = format_vector_constructor(vec_type, dimension, &b_values);
 
     format!(
-        "{} test_{}_add_zero() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_zero() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_zero() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        a_constructor
+// run: test_{type_name}_add_zero() {cmp_op} {a_constructor}\n"
     )
 }
 
@@ -296,22 +259,13 @@ fn generate_test_variables(vec_type: VecType, dimension: Dimension) -> String {
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_variables() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_variables() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_variables() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_variables() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -342,12 +296,11 @@ fn generate_test_expressions(vec_type: VecType, dimension: Dimension) -> String 
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_expressions() {{\n\
-    return {} + {};\n\
+        "{type_name} test_{type_name}_add_expressions() {{\n\
+    return {a_constructor} + {b_constructor};\n\
 }}\n\
 \n\
-// run: test_{}_add_expressions() {} {}\n",
-        type_name, type_name, a_constructor, b_constructor, type_name, cmp_op, expected_constructor
+// run: test_{type_name}_add_expressions() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -378,21 +331,13 @@ fn generate_test_in_assignment(vec_type: VecType, dimension: Dimension) -> Strin
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_in_assignment() {{\n\
-    {} result = {};\n\
-    result = result + {};\n\
+        "{type_name} test_{type_name}_add_in_assignment() {{\n\
+    {type_name} result = {initial_constructor};\n\
+    result = result + {add_constructor};\n\
     return result;\n\
 }}\n\
 \n\
-// run: test_{}_add_in_assignment() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        initial_constructor,
-        add_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_in_assignment() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -438,24 +383,15 @@ fn generate_test_large_numbers(vec_type: VecType, dimension: Dimension) -> Strin
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected_values);
 
     format!(
-        "{} test_{}_add_large_numbers() {{\n\
+        "{type_name} test_{type_name}_add_large_numbers() {{\n\
     // Large numbers are clamped to fixed16x16 max (32767.99998)\n\
     // Addition saturates to max for each component\n\
-    {} a = {};\n\
-    {} b = {};\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_large_numbers() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_large_numbers() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -470,7 +406,11 @@ fn generate_test_mixed_components(vec_type: VecType, dimension: Dimension) -> St
         match dimension {
             Dimension::D2 => (vec![100, 50], vec![200, 75], vec![300, 125]),
             Dimension::D3 => (vec![100, 50, 75], vec![200, 75, 150], vec![300, 125, 225]),
-            Dimension::D4 => (vec![100, 50, 75, 25], vec![200, 75, 150, 50], vec![300, 125, 225, 75]),
+            Dimension::D4 => (
+                vec![100, 50, 75, 25],
+                vec![200, 75, 150, 50],
+                vec![300, 125, 225, 75],
+            ),
         }
     } else {
         // Values: a = [1, -2, 3, -4...], b = [-3, 4, -1, 2...]
@@ -487,22 +427,13 @@ fn generate_test_mixed_components(vec_type: VecType, dimension: Dimension) -> St
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_add_mixed_components() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_mixed_components() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_mixed_components() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_mixed_components() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -529,7 +460,8 @@ fn generate_test_max_values(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => "uvec2(4294967295u, 4294967294u)".to_string(),
             Dimension::D3 => "uvec3(4294967295u, 4294967294u, 4294967293u)".to_string(),
-            Dimension::D4 => "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
+            Dimension::D4 =>
+                "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
         },
         type_name,
         match dimension {
@@ -578,21 +510,12 @@ fn generate_test_fractions(vec_type: VecType, dimension: Dimension) -> String {
     };
 
     format!(
-        "{} test_{}_add_fractions() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_add_fractions() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a + b;\n\
 }}\n\
 \n\
-// run: test_{}_add_fractions() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_add_fractions() {cmp_op} {expected_constructor}\n"
     )
 }

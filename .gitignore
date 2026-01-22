@@ -23,6 +23,7 @@ vendor
 *.smt2
 *.cwasm
 /artifacts
+.ci-artifacts
 testcase*.wat
 testcase*.wasm
 testcase*.dna

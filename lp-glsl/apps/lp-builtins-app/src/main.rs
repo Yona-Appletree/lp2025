@@ -74,9 +74,7 @@ fn panic_syscall(
 /// Exit the interpreter
 #[inline(always)]
 fn ebreak() -> ! {
-    unsafe {
-        asm!("ebreak", options(nostack, noreturn))
-    }
+    unsafe { asm!("ebreak", options(nostack, noreturn)) }
 }
 
 /// Panic handler
@@ -200,11 +198,11 @@ unsafe extern "C" fn _code_entry() -> ! {
 
     // Call placeholder main function
     unsafe extern "C" {
-        fn main();
+        fn _lp_main();
     }
 
     unsafe {
-        main();
+        _lp_main();
     }
 
     unsafe {
@@ -228,7 +226,7 @@ static mut __USER_MAIN_PTR: u32 = 0xDEADBEEF;
 /// 2. Reads __USER_MAIN_PTR from .data section
 /// 3. Jumps to user _init if set, otherwise halts gracefully
 #[unsafe(no_mangle)]
-pub extern "C" fn main() -> () {
+pub extern "C" fn _lp_main() -> () {
     // Reference all builtin functions to prevent dead code elimination
     // This is done via the generated builtin_refs module
     builtin_refs::ensure_builtins_referenced();

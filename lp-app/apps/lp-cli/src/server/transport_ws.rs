@@ -24,7 +24,7 @@ struct Connection {
     /// Channel receiver for receiving messages from this connection
     /// Note: Currently unused as messages are received via the async task,
     /// but kept for potential future use or debugging
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Reserved for future use or debugging")]
     receiver: mpsc::UnboundedReceiver<ClientMessage>,
 }
 
@@ -45,13 +45,13 @@ struct SharedState {
 pub struct WebSocketServerTransport {
     /// TCP listener for accepting new connections
     /// Note: Kept to maintain ownership of the listener, even though not directly accessed
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Maintains ownership of listener")]
     listener: TcpListener,
     /// Shared state for connection management
     shared_state: Arc<Mutex<SharedState>>,
     /// Tokio runtime for async operations
     /// Note: Kept to ensure runtime stays alive for async tasks
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Ensures runtime stays alive for async tasks")]
     runtime: Arc<Runtime>,
 }
 
@@ -69,17 +69,17 @@ impl WebSocketServerTransport {
     pub fn new(port: u16) -> Result<Self, TransportError> {
         // Create tokio runtime
         let runtime = Runtime::new()
-            .map_err(|e| TransportError::Other(format!("Failed to create tokio runtime: {}", e)))?;
+            .map_err(|e| TransportError::Other(format!("Failed to create tokio runtime: {e}")))?;
 
         // Bind TCP listener
-        let addr = format!("0.0.0.0:{}", port);
+        let addr = format!("0.0.0.0:{port}");
         let listener = TcpListener::bind(&addr)
-            .map_err(|e| TransportError::Other(format!("Failed to bind to {}: {}", addr, e)))?;
+            .map_err(|e| TransportError::Other(format!("Failed to bind to {addr}: {e}")))?;
 
         // Set non-blocking mode for the listener
         listener
             .set_nonblocking(true)
-            .map_err(|e| TransportError::Other(format!("Failed to set non-blocking: {}", e)))?;
+            .map_err(|e| TransportError::Other(format!("Failed to set non-blocking: {e}")))?;
 
         // Create shared state
         let shared_state = Arc::new(Mutex::new(SharedState {
@@ -96,7 +96,7 @@ impl WebSocketServerTransport {
         runtime_clone.spawn(Self::accept_connections_task(
             listener
                 .try_clone()
-                .map_err(|e| TransportError::Other(format!("Failed to clone listener: {}", e)))?,
+                .map_err(|e| TransportError::Other(format!("Failed to clone listener: {e}")))?,
             shared_state_clone,
         ));
 
@@ -122,7 +122,7 @@ impl WebSocketServerTransport {
         let listener = match TokioTcpListener::from_std(listener) {
             Ok(l) => l,
             Err(e) => {
-                eprintln!("Failed to convert listener to tokio: {}", e);
+                eprintln!("Failed to convert listener to tokio: {e}");
                 return;
             }
         };
@@ -147,7 +147,7 @@ impl WebSocketServerTransport {
                     ));
                 }
                 Err(e) => {
-                    eprintln!("Failed to accept websocket connection: {}", e);
+                    eprintln!("Failed to accept websocket connection: {e}");
                 }
             }
         }
@@ -191,14 +191,14 @@ impl WebSocketServerTransport {
                 let json = match serde_json::to_string(&msg) {
                     Ok(j) => j,
                     Err(e) => {
-                        eprintln!("Failed to serialize ServerMessage: {}", e);
+                        eprintln!("Failed to serialize ServerMessage: {e}");
                         continue;
                     }
                 };
 
                 // Send via websocket
                 if let Err(e) = ws_sender.send(Message::Text(json)).await {
-                    eprintln!("Failed to send message: {}", e);
+                    eprintln!("Failed to send message: {e}");
                     break;
                 }
             }
@@ -218,7 +218,7 @@ impl WebSocketServerTransport {
                                     .push_back((connection_id, client_msg));
                             }
                             Err(e) => {
-                                eprintln!("Failed to deserialize ClientMessage: {}", e);
+                                eprintln!("Failed to deserialize ClientMessage: {e}");
                             }
                         }
                     }
@@ -232,7 +232,7 @@ impl WebSocketServerTransport {
                                     .push_back((connection_id, client_msg));
                             }
                             Err(e) => {
-                                eprintln!("Failed to deserialize ClientMessage: {}", e);
+                                eprintln!("Failed to deserialize ClientMessage: {e}");
                             }
                         }
                     }
@@ -255,7 +255,7 @@ impl WebSocketServerTransport {
                         // Ignore raw frames
                     }
                     Err(e) => {
-                        eprintln!("WebSocket error: {}", e);
+                        eprintln!("WebSocket error: {e}");
                         let mut state = shared_state.lock().unwrap();
                         state.connections.remove(&connection_id);
                         break;
@@ -279,7 +279,7 @@ impl ServerTransport for WebSocketServerTransport {
         // (we can't clone ServerMessage, so we serialize/deserialize for each connection)
 
         let json = serde_json::to_string(&msg).map_err(|e| {
-            TransportError::Serialization(format!("Failed to serialize ServerMessage: {}", e))
+            TransportError::Serialization(format!("Failed to serialize ServerMessage: {e}"))
         })?;
 
         let state = self.shared_state.lock().unwrap();
@@ -299,8 +299,7 @@ impl ServerTransport for WebSocketServerTransport {
                 Ok(m) => m,
                 Err(e) => {
                     return Err(TransportError::Deserialization(format!(
-                        "Failed to deserialize ServerMessage: {}",
-                        e
+                        "Failed to deserialize ServerMessage: {e}"
                     )));
                 }
             };

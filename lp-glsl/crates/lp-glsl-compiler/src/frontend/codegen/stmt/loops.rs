@@ -3,6 +3,8 @@ use glsl::syntax::IterationStatement;
 use crate::error::{ErrorCode, GlslError};
 use crate::frontend::codegen::context::CodegenContext;
 
+use alloc::format;
+
 /// Emit iteration statement (dispatch to specific loop types)
 pub fn emit_iteration_stmt<M: cranelift_module::Module>(
     ctx: &mut CodegenContext<'_, M>,

@@ -72,7 +72,7 @@ impl FileUpdate {
                     } else if let Some(pos) = run_content.rfind(" ~= ") {
                         run_content[..pos].trim()
                     } else {
-                        bail!("invalid run directive format at line {}", line_number);
+                        bail!("invalid run directive format at line {line_number}");
                     };
 
                     // Format the new expected value
@@ -88,8 +88,7 @@ impl FileUpdate {
                         .take_while(|c| c.is_whitespace())
                         .collect::<String>();
                     new_test.push_str(&format!(
-                        "{}// run: {} {} {}\n",
-                        indent, expression, op_str, expected_str
+                        "{indent}// run: {expression} {op_str} {expected_str}\n"
                     ));
                 } else {
                     // Malformed run directive, keep original
@@ -131,9 +130,9 @@ impl FileUpdate {
 /// Format a float value with .0 suffix for whole numbers (matching GLSL literal format)
 fn format_float(f: f32) -> String {
     if f.fract() == 0.0 {
-        format!("{:.1}", f)
+        format!("{f:.1}")
     } else {
-        format!("{}", f)
+        format!("{f}")
     }
 }
 
@@ -142,13 +141,13 @@ fn format_float(f: f32) -> String {
 pub fn format_glsl_value(value: &GlslValue) -> String {
     match value {
         GlslValue::I32(i) => i.to_string(),
-        GlslValue::U32(u) => format!("{}u", u),
+        GlslValue::U32(u) => format!("{u}u"),
         GlslValue::F32(f) => {
             // Format float with enough precision but avoid unnecessary decimals
             if f.fract() == 0.0 {
-                format!("{:.1}", f)
+                format!("{f:.1}")
             } else {
-                format!("{}", f)
+                format!("{f}")
             }
         }
         GlslValue::Bool(b) => b.to_string(),

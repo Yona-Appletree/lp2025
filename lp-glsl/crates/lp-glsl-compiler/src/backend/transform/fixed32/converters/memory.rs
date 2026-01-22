@@ -46,7 +46,7 @@ pub(crate) fn convert_load(
     } else {
         return Err(GlslError::new(
             ErrorCode::E0301,
-            alloc::format!("Load instruction has unexpected format: {:?}", inst_data),
+            alloc::format!("Load instruction has unexpected format: {inst_data:?}"),
         ));
     }
 
@@ -88,9 +88,7 @@ pub(crate) fn convert_store(
                 return Err(GlslError::new(
                     ErrorCode::E0301,
                     alloc::format!(
-                        "Store value type mismatch: expected {:?}, got {:?}",
-                        target_type,
-                        mapped_type
+                        "Store value type mismatch: expected {target_type:?}, got {mapped_type:?}"
                     ),
                 ));
             }
@@ -114,7 +112,7 @@ pub(crate) fn convert_store(
     } else {
         return Err(GlslError::new(
             ErrorCode::E0301,
-            alloc::format!("Store instruction has unexpected format: {:?}", inst_data),
+            alloc::format!("Store instruction has unexpected format: {inst_data:?}"),
         ));
     }
 

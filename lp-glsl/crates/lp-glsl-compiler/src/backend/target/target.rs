@@ -1,5 +1,7 @@
 //! Semantic target enum - hides implementation details
 
+use alloc::format;
+
 use crate::error::{ErrorCode, GlslError};
 use cranelift_codegen::ir::Type;
 use cranelift_codegen::isa::CallConv;
@@ -19,7 +21,7 @@ pub enum Target {
     /// Host JIT target (runs on current machine)
     HostJit {
         /// Optional architecture override (if None, detect from host)
-        #[allow(unused)]
+        #[allow(unused, reason = "Architecture override for future use")]
         arch: Option<Architecture>,
         flags: Flags,
         /// Cached ISA (created lazily)
@@ -47,7 +49,8 @@ impl Target {
     }
 
     /// Create host JIT with specific architecture
-    #[allow(unused)]
+    #[allow(unused, reason = "Method for architecture-specific JIT creation")]
+    #[cfg(feature = "std")]
     pub fn host_jit_with_arch(arch: Architecture) -> Result<Self, GlslError> {
         Ok(Self::HostJit {
             arch: Some(arch),
@@ -59,7 +62,10 @@ impl Target {
     /// Create or get cached ISA for this target
     pub fn create_isa(&mut self) -> Result<&OwnedTargetIsa, GlslError> {
         match self {
-            #[allow(unused_variables)]
+            #[allow(
+                unused_variables,
+                reason = "Flags may be used in future ISA configuration"
+            )]
             Target::Rv32Emu { flags, isa } => {
                 if isa.is_none() {
                     #[cfg(feature = "emulator")]
@@ -67,7 +73,7 @@ impl Target {
                         let triple = riscv32_triple();
                         use cranelift_codegen::isa::riscv32::isa_builder;
                         *isa = Some(isa_builder(triple).finish(flags.clone()).map_err(|e| {
-                            GlslError::new(ErrorCode::E0400, format!("ISA creation failed: {}", e))
+                            GlslError::new(ErrorCode::E0400, format!("ISA creation failed: {e}"))
                         })?);
                     }
                     #[cfg(not(feature = "emulator"))]
@@ -82,7 +88,7 @@ impl Target {
             }
             Target::HostJit {
                 arch: _,
-                flags,
+                flags: _flags,
                 isa,
             } => {
                 if isa.is_none() {
@@ -92,11 +98,11 @@ impl Target {
                         let isa_builder = cranelift_native::builder().map_err(|e| {
                             GlslError::new(
                                 ErrorCode::E0400,
-                                format!("host machine is not supported: {}", e),
+                                format!("host machine is not supported: {e}"),
                             )
                         })?;
-                        *isa = Some(isa_builder.finish(flags.clone()).map_err(|e| {
-                            GlslError::new(ErrorCode::E0400, format!("ISA creation failed: {}", e))
+                        *isa = Some(isa_builder.finish(_flags.clone()).map_err(|e| {
+                            GlslError::new(ErrorCode::E0400, format!("ISA creation failed: {e}"))
                         })?);
                     }
                     #[cfg(not(feature = "std"))]
@@ -132,13 +138,13 @@ fn default_riscv32_flags() -> Result<Flags, GlslError> {
         // Enable PIC for emulator target to generate GOT-based relocations for external symbols
         // This matches how test_load_object_file_with_actual_builtins compiles code
         .set("is_pic", "true")
-        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("failed to set is_pic: {}", e)))?;
+        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("failed to set is_pic: {e}")))?;
     flag_builder
         .set("use_colocated_libcalls", "false")
         .map_err(|e| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("failed to set use_colocated_libcalls: {}", e),
+                format!("failed to set use_colocated_libcalls: {e}"),
             )
         })?;
     flag_builder
@@ -146,7 +152,7 @@ fn default_riscv32_flags() -> Result<Flags, GlslError> {
         .map_err(|e| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("failed to set enable_multi_ret_implicit_sret: {}", e),
+                format!("failed to set enable_multi_ret_implicit_sret: {e}"),
             )
         })?;
 
@@ -160,13 +166,13 @@ fn default_host_flags() -> Result<Flags, GlslError> {
     flag_builder
         // Disable PIC for JIT target - cranelift-jit requires is_pic=false
         .set("is_pic", "false")
-        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("failed to set is_pic: {}", e)))?;
+        .map_err(|e| GlslError::new(ErrorCode::E0400, format!("failed to set is_pic: {e}")))?;
     flag_builder
         .set("use_colocated_libcalls", "false")
         .map_err(|e| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("failed to set use_colocated_libcalls: {}", e),
+                format!("failed to set use_colocated_libcalls: {e}"),
             )
         })?;
     flag_builder
@@ -174,7 +180,7 @@ fn default_host_flags() -> Result<Flags, GlslError> {
         .map_err(|e| {
             GlslError::new(
                 ErrorCode::E0400,
-                format!("failed to set enable_multi_ret_implicit_sret: {}", e),
+                format!("failed to set enable_multi_ret_implicit_sret: {e}"),
             )
         })?;
 
@@ -199,7 +205,7 @@ fn riscv32_triple() -> target_lexicon::Triple {
 }
 
 /// Helper: Convert Architecture to Triple
-#[allow(unused)]
+#[allow(unused, reason = "Utility function for architecture conversion")]
 fn triple_for_arch(arch: Architecture) -> target_lexicon::Triple {
     use target_lexicon::{BinaryFormat, Environment, OperatingSystem, Triple, Vendor};
 
@@ -214,7 +220,7 @@ fn triple_for_arch(arch: Architecture) -> target_lexicon::Triple {
 
 /// Helper: Detect host triple
 #[cfg(feature = "std")]
-#[allow(unused)]
+#[allow(unused, reason = "Utility function for host detection")]
 fn detect_host_triple() -> target_lexicon::Triple {
     target_lexicon::Triple::host()
 }

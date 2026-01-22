@@ -1,8 +1,7 @@
 //! Phase 2: Apply relocations in dependency order.
 
-use crate::debug;
 use alloc::format;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use hashbrown::HashMap;
 
@@ -98,12 +97,24 @@ fn apply_single_relocation(
         ))?;
 
     // Get section address info
-    let section_info = section_addrs.get(&reloc.section_name).ok_or_else(|| {
-        format!(
-            "Section '{}' not found in section address map",
-            reloc.section_name
-        )
-    })?;
+    // Try direct lookup first, then try normalized name (for subsections like .text._init -> .text)
+    let section_info = section_addrs
+        .get(&reloc.section_name)
+        .or_else(|| {
+            // Normalize section name (e.g., ".text._init" -> ".text") for lookup
+            let normalized = if let Some(second_dot) = reloc.section_name[1..].find('.') {
+                reloc.section_name[..1 + second_dot].to_string()
+            } else {
+                return None;
+            };
+            section_addrs.get(&normalized)
+        })
+        .ok_or_else(|| {
+            format!(
+                "Section '{}' not found in section address map",
+                reloc.section_name
+            )
+        })?;
 
     // Determine which buffer to use and get slice
     let (buffer_slice, load_addr) = match &section_info.buffer {
@@ -145,8 +156,7 @@ fn apply_single_relocation(
             let offset = reloc.offset as usize;
             if offset + 4 > buffer_slice.len() {
                 return Err(format!(
-                    "R_RISCV_32 relocation at offset {} requires 4 bytes",
-                    offset
+                    "R_RISCV_32 relocation at offset {offset} requires 4 bytes"
                 ));
             }
 

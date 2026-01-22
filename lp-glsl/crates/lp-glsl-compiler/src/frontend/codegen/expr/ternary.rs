@@ -8,7 +8,7 @@ use glsl::syntax::Expr;
 
 use super::coercion;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 /// Emit code to compute a ternary expression as an RValue
 pub fn emit_ternary_rvalue<M: cranelift_module::Module>(
@@ -35,10 +35,7 @@ pub fn emit_ternary_rvalue<M: cranelift_module::Module>(
             "ternary condition must be scalar bool type",
         )
         .with_location(source_span_to_location(&cond_span))
-        .with_note(format!(
-            "condition has type `{:?}`, expected `Bool`",
-            cond_ty
-        )));
+        .with_note(format!("condition has type `{cond_ty:?}`, expected `Bool`")));
     }
 
     // Condition must be scalar, so take the first (and only) value
@@ -75,8 +72,7 @@ pub fn emit_ternary_rvalue<M: cranelift_module::Module>(
         )
         .with_location(source_span_to_location(span))
         .with_note(format!(
-            "true branch has type `{:?}`, false branch has type `{:?}`",
-            true_ty, false_ty
+            "true branch has type `{true_ty:?}`, false branch has type `{false_ty:?}`"
         ))
         .with_note("branches must have matching types or allow implicit conversion"));
     };

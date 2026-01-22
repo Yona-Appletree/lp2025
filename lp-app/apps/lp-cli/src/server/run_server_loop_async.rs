@@ -43,7 +43,7 @@ pub async fn run_server_loop_async<T: ServerTransport>(
                         return Ok(());
                     }
                     // Other transport errors - log and continue
-                    eprintln!("Transport error: {}", e);
+                    eprintln!("Transport error: {e}");
                     break;
                 }
             }
@@ -57,13 +57,13 @@ pub async fn run_server_loop_async<T: ServerTransport>(
                     for response in responses {
                         if let Message::Server(server_msg) = response {
                             if let Err(e) = transport.send(server_msg) {
-                                eprintln!("Failed to send response: {}", e);
+                                eprintln!("Failed to send response: {e}");
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("Server error: {}", e);
+                    eprintln!("Server error: {e}");
                     // Continue running despite errors
                 }
             }

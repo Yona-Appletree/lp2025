@@ -89,7 +89,7 @@ pub fn infer_expr_type_with_registry(
                 let span = extract_span_from_expr(expr);
                 return Err(GlslError::new(
                     ErrorCode::E0112,
-                    format!("component access on non-vector type: {:?}", base_ty),
+                    format!("component access on non-vector type: {base_ty:?}"),
                 )
                 .with_location(source_span_to_location(&span)));
             }
@@ -115,7 +115,7 @@ pub fn infer_expr_type_with_registry(
                 Type::vector_type(&base_scalar_ty, swizzle_len).ok_or_else(|| {
                     let mut error = GlslError::new(
                         ErrorCode::E0113,
-                        format!("invalid swizzle length: {}", swizzle_len),
+                        format!("invalid swizzle length: {swizzle_len}"),
                     );
                     if error.location.is_none() {
                         error = error.with_location(source_span_to_location(&dot_span));
@@ -195,8 +195,7 @@ pub fn infer_expr_type_with_registry(
                 Err(GlslError::new(
                     ErrorCode::E0112,
                     format!(
-                        "cannot infer type for function call `{}` without function registry",
-                        func_name
+                        "cannot infer type for function call `{func_name}` without function registry"
                     ),
                 )
                 .with_location(source_span_to_location(&span)))
@@ -275,8 +274,7 @@ pub fn infer_expr_type_with_registry(
                             return Err(GlslError::new(
                                 ErrorCode::E0400,
                                 format!(
-                                    "cannot index into {:?} (only matrices and vectors can be indexed after array)",
-                                    current_ty
+                                    "cannot index into {current_ty:?} (only matrices and vectors can be indexed after array)"
                                 ),
                             )
                             .with_location(source_span_to_location(span)));
@@ -330,8 +328,7 @@ pub fn infer_expr_type_with_registry(
                     return Err(GlslError::new(
                         ErrorCode::E0400,
                         format!(
-                            "cannot index into {:?} (only arrays, matrices and vectors can be indexed)",
-                            current_ty
+                            "cannot index into {current_ty:?} (only arrays, matrices and vectors can be indexed)"
                         ),
                     )
                     .with_location(source_span_to_location(span)));
@@ -350,10 +347,7 @@ pub fn infer_expr_type_with_registry(
                     "ternary condition must be scalar bool type",
                 )
                 .with_location(source_span_to_location(span))
-                .with_note(format!(
-                    "condition has type `{:?}`, expected `Bool`",
-                    cond_ty
-                )));
+                .with_note(format!("condition has type `{cond_ty:?}`, expected `Bool`")));
             }
 
             // Infer types of both branches
@@ -378,8 +372,7 @@ pub fn infer_expr_type_with_registry(
                 )
                 .with_location(source_span_to_location(span))
                 .with_note(format!(
-                    "true branch has type `{:?}`, false branch has type `{:?}`",
-                    true_ty, false_ty
+                    "true branch has type `{true_ty:?}`, false branch has type `{false_ty:?}`"
                 ))
                 .with_note("branches must have matching types or allow implicit conversion"))
             }
@@ -389,7 +382,7 @@ pub fn infer_expr_type_with_registry(
             let span = extract_span_from_expr(expr);
             Err(GlslError::new(
                 ErrorCode::E0112,
-                format!("cannot infer type for expression: {:?}", expr),
+                format!("cannot infer type for expression: {expr:?}"),
             )
             .with_location(source_span_to_location(&span)))
         }
@@ -425,10 +418,10 @@ pub fn infer_expr_type_in_context(
     // Wrap the expression in a minimal function to parse it
     // We'll try different return types to see which one parses successfully
     let wrappers = [
-        format!("int main() {{ return {}; }}", expr_str),
-        format!("uint main() {{ return {}; }}", expr_str),
-        format!("float main() {{ return {}; }}", expr_str),
-        format!("bool main() {{ return {}; }}", expr_str),
+        format!("int main() {{ return {expr_str}; }}"),
+        format!("uint main() {{ return {expr_str}; }}"),
+        format!("float main() {{ return {expr_str}; }}"),
+        format!("bool main() {{ return {expr_str}; }}"),
     ];
 
     // Use empty symbol table since we're only parsing expressions (no variables)
@@ -446,6 +439,6 @@ pub fn infer_expr_type_in_context(
 
     Err(GlslError::new(
         ErrorCode::E0001,
-        format!("failed to parse expression: `{}`", expr_str),
+        format!("failed to parse expression: `{expr_str}`"),
     ))
 }

@@ -24,7 +24,7 @@ pub fn should_color() -> bool {
 /// Format text with color if colors are enabled.
 pub fn colorize(text: &str, color: &str) -> String {
     if should_color() {
-        format!("{}{}{}", color, text, RESET)
+        format!("{color}{text}{RESET}")
     } else {
         text.to_string()
     }

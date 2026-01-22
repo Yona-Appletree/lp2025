@@ -95,11 +95,10 @@ fn assert_memory_output_red(
 
     assert_eq!(
         r, expected_r,
-        "Output channel 0 R: expected {}, got {}",
-        expected_r, r
+        "Output channel 0 R: expected {expected_r}, got {r}"
     );
-    assert_eq!(g, 0, "Output channel 0 G: expected 0, got {}", g);
-    assert_eq!(b, 0, "Output channel 0 B: expected 0, got {}", b);
+    assert_eq!(g, 0, "Output channel 0 G: expected 0, got {g}");
+    assert_eq!(b, 0, "Output channel 0 B: expected 0, got {b}");
 }
 
 /// Sync the client view with the runtime

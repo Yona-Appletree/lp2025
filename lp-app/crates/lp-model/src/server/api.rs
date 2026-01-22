@@ -1,6 +1,6 @@
-use crate::project::{api::SerializableProjectResponse, ProjectHandle, ProjectRequest};
-use crate::server::fs_api::{FsRequest, FsResponse};
 use crate::LpPathBuf;
+use crate::project::{ProjectHandle, ProjectRequest, api::SerializableProjectResponse};
+use crate::server::fs_api::{FsRequest, FsResponse};
 use alloc::string::String;
 use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};

@@ -108,7 +108,7 @@ fn extract_function_name(expression: &str) -> Result<String> {
 /// Search for function definition in source and extract its return type.
 /// Returns an error if the return type is not in KNOWN_TYPES.
 fn find_return_type_in_source(source: &str, func_name: &str) -> Result<Option<String>> {
-    let pattern = format!("{}(", func_name);
+    let pattern = format!("{func_name}(");
     for line in source.lines() {
         let trimmed = line.trim();
         if let Some(pos) = trimmed.find(&pattern) {
@@ -122,12 +122,8 @@ fn find_return_type_in_source(source: &str, func_name: &str) -> Result<Option<St
                 } else {
                     // Error if we found a return type that's not in KNOWN_TYPES
                     return Err(anyhow::anyhow!(
-                        "unknown return type '{}' for function '{}'. Known types: {:?}. \
-                         Please add '{}' to KNOWN_TYPES in test_glsl.rs",
-                        return_type,
-                        func_name,
-                        KNOWN_TYPES,
-                        return_type
+                        "unknown return type '{return_type}' for function '{func_name}'. Known types: {KNOWN_TYPES:?}. \
+                         Please add '{return_type}' to KNOWN_TYPES in test_glsl.rs"
                     ));
                 }
             }

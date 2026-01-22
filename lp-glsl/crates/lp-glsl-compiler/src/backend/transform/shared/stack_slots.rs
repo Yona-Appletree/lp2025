@@ -31,9 +31,7 @@ pub fn copy_stack_slots(
             return Err(GlslError::new(
                 ErrorCode::E0301,
                 alloc::format!(
-                    "Failed to create stack slot {:?} in new function (copied from {:?})",
-                    new_slot_idx,
-                    old_slot_idx
+                    "Failed to create stack slot {new_slot_idx:?} in new function (copied from {old_slot_idx:?})"
                 ),
             ));
         }

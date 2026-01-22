@@ -9,7 +9,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let type_name = format_type_name(vec_type, dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/op-multiply", type_name);
+    let specifier = format!("vec/{type_name}/op-multiply");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -22,8 +22,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
         "// ============================================================================\n"
     ));
     content.push_str(&format!(
-        "// Multiply: {} * {} -> {} (component-wise)\n",
-        type_name, type_name, type_name
+        "// Multiply: {type_name} * {type_name} -> {type_name} (component-wise)\n"
     ));
     content.push_str(&format!(
         "// ============================================================================\n"
@@ -109,23 +108,14 @@ fn generate_test_positive_positive(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_positive_positive() {{\n\
+        "{type_name} test_{type_name}_multiply_positive_positive() {{\n\
     // Multiplication with positive vectors (component-wise)\n\
-    {} a = {};\n\
-    {} b = {};\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_positive_positive() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_positive_positive() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -161,22 +151,13 @@ fn generate_test_positive_negative(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_positive_negative() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_positive_negative() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_positive_negative() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_positive_negative() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -212,22 +193,13 @@ fn generate_test_negative_negative(vec_type: VecType, dimension: Dimension) -> S
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_negative_negative() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_negative_negative() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_negative_negative() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_negative_negative() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -258,22 +230,13 @@ fn generate_test_by_zero(vec_type: VecType, dimension: Dimension) -> String {
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_by_zero() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_by_zero() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_by_zero() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_by_zero() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -298,22 +261,13 @@ fn generate_test_by_one(vec_type: VecType, dimension: Dimension) -> String {
     let b_constructor = format_vector_constructor(vec_type, dimension, &b_values);
 
     format!(
-        "{} test_{}_multiply_by_one() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_by_one() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_by_one() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        a_constructor
+// run: test_{type_name}_multiply_by_one() {cmp_op} {a_constructor}\n"
     )
 }
 
@@ -344,22 +298,13 @@ fn generate_test_variables(vec_type: VecType, dimension: Dimension) -> String {
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_variables() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_variables() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_variables() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_variables() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -390,12 +335,11 @@ fn generate_test_expressions(vec_type: VecType, dimension: Dimension) -> String 
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_expressions() {{\n\
-    return {} * {};\n\
+        "{type_name} test_{type_name}_multiply_expressions() {{\n\
+    return {a_constructor} * {b_constructor};\n\
 }}\n\
 \n\
-// run: test_{}_multiply_expressions() {} {}\n",
-        type_name, type_name, a_constructor, b_constructor, type_name, cmp_op, expected_constructor
+// run: test_{type_name}_multiply_expressions() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -426,21 +370,13 @@ fn generate_test_in_assignment(vec_type: VecType, dimension: Dimension) -> Strin
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_in_assignment() {{\n\
-    {} result = {};\n\
-    result = result * {};\n\
+        "{type_name} test_{type_name}_multiply_in_assignment() {{\n\
+    {type_name} result = {initial_constructor};\n\
+    result = result * {multiply_constructor};\n\
     return result;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_in_assignment() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        initial_constructor,
-        multiply_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_in_assignment() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -485,22 +421,13 @@ fn generate_test_large_numbers(vec_type: VecType, dimension: Dimension) -> Strin
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected_values);
 
     format!(
-        "{} test_{}_multiply_large_numbers() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_large_numbers() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_large_numbers() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_large_numbers() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -536,22 +463,13 @@ fn generate_test_mixed_components(vec_type: VecType, dimension: Dimension) -> St
     let expected_constructor = format_vector_constructor(vec_type, dimension, &expected);
 
     format!(
-        "{} test_{}_multiply_mixed_components() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_mixed_components() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_mixed_components() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_mixed_components() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -585,22 +503,13 @@ fn generate_test_overflow(vec_type: VecType, dimension: Dimension) -> String {
     };
 
     format!(
-        "{} test_{}_multiply_overflow() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_overflow() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_overflow() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_overflow() {cmp_op} {expected_constructor}\n"
     )
 }
 
@@ -650,21 +559,12 @@ fn generate_test_fractions(vec_type: VecType, dimension: Dimension) -> String {
     };
 
     format!(
-        "{} test_{}_multiply_fractions() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "{type_name} test_{type_name}_multiply_fractions() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a * b;\n\
 }}\n\
 \n\
-// run: test_{}_multiply_fractions() {} {}\n",
-        type_name,
-        type_name,
-        type_name,
-        a_constructor,
-        type_name,
-        b_constructor,
-        type_name,
-        cmp_op,
-        expected_constructor
+// run: test_{type_name}_multiply_fractions() {cmp_op} {expected_constructor}\n"
     )
 }

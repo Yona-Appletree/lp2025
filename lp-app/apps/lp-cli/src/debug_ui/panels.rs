@@ -17,7 +17,7 @@ pub fn render_status_panel(
     ui.horizontal(|ui| {
         ui.label(format!("Frame: {}", frame_id.as_i64()));
         ui.separator();
-        ui.label(format!("Server FPS: {:.0}", avg_server_fps));
+        ui.label(format!("Server FPS: {avg_server_fps:.0}"));
         ui.separator();
         if sync_in_progress {
             ui.label(egui::RichText::new("Syncing...").color(egui::Color32::YELLOW));

@@ -13,7 +13,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let bvec_type_name = format_bvec_type_name(dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/fn-equal", type_name);
+    let specifier = format!("vec/{type_name}/fn-equal");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -26,8 +26,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
         "// ============================================================================\n"
     ));
     content.push_str(&format!(
-        "// Equal: equal({}, {}) -> {} (component-wise)\n",
-        type_name, type_name, bvec_type_name
+        "// Equal: equal({type_name}, {type_name}) -> {bvec_type_name} (component-wise)\n"
     ));
     content.push_str(&format!(
         "// ============================================================================\n"
@@ -395,13 +394,15 @@ fn generate_test_max_values(vec_type: VecType, dimension: Dimension) -> String {
         match dimension {
             Dimension::D2 => "uvec2(4294967295u, 4294967294u)".to_string(),
             Dimension::D3 => "uvec3(4294967295u, 4294967294u, 4294967293u)".to_string(),
-            Dimension::D4 => "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
+            Dimension::D4 =>
+                "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
         },
         type_name,
         match dimension {
             Dimension::D2 => "uvec2(4294967295u, 4294967294u)".to_string(),
             Dimension::D3 => "uvec3(4294967295u, 4294967294u, 4294967293u)".to_string(),
-            Dimension::D4 => "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
+            Dimension::D4 =>
+                "uvec4(4294967295u, 4294967294u, 4294967293u, 4294967292u)".to_string(),
         },
         type_name,
         match dimension {
@@ -418,20 +419,15 @@ fn generate_test_in_expression(vec_type: VecType, dimension: Dimension) -> Strin
     // Special case for D2 uvec: return bool instead of bvec2 (following manual file)
     if matches!(vec_type, VecType::UVec) && matches!(dimension, Dimension::D2) {
         return format!(
-            "bool test_{}_equal_function_in_expression() {{\n\
-    {} a = uvec2(1u, 3u);\n\
-    {} b = uvec2(1u, 4u);\n\
-    {} c = uvec2(2u, 3u);\n\
+            "bool test_{type_name}_equal_function_in_expression() {{\n\
+    {type_name} a = uvec2(1u, 3u);\n\
+    {type_name} b = uvec2(1u, 4u);\n\
+    {type_name} c = uvec2(2u, 3u);\n\
     return equal(a, b) == equal(b, c);\n\
     // (true,false) == (false,false) = false\n\
 }}\n\
 \n\
-// run: test_{}_equal_function_in_expression() == false\n",
-            type_name,
-            type_name,
-            type_name,
-            type_name,
-            type_name
+// run: test_{type_name}_equal_function_in_expression() == false\n"
         );
     }
 

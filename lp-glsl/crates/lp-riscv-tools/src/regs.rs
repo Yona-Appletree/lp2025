@@ -142,7 +142,7 @@ impl Gpr {
                         }
                     }
                 }
-                Err(alloc::format!("Invalid register name: {}", name))
+                Err(alloc::format!("Invalid register name: {name}"))
             }
         }
     }
@@ -184,7 +184,7 @@ impl fmt::Display for Gpr {
             Gpr::T5 => "t5",
             Gpr::T6 => "t6",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 

@@ -16,18 +16,19 @@ pub enum ModuleBuilder {
 
 impl Target {
     /// Create the appropriate Module builder for this target
-    /// Internal implementation details are hidden - caller doesn't care about ModuleKind
+    /// For Rv32Emu, this creates an ObjectBuilder (for emulator)
+    /// For HostJit, this creates a JITBuilder
     pub fn create_module_builder(&mut self) -> Result<ModuleBuilder, GlslError> {
         let isa = self.create_isa()?.clone(); // Clone owned ISA for builder
         match self {
             #[cfg(feature = "emulator")]
             Target::Rv32Emu { .. } => {
-                // Internally knows: ObjectModule, riscv32 triple, etc.
+                // Rv32Emu creates ObjectModule for emulator execution
                 ObjectBuilder::new(isa, b"module", default_libcall_names())
                     .map_err(|e| {
                         GlslError::new(
                             ErrorCode::E0400,
-                            format!("ObjectBuilder creation failed: {}", e),
+                            format!("ObjectBuilder creation failed: {e}"),
                         )
                     })
                     .map(|b| ModuleBuilder::Object(b))
@@ -38,13 +39,20 @@ impl Target {
                 "Emulator feature is not enabled",
             )),
             Target::HostJit { .. } => {
-                // Internally knows: JITModule, host triple, etc.
+                // HostJit creates JITModule
                 Ok(ModuleBuilder::JIT(JITBuilder::with_isa(
                     isa,
                     default_libcall_names(),
                 )))
             }
         }
+    }
+
+    /// Create a JIT builder for this target
+    /// This allows Rv32Emu to create JITModule (for embedded JIT) instead of ObjectModule
+    pub fn create_jit_builder(&mut self) -> Result<JITBuilder, GlslError> {
+        let isa = self.create_isa()?.clone();
+        Ok(JITBuilder::with_isa(isa, default_libcall_names()))
     }
 }
 

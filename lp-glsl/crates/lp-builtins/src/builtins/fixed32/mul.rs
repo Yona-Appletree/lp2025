@@ -26,15 +26,14 @@ pub extern "C" fn __lp_fixed32_mul(a: i32, b: i32) -> i32 {
 
     // Saturate to fixed-point range BEFORE truncation
     // Clamp to [MIN_FIXED, MAX_FIXED]
-    let clamped = if shifted_wide > MAX_FIXED as i64 {
+
+    if shifted_wide > MAX_FIXED as i64 {
         MAX_FIXED
     } else if shifted_wide < MIN_FIXED as i64 {
         MIN_FIXED
     } else {
         shifted_wide as i32
-    };
-
-    clamped
+    }
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@ use cranelift_codegen::ir::{InstBuilder, Value};
 use super::binary;
 use super::coercion;
 
-use alloc::{format, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 pub fn emit_vector_binary<M: cranelift_module::Module>(
     ctx: &mut CodegenContext<'_, M>,
@@ -26,7 +26,7 @@ pub fn emit_vector_binary<M: cranelift_module::Module>(
         _ => {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("operator {:?} not supported on vectors yet", op),
+                format!("operator {op:?} not supported on vectors yet"),
             ));
         }
     }
@@ -43,10 +43,7 @@ pub fn emit_vector_binary<M: cranelift_module::Module>(
         if lhs_ty != rhs_ty {
             let mut error = GlslError::new(
                 ErrorCode::E0106,
-                format!(
-                    "vector operation requires matching types, got {:?} and {:?}",
-                    lhs_ty, rhs_ty
-                ),
+                format!("vector operation requires matching types, got {lhs_ty:?} and {rhs_ty:?}"),
             );
             if let Some(s) = span {
                 error = error.with_location(source_span_to_location(&s));
@@ -61,7 +58,7 @@ pub fn emit_vector_binary<M: cranelift_module::Module>(
         if !rhs_ty.is_numeric() || !vec_base.is_numeric() {
             return Err(GlslError::new(
                 ErrorCode::E0106,
-                format!("cannot use {:?} with {:?}", rhs_ty, lhs_ty),
+                format!("cannot use {rhs_ty:?} with {lhs_ty:?}"),
             ));
         }
         (lhs_ty.clone(), VectorOpMode::VectorScalar)
@@ -71,7 +68,7 @@ pub fn emit_vector_binary<M: cranelift_module::Module>(
         if !lhs_ty.is_numeric() || !vec_base.is_numeric() {
             return Err(GlslError::new(
                 ErrorCode::E0400,
-                format!("Cannot use {:?} with {:?}", lhs_ty, rhs_ty),
+                format!("Cannot use {lhs_ty:?} with {rhs_ty:?}"),
             ));
         }
         (rhs_ty.clone(), VectorOpMode::ScalarVector)

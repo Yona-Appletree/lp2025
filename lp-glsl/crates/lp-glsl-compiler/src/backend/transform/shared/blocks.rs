@@ -124,8 +124,7 @@ pub fn map_entry_block_params(
             return Err(GlslError::new(
                 ErrorCode::E0301,
                 format!(
-                    "Function parameter not mapped: old_param={:?}, expected new_param={:?}",
-                    old_param, new_param
+                    "Function parameter not mapped: old_param={old_param:?}, expected new_param={new_param:?}"
                 ),
             ));
         }

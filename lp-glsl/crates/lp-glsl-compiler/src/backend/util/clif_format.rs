@@ -48,7 +48,7 @@ pub fn format_clif_module<M: Module>(module: &GlModule<M>) -> Result<String, Gls
 /// Format a single function as CLIF text.
 /// The function is cloned and its name is set to the provided name, and external function
 /// references are updated to use testcase names.
-fn format_function(
+pub(crate) fn format_function(
     func: &cranelift_codegen::ir::Function,
     name: &str,
     name_mapping: &HashMap<String, String>,
@@ -88,7 +88,7 @@ fn format_function(
     write_function(&mut buf, &func_clone).map_err(|e| {
         GlslError::new(
             crate::error::ErrorCode::E0400,
-            format!("failed to write function: {}", e),
+            format!("failed to write function: {e}"),
         )
     })?;
 

@@ -14,7 +14,6 @@ pub use phase1::analyze_relocations;
 pub use phase2::apply_relocations_phase2;
 pub use section::{BufferSlice, SectionAddressInfo};
 
-use crate::debug;
 use alloc::string::String;
 use hashbrown::HashMap;
 

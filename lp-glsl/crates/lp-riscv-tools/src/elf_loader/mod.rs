@@ -13,7 +13,6 @@ mod relocations;
 mod sections;
 mod symbols;
 
-use crate::debug;
 use ::object::{Object, ObjectSection};
 use alloc::string::String;
 use alloc::vec;
@@ -179,31 +178,30 @@ mod tests {
             }
         }
 
-        // Try both debug and release profiles
-        for profile in ["debug", "release"].iter() {
-            // Path to the executable
-            // Try both workspace root and lightplayer/ subdirectory
-            let exe_path = current_dir
-                .join("../../../../../lp-app")
+        // Only use release builds (filetests-setup builds in release mode)
+        let profile = "release";
+        // Path to the executable
+        // Try both workspace root and lightplayer/ subdirectory
+        let exe_path = current_dir
+            .join("../../../../../lp-app")
+            .join("target")
+            .join(target)
+            .join(profile)
+            .join("lp-builtins-app");
+
+        // If not found, try workspace root directly (for when running from lightplayer/)
+        let exe_path = if exe_path.exists() {
+            exe_path
+        } else {
+            current_dir
                 .join("target")
                 .join(target)
                 .join(profile)
-                .join("lp-builtins-app");
+                .join("lp-builtins-app")
+        };
 
-            // If not found, try workspace root directly (for when running from lightplayer/)
-            let exe_path = if exe_path.exists() {
-                exe_path
-            } else {
-                current_dir
-                    .join("target")
-                    .join(target)
-                    .join(profile)
-                    .join("lp-builtins-app")
-            };
-
-            if exe_path.exists() {
-                return std::fs::read(&exe_path).ok();
-            }
+        if exe_path.exists() {
+            return std::fs::read(&exe_path).ok();
         }
 
         None
@@ -259,10 +257,7 @@ mod tests {
         let max_steps = 10000;
         loop {
             if steps >= max_steps {
-                println!(
-                    "\n=== Emulator exceeded {} steps - possible infinite loop ===",
-                    max_steps
-                );
+                println!("\n=== Emulator exceeded {max_steps} steps - possible infinite loop ===");
                 println!("PC: 0x{:x}", emu.get_pc());
                 println!("\n=== Emulator State ===");
                 println!("{}", emu.dump_state());
@@ -282,12 +277,12 @@ mod tests {
                         println!("Panic message: {}", panic_info.message);
                         if let Some(ref file) = panic_info.file {
                             if let Some(line) = panic_info.line {
-                                println!("  at {}:{}", file, line);
+                                println!("  at {file}:{line}");
                             } else {
-                                println!("  at {}", file);
+                                println!("  at {file}");
                             }
                         } else if let Some(line) = panic_info.line {
-                            println!("  at line {}", line);
+                            println!("  at line {line}");
                         } else {
                             println!(
                                 "  (no file/line information available, PC: 0x{:x})",
@@ -314,8 +309,8 @@ mod tests {
                 }
                 Err(e) => {
                     println!("\n=== Emulator Error ===");
-                    println!("Error: {}", e);
-                    println!("Steps executed: {}", steps);
+                    println!("Error: {e}");
+                    println!("Steps executed: {steps}");
                     println!("PC: 0x{:x}", emu.get_pc());
                     println!("\n=== Emulator State ===");
                     println!("{}", emu.dump_state());

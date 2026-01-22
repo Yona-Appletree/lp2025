@@ -40,7 +40,7 @@ pub fn parse_glsl_value(s: &str) -> Result<GlslValue> {
         return Ok(value);
     }
 
-    anyhow::bail!("failed to parse GLSL value: {}", s)
+    anyhow::bail!("failed to parse GLSL value: {s}")
 }
 
 /// Parse a function call expression (e.g., "add_float(1.5, 2.5)") into function name and arguments.
@@ -51,14 +51,13 @@ pub fn parse_function_call(expression: &str) -> Result<(String, Vec<String>)> {
     // Find the opening parenthesis
     let open_paren = expression
         .find('(')
-        .ok_or_else(|| anyhow::anyhow!("function call must contain '(': {}", expression))?;
+        .ok_or_else(|| anyhow::anyhow!("function call must contain '(': {expression}"))?;
 
     // Extract function name (everything before the opening parenthesis)
     let func_name = expression[..open_paren].trim().to_string();
     if func_name.is_empty() {
         return Err(anyhow::anyhow!(
-            "function name is empty in expression: {}",
-            expression
+            "function name is empty in expression: {expression}"
         ));
     }
 
@@ -82,7 +81,7 @@ pub fn parse_function_call(expression: &str) -> Result<(String, Vec<String>)> {
     }
 
     let close_paren_pos = close_paren_pos
-        .ok_or_else(|| anyhow::anyhow!("unmatched parentheses in expression: {}", expression))?;
+        .ok_or_else(|| anyhow::anyhow!("unmatched parentheses in expression: {expression}"))?;
 
     // Extract arguments string (between parentheses)
     let args_str = &args_str[..close_paren_pos];
@@ -138,7 +137,7 @@ pub fn parse_function_arguments(arg_strings: &[String]) -> Result<Vec<GlslValue>
 fn format_glsl_value(value: &GlslValue) -> String {
     // TODO: Move this to util::file_update in Phase 4
     // For now, use a simple format
-    format!("{:?}", value)
+    format!("{value:?}")
 }
 
 /// Compare actual and expected values.

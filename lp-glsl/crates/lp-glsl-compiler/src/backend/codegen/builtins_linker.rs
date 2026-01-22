@@ -45,9 +45,8 @@ pub fn link_and_verify_builtins(
         GlslError::new(
             ErrorCode::E0400,
             format!(
-                "Failed to load base executable: {}. \
-                     Ensure lp-builtins-app is correctly compiled.",
-                e
+                "Failed to load base executable: {e}. \
+                     Ensure lp-builtins-app is correctly compiled."
             ),
         )
     })?;
@@ -66,9 +65,8 @@ pub fn link_and_verify_builtins(
         GlslError::new(
             ErrorCode::E0400,
             format!(
-                "Failed to load object file: {}. \
-                 Ensure the object file is correctly compiled.",
-                e
+                "Failed to load object file: {e}. \
+                 Ensure the object file is correctly compiled."
             ),
         )
     })?;
@@ -113,10 +111,9 @@ pub fn link_and_verify_builtins(
         return Err(GlslError::new(
             ErrorCode::E0400,
             format!(
-                "Builtin symbols are undefined after loading: {:?}. \
+                "Builtin symbols are undefined after loading: {undefined_symbols:?}. \
                  These symbols were declared but not resolved. \
-                 Ensure lp-builtins library is built and linked correctly.",
-                undefined_symbols
+                 Ensure lp-builtins library is built and linked correctly."
             ),
         ));
     }
@@ -125,9 +122,8 @@ pub fn link_and_verify_builtins(
         return Err(GlslError::new(
             ErrorCode::E0400,
             format!(
-                "Builtin symbols not found after loading: {:?}. \
-                 Ensure lp-builtins library is built and contains these symbols.",
-                missing_symbols
+                "Builtin symbols not found after loading: {missing_symbols:?}. \
+                 Ensure lp-builtins library is built and contains these symbols."
             ),
         ));
     }

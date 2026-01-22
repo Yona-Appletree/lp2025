@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["feature/*"]
+  push:
+    branches: ["feature/*"]
+
+env:
+  RUST_BACKTRACE: 1
+  RISC_V_TARGET: riscv32imac-unknown-none-elf
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install RISC-V target
+        run: rustup target add ${{ env.RISC_V_TARGET }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Validate
+        # Note: we don't run tests on ci right now because jit tests fail on arm
+        #       due to memory protection, and don't run on x64 due to some cranelift
+        #       x64 build issue.
+        run: just check build

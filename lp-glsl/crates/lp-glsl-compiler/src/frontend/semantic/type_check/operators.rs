@@ -8,6 +8,8 @@ use glsl::syntax::{BinaryOp, SourceSpan, UnaryOp};
 use super::conversion::promote_numeric;
 use super::matrix;
 
+use alloc::format;
+
 /// Infer result type of binary operation (with implicit conversion)
 /// Implements GLSL spec: operators.adoc:775-855, operators.adoc:1019-1098 (matrix ops)
 pub fn infer_binary_result_type(
@@ -34,8 +36,7 @@ pub fn infer_binary_result_type(
                         return Err(GlslError::new(
                             ErrorCode::E0106,
                             format!(
-                                "vector operation requires matching types, got {:?} and {:?}",
-                                lhs_ty, rhs_ty
+                                "vector operation requires matching types, got {lhs_ty:?} and {rhs_ty:?}"
                             ),
                         )
                         .with_location(source_span_to_location(&span)));
@@ -49,7 +50,7 @@ pub fn infer_binary_result_type(
                     if !rhs_ty.is_numeric() || !vec_base.is_numeric() {
                         return Err(GlslError::new(
                             ErrorCode::E0106,
-                            format!("cannot use {:?} with {:?}", rhs_ty, lhs_ty),
+                            format!("cannot use {rhs_ty:?} with {lhs_ty:?}"),
                         )
                         .with_location(source_span_to_location(&span)));
                     }
@@ -61,7 +62,7 @@ pub fn infer_binary_result_type(
                     if !lhs_ty.is_numeric() || !vec_base.is_numeric() {
                         return Err(GlslError::new(
                             ErrorCode::E0106,
-                            format!("cannot use {:?} with {:?}", lhs_ty, rhs_ty),
+                            format!("cannot use {lhs_ty:?} with {rhs_ty:?}"),
                         )
                         .with_location(source_span_to_location(&span)));
                     }
@@ -73,12 +74,11 @@ pub fn infer_binary_result_type(
             if !lhs_ty.is_numeric() || !rhs_ty.is_numeric() {
                 return Err(GlslError::new(
                     ErrorCode::E0106,
-                    format!("arithmetic operator {:?} requires numeric operands", op),
+                    format!("arithmetic operator {op:?} requires numeric operands"),
                 )
                 .with_location(source_span_to_location(&span))
                 .with_note(format!(
-                    "left operand has type `{:?}`, right operand has type `{:?}`",
-                    lhs_ty, rhs_ty
+                    "left operand has type `{lhs_ty:?}`, right operand has type `{rhs_ty:?}`"
                 )));
             }
             // Result type is the promoted type
@@ -115,8 +115,7 @@ pub fn infer_binary_result_type(
                 return Err(GlslError::new(
                     ErrorCode::E0106,
                     format!(
-                        "modulo operator requires integer operands, got {:?} and {:?}",
-                        lhs_ty, rhs_ty
+                        "modulo operator requires integer operands, got {lhs_ty:?} and {rhs_ty:?}"
                     ),
                 )
                 .with_location(source_span_to_location(&span)));
@@ -139,8 +138,7 @@ pub fn infer_binary_result_type(
                         return Err(GlslError::new(
                             ErrorCode::E0106,
                             format!(
-                                "vector modulo requires matching types, got {:?} and {:?}",
-                                lhs_ty, rhs_ty
+                                "vector modulo requires matching types, got {lhs_ty:?} and {rhs_ty:?}"
                             ),
                         )
                         .with_location(source_span_to_location(&span)));
@@ -156,10 +154,7 @@ pub fn infer_binary_result_type(
                     {
                         return Err(GlslError::new(
                             ErrorCode::E0106,
-                            format!(
-                                "modulo requires integer types, got {:?} and {:?}",
-                                lhs_ty, rhs_ty
-                            ),
+                            format!("modulo requires integer types, got {lhs_ty:?} and {rhs_ty:?}"),
                         )
                         .with_location(source_span_to_location(&span)));
                     }
@@ -173,10 +168,7 @@ pub fn infer_binary_result_type(
                     {
                         return Err(GlslError::new(
                             ErrorCode::E0106,
-                            format!(
-                                "modulo requires integer types, got {:?} and {:?}",
-                                lhs_ty, rhs_ty
-                            ),
+                            format!("modulo requires integer types, got {lhs_ty:?} and {rhs_ty:?}"),
                         )
                         .with_location(source_span_to_location(&span)));
                     }
@@ -196,8 +188,7 @@ pub fn infer_binary_result_type(
                     return Err(GlslError::new(
                         ErrorCode::E0106,
                         format!(
-                            "modulo operator requires integer operands, got {:?} and {:?}",
-                            lhs_ty, rhs_ty
+                            "modulo operator requires integer operands, got {lhs_ty:?} and {rhs_ty:?}"
                         ),
                     )
                     .with_location(source_span_to_location(&span)));
@@ -213,12 +204,11 @@ pub fn infer_binary_result_type(
             if lhs_ty != rhs_ty {
                 return Err(GlslError::new(
                     ErrorCode::E0106,
-                    format!("equality operator {:?} requires matching types", op),
+                    format!("equality operator {op:?} requires matching types"),
                 )
                 .with_location(source_span_to_location(&span))
                 .with_note(format!(
-                    "left operand has type `{:?}`, right operand has type `{:?}`",
-                    lhs_ty, rhs_ty
+                    "left operand has type `{lhs_ty:?}`, right operand has type `{rhs_ty:?}`"
                 )));
             }
             Ok(Type::Bool)
@@ -228,12 +218,11 @@ pub fn infer_binary_result_type(
             if !lhs_ty.is_numeric() || !rhs_ty.is_numeric() {
                 return Err(GlslError::new(
                     ErrorCode::E0106,
-                    format!("comparison operator {:?} requires numeric operands", op),
+                    format!("comparison operator {op:?} requires numeric operands"),
                 )
                 .with_location(source_span_to_location(&span))
                 .with_note(format!(
-                    "left operand has type `{:?}`, right operand has type `{:?}`",
-                    lhs_ty, rhs_ty
+                    "left operand has type `{lhs_ty:?}`, right operand has type `{rhs_ty:?}`"
                 )));
             }
             Ok(Type::Bool)
@@ -244,12 +233,11 @@ pub fn infer_binary_result_type(
             if lhs_ty != &Type::Bool || rhs_ty != &Type::Bool {
                 return Err(GlslError::new(
                     ErrorCode::E0106,
-                    format!("logical operator {:?} requires bool operands", op),
+                    format!("logical operator {op:?} requires bool operands"),
                 )
                 .with_location(source_span_to_location(&span))
                 .with_note(format!(
-                    "left operand has type `{:?}`, right operand has type `{:?}`",
-                    lhs_ty, rhs_ty
+                    "left operand has type `{lhs_ty:?}`, right operand has type `{rhs_ty:?}`"
                 )));
             }
             Ok(Type::Bool)
@@ -257,7 +245,7 @@ pub fn infer_binary_result_type(
 
         _ => Err(GlslError::new(
             ErrorCode::E0112,
-            format!("unsupported binary operator: {:?}", op),
+            format!("unsupported binary operator: {op:?}"),
         )
         .with_location(source_span_to_location(&span))),
     }
@@ -279,7 +267,7 @@ pub fn infer_unary_result_type(
                     "unary minus requires numeric operand",
                 )
                 .with_location(source_span_to_location(&span))
-                .with_note(format!("operand has type `{:?}`", operand_ty)));
+                .with_note(format!("operand has type `{operand_ty:?}`")));
             }
             Ok(operand_ty.clone())
         }
@@ -289,7 +277,7 @@ pub fn infer_unary_result_type(
                 return Err(
                     GlslError::new(ErrorCode::E0112, "logical NOT requires bool operand")
                         .with_location(source_span_to_location(&span))
-                        .with_note(format!("operand has type `{:?}`", operand_ty)),
+                        .with_note(format!("operand has type `{operand_ty:?}`")),
                 );
             }
             Ok(Type::Bool)
@@ -302,14 +290,14 @@ pub fn infer_unary_result_type(
                     "increment/decrement requires numeric operand (scalar, vector, or matrix)",
                 )
                 .with_location(source_span_to_location(&span))
-                .with_note(format!("operand has type `{:?}`", operand_ty)));
+                .with_note(format!("operand has type `{operand_ty:?}`")));
             }
             Ok(operand_ty.clone())
         }
 
         _ => Err(GlslError::new(
             ErrorCode::E0112,
-            format!("unsupported unary operator: {:?}", op),
+            format!("unsupported unary operator: {op:?}"),
         )
         .with_location(source_span_to_location(&span))),
     }
@@ -319,10 +307,8 @@ pub fn infer_unary_result_type(
 pub fn check_condition(cond_ty: &Type) -> Result<(), GlslError> {
     if cond_ty != &Type::Bool {
         return Err(
-            GlslError::new(ErrorCode::E0107, "condition must be bool type").with_note(format!(
-                "condition has type `{:?}`, expected `Bool`",
-                cond_ty
-            )),
+            GlslError::new(ErrorCode::E0107, "condition must be bool type")
+                .with_note(format!("condition has type `{cond_ty:?}`, expected `Bool`")),
         );
     }
     Ok(())
@@ -338,7 +324,7 @@ pub fn infer_postinc_result_type(operand_ty: &Type, span: SourceSpan) -> Result<
             "post-increment requires numeric operand (scalar, vector, or matrix)",
         )
         .with_location(source_span_to_location(&span))
-        .with_note(format!("operand has type `{:?}`", operand_ty)));
+        .with_note(format!("operand has type `{operand_ty:?}`")));
     }
 
     // Return same type as operand
@@ -355,7 +341,7 @@ pub fn infer_preinc_result_type(operand_ty: &Type, span: SourceSpan) -> Result<T
             "pre-increment requires numeric operand (scalar, vector, or matrix)",
         )
         .with_location(source_span_to_location(&span))
-        .with_note(format!("operand has type `{:?}`", operand_ty)));
+        .with_note(format!("operand has type `{operand_ty:?}`")));
     }
 
     // Return same type as operand
@@ -372,7 +358,7 @@ pub fn infer_predec_result_type(operand_ty: &Type, span: SourceSpan) -> Result<T
             "pre-decrement requires numeric operand (scalar, vector, or matrix)",
         )
         .with_location(source_span_to_location(&span))
-        .with_note(format!("operand has type `{:?}`", operand_ty)));
+        .with_note(format!("operand has type `{operand_ty:?}`")));
     }
 
     // Return same type as operand
@@ -389,7 +375,7 @@ pub fn infer_postdec_result_type(operand_ty: &Type, span: SourceSpan) -> Result<
             "post-decrement requires numeric operand (scalar, vector, or matrix)",
         )
         .with_location(source_span_to_location(&span))
-        .with_note(format!("operand has type `{:?}`", operand_ty)));
+        .with_note(format!("operand has type `{operand_ty:?}`")));
     }
 
     // Return same type as operand

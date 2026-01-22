@@ -11,7 +11,7 @@ pub enum FixedPointFormat {
     Fixed16x16,
     /// 32.32 format: 32 integer bits, 32 fractional bits (uses I64)
     /// Note: Not yet fully implemented
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "Reserved for future fixed32x32 implementation")]
     Fixed32x32,
 }
 
@@ -52,7 +52,10 @@ pub fn float_to_fixed16x16(f: f32) -> i32 {
 }
 
 /// Convert fixed16x16 back to float32 (for debugging/constants).
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Utility function for debugging and constant conversion"
+)]
 pub fn fixed16x16_to_float(fixed: i32) -> f32 {
     fixed as f32 / crate::frontend::codegen::constants::FIXED16X16_SCALE
 }
@@ -62,7 +65,7 @@ pub fn fixed16x16_to_float(fixed: i32) -> f32 {
 /// Fixed32x32 format uses 32 integer bits and 32 fractional bits.
 /// Range: -2147483648.0 to +2147483647.9999999998
 /// Precision: 1/4294967296 (approximately 0.00000000023)
-#[allow(dead_code)] // Reserved for future use
+#[allow(dead_code, reason = "Reserved for future use")]
 pub fn float_to_fixed32x32(f: f32) -> i64 {
     // Convert to f64 for more precision in intermediate calculations
     let f64_val = f as f64;
@@ -79,7 +82,10 @@ pub fn float_to_fixed32x32(f: f32) -> i64 {
 }
 
 /// Convert fixed32x32 back to float32 (for debugging/constants).
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Utility function for debugging and constant conversion"
+)]
 pub fn fixed32x32_to_float(fixed: i64) -> f32 {
     (fixed as f64 / 4294967296.0) as f32
 }

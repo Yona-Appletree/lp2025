@@ -11,7 +11,7 @@ pub fn generate(vec_type: VecType, dimension: Dimension) -> String {
     let type_name = format_type_name(vec_type, dimension);
 
     // Generate header with regeneration command
-    let specifier = format!("vec/{}/op-equal", type_name);
+    let specifier = format!("vec/{type_name}/op-equal");
     let mut content = generate_header(&specifier);
 
     // Add test run and target directives
@@ -81,15 +81,14 @@ fn generate_test_operator_true(vec_type: VecType, dimension: Dimension) -> Strin
     let constructor = format_vector_constructor(vec_type, dimension, &values);
 
     format!(
-        "bool test_{}_equal_operator_true() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_true() {{\n\
+    {type_name} a = {constructor};\n\
+    {type_name} b = {constructor};\n\
     // Operator == returns bool (aggregate comparison - all components must match)\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_true() == true\n",
-        type_name, type_name, constructor, type_name, constructor, type_name
+// run: test_{type_name}_equal_operator_true() == true\n"
     )
 }
 
@@ -113,14 +112,13 @@ fn generate_test_operator_false(vec_type: VecType, dimension: Dimension) -> Stri
     let b_constructor = format_vector_constructor(vec_type, dimension, &b_values);
 
     format!(
-        "bool test_{}_equal_operator_false() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_false() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_false() == false\n",
-        type_name, type_name, a_constructor, type_name, b_constructor, type_name
+// run: test_{type_name}_equal_operator_false() == false\n"
     )
 }
 
@@ -144,14 +142,13 @@ fn generate_test_operator_partial_match(vec_type: VecType, dimension: Dimension)
     let b_constructor = format_vector_constructor(vec_type, dimension, &b_values);
 
     format!(
-        "bool test_{}_equal_operator_partial_match() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_partial_match() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_partial_match() == false\n",
-        type_name, type_name, a_constructor, type_name, b_constructor, type_name
+// run: test_{type_name}_equal_operator_partial_match() == false\n"
     )
 }
 
@@ -169,14 +166,13 @@ fn generate_test_operator_all_zero(vec_type: VecType, dimension: Dimension) -> S
     let constructor = format_vector_constructor(vec_type, dimension, &values);
 
     format!(
-        "bool test_{}_equal_operator_all_zero() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_all_zero() {{\n\
+    {type_name} a = {constructor};\n\
+    {type_name} b = {constructor};\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_all_zero() == true\n",
-        type_name, type_name, constructor, type_name, constructor, type_name
+// run: test_{type_name}_equal_operator_all_zero() == true\n"
     )
 }
 
@@ -199,14 +195,13 @@ fn generate_test_operator_negative(vec_type: VecType, dimension: Dimension) -> S
     let constructor = format_vector_constructor(vec_type, dimension, &values);
 
     format!(
-        "bool test_{}_equal_operator_negative() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_negative() {{\n\
+    {type_name} a = {constructor};\n\
+    {type_name} b = {constructor};\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_negative() == true\n",
-        type_name, type_name, constructor, type_name, constructor, type_name
+// run: test_{type_name}_equal_operator_negative() == true\n"
     )
 }
 
@@ -230,15 +225,14 @@ fn generate_test_operator_after_assignment(vec_type: VecType, dimension: Dimensi
     let b_constructor = format_vector_constructor(vec_type, dimension, &b_values);
 
     format!(
-        "bool test_{}_equal_operator_after_assignment() {{\n\
-    {} a = {};\n\
-    {} b = {};\n\
+        "bool test_{type_name}_equal_operator_after_assignment() {{\n\
+    {type_name} a = {a_constructor};\n\
+    {type_name} b = {b_constructor};\n\
     b = a;\n\
     return a == b;\n\
 }}\n\
 \n\
-// run: test_{}_equal_operator_after_assignment() == true\n",
-        type_name, type_name, a_constructor, type_name, b_constructor, type_name
+// run: test_{type_name}_equal_operator_after_assignment() == true\n"
     )
 }
 

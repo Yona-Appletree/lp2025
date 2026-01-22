@@ -90,7 +90,7 @@ impl ProjectManager {
         // Create project-scoped filesystem using chroot
         let project_fs = base_fs
             .chroot(project_path.as_path())
-            .map_err(|e| ServerError::Filesystem(format!("Failed to chroot to project: {}", e)))?;
+            .map_err(|e| ServerError::Filesystem(format!("Failed to chroot to project: {e}")))?;
 
         // Create a new project instance
         let mut project = Project::new(
@@ -102,12 +102,11 @@ impl ProjectManager {
 
         // Auto-initialize the project runtime
         project.runtime_mut().load_nodes().map_err(|e| {
-            ServerError::Core(format!("Failed to load nodes for project {}: {}", name, e))
+            ServerError::Core(format!("Failed to load nodes for project {name}: {e}"))
         })?;
         project.runtime_mut().init_nodes().map_err(|e| {
             ServerError::Core(format!(
-                "Failed to initialize nodes for project {}: {}",
-                name, e
+                "Failed to initialize nodes for project {name}: {e}"
             ))
         })?;
         project
@@ -115,8 +114,7 @@ impl ProjectManager {
             .ensure_all_nodes_initialized()
             .map_err(|e| {
                 ServerError::Core(format!(
-                    "Failed to ensure all nodes initialized for project {}: {}",
-                    name, e
+                    "Failed to ensure all nodes initialized for project {name}: {e}"
                 ))
             })?;
 
@@ -144,8 +142,7 @@ impl ProjectManager {
         let project_path = lp_model::LpPathBuf::from(normalized_path);
         let name = project_path.file_name().ok_or_else(|| {
             ServerError::Core(format!(
-                "Invalid project path: cannot extract name from '{}'",
-                path
+                "Invalid project path: cannot extract name from '{path}'"
             ))
         })?;
 
@@ -211,7 +208,7 @@ impl ProjectManager {
         let entries = fs
             .list_dir(self.projects_base_dir.as_path(), false)
             .map_err(|e| {
-                ServerError::Filesystem(format!("Failed to read projects directory: {}", e))
+                ServerError::Filesystem(format!("Failed to read projects directory: {e}"))
             })?;
 
         let mut projects = Vec::new();

@@ -17,9 +17,9 @@ pub enum FsError {
 impl fmt::Display for FsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FsError::Filesystem(msg) => write!(f, "Filesystem error: {}", msg),
-            FsError::NotFound(msg) => write!(f, "File not found: {}", msg),
-            FsError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
+            FsError::Filesystem(msg) => write!(f, "Filesystem error: {msg}"),
+            FsError::NotFound(msg) => write!(f, "File not found: {msg}"),
+            FsError::InvalidPath(msg) => write!(f, "Invalid path: {msg}"),
         }
     }
 }
@@ -37,10 +37,10 @@ impl fmt::Display for TextureError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TextureError::InvalidFormat(format) => {
-                write!(f, "Invalid texture format: {}", format)
+                write!(f, "Invalid texture format: {format}")
             }
             TextureError::DimensionsTooLarge { width, height } => {
-                write!(f, "Texture dimensions too large: {}x{}", width, height)
+                write!(f, "Texture dimensions too large: {width}x{height}")
             }
         }
     }
@@ -65,23 +65,22 @@ impl fmt::Display for OutputError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OutputError::PinAlreadyOpen { pin } => {
-                write!(f, "Pin {} is already open", pin)
+                write!(f, "Pin {pin} is already open")
             }
             OutputError::InvalidHandle { handle } => {
-                write!(f, "Invalid handle: {}", handle)
+                write!(f, "Invalid handle: {handle}")
             }
             OutputError::InvalidConfig { reason } => {
-                write!(f, "Invalid config: {}", reason)
+                write!(f, "Invalid config: {reason}")
             }
             OutputError::DataLengthMismatch { expected, actual } => {
                 write!(
                     f,
-                    "Data length {} doesn't match expected byte_count {}",
-                    actual, expected
+                    "Data length {actual} doesn't match expected byte_count {expected}"
                 )
             }
             OutputError::Other { message } => {
-                write!(f, "Error: {}", message)
+                write!(f, "Error: {message}")
             }
         }
     }

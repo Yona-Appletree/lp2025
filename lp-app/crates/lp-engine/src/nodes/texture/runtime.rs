@@ -83,7 +83,7 @@ impl NodeRuntime for TextureRuntime {
         let texture = Texture::new(config.width, config.height, format).map_err(|e| {
             Error::InvalidConfig {
                 node_path: format!("texture-{}", self.node_handle.as_i32()),
-                reason: format!("Failed to create texture: {}", e),
+                reason: format!("Failed to create texture: {e}"),
             }
         })?;
 
@@ -131,7 +131,7 @@ impl NodeRuntime for TextureRuntime {
             let texture = Texture::new(texture_config.width, texture_config.height, format)
                 .map_err(|e| Error::InvalidConfig {
                     node_path: format!("texture-{}", self.node_handle.as_i32()),
-                    reason: format!("Failed to resize texture: {}", e),
+                    reason: format!("Failed to resize texture: {e}"),
                 })?;
             self.texture = Some(texture);
         }

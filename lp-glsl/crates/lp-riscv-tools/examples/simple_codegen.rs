@@ -69,16 +69,16 @@ fn main() {
         Ok(result) => {
             println!("✓ Function executed successfully!");
             println!("  Input: 5 + 7");
-            println!("  Result (a0): {}", result);
+            println!("  Result (a0): {result}");
 
             if result == 12 {
                 println!("\n✓ PASS: Result is correct!");
             } else {
-                println!("\n✗ FAIL: Expected 12, got {}", result);
+                println!("\n✗ FAIL: Expected 12, got {result}");
             }
         }
         Err(e) => {
-            println!("✗ Emulator error: {:?}", e);
+            println!("✗ Emulator error: {e:?}");
             std::process::exit(1);
         }
     }

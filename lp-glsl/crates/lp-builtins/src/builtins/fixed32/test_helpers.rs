@@ -29,6 +29,7 @@ pub fn fixed_to_float(fixed: i32) -> f32 {
 /// * `func` - The function to test (takes i32, returns i32)
 /// * `test_cases` - Array of (input_float, expected_output_float) pairs
 /// * `tolerance` - Maximum allowed absolute error between expected and actual
+#[allow(dead_code, reason = "Test helper function")]
 pub fn test_fixed32_function<F>(func: F, test_cases: &[(f32, f32)], tolerance: f32)
 where
     F: Fn(i32) -> i32 + Copy,

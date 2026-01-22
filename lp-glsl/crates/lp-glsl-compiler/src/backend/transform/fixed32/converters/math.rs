@@ -10,6 +10,8 @@ use cranelift_codegen::ir::{Function, Inst, InstBuilder, Value, types};
 use cranelift_frontend::FunctionBuilder;
 use hashbrown::HashMap;
 
+use alloc::format;
+
 /// Map TestCase function name to BuiltinId and argument count.
 ///
 /// Returns None if the function name is not a math function that should be converted.
@@ -55,29 +57,6 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
         _ => None,
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /// Convert Ceil instruction.
 pub(crate) fn convert_ceil(
@@ -193,10 +172,7 @@ pub(crate) fn convert_sqrt(
     let func_id = func_id_map.get(builtin_name).ok_or_else(|| {
         GlslError::new(
             crate::error::ErrorCode::E0400,
-            format!(
-                "Builtin function '{}' not found in func_id_map",
-                builtin_name
-            ),
+            format!("Builtin function '{builtin_name}' not found in func_id_map"),
         )
     })?;
 

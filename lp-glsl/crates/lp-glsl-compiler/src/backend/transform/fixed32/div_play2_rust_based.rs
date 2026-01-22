@@ -18,7 +18,7 @@
 /// long division step with the dividend `duo`.
 ///
 /// Adapted from compiler-builtins/src/int/specialized_div_rem/norm_shift.rs
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Division helper function")]
 fn u32_normalization_shift(duo: u32, div: u32, full_normalization: bool) -> usize {
     // Use leading_zeros since RISC-V has CLZ instruction (or we can use software fallback)
     let mut shl = (div.leading_zeros() - duo.leading_zeros()) as usize;
@@ -35,7 +35,7 @@ fn u32_normalization_shift(duo: u32, div: u32, full_normalization: bool) -> usiz
 /// 32-bit by 32-bit division helper.
 ///
 /// This delegates to hardware division when available, or uses software division.
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Division helper function")]
 fn u32_by_u32_div_rem(duo: u32, div: u32) -> (u32, u32) {
     // Use checked_div/checked_rem to avoid panic dependencies
     if let Some(quo) = duo.checked_div(div) {
@@ -58,7 +58,7 @@ fn u32_by_u32_div_rem(duo: u32, div: u32) -> (u32, u32) {
 /// This implementation is adapted from Rust's compiler-builtins delegate algorithm
 /// for u64_div_rem on 32-bit targets. See:
 /// https://github.com/rust-lang/compiler-builtins/blob/main/compiler-builtins/src/int/specialized_div_rem/delegate.rs
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Division helper function for 64-bit division on 32-bit targets")]
 pub fn divide64(dividend_hi: u32, dividend_lo: u32, divisor: u32) -> u32 {
     // Check that dividend_hi < divisor to avoid quotient overflow
     assert!(dividend_hi < divisor, "Quotient would overflow 32 bits");

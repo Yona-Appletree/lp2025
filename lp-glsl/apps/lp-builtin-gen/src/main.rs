@@ -24,8 +24,7 @@ fn main() {
     generate_registry(&registry_path, &builtins);
 
     // Generate builtin_refs.rs
-    let builtin_refs_path =
-        workspace_root.join("lp-glsl/apps/lp-builtins-app/src/builtin_refs.rs");
+    let builtin_refs_path = workspace_root.join("lp-glsl/apps/lp-builtins-app/src/builtin_refs.rs");
     generate_builtin_refs(&builtin_refs_path, &builtins);
 
     // Generate mod.rs
@@ -37,14 +36,30 @@ fn main() {
         .join("lp-glsl/crates/lp-glsl-compiler/src/backend/transform/fixed32/converters/math.rs");
     generate_testcase_mapping(&math_rs_path, &builtins);
 
+    // Format generated files using cargo fmt
+    format_generated_files(
+        &workspace_root,
+        &[
+            &registry_path,
+            &builtin_refs_path,
+            &mod_rs_path,
+            &math_rs_path,
+        ],
+    );
+
     println!("Generated all builtin boilerplate files");
 }
 
 fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut current = std::env::current_dir()?;
     loop {
-        if current.join("lp-glsl/Cargo.toml").exists() {
-            return Ok(current);
+        let cargo_toml = current.join("Cargo.toml");
+        if cargo_toml.exists() {
+            // Check if this is the workspace root by looking for [workspace] section
+            let content = std::fs::read_to_string(&cargo_toml)?;
+            if content.contains("[workspace]") && current.join("lp-glsl").exists() {
+                return Ok(current);
+            }
         }
         if !current.pop() {
             return Err("Could not find workspace root".into());
@@ -77,10 +92,10 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
         let ast = parse_file(&content)?;
 
         for item in ast.items {
-            if let Item::Fn(func) = item {
-                if let Some(builtin) = extract_builtin(&func, file_name) {
-                    builtins.push(builtin);
-                }
+            if let Item::Fn(func) = item
+                && let Some(builtin) = extract_builtin(&func, file_name)
+            {
+                builtins.push(builtin);
             }
         }
     }
@@ -117,7 +132,7 @@ fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
             let mut chars = s.chars();
             match chars.next() {
                 None => String::new(),
-                Some(c) => c.to_uppercase().collect::<String>() + &chars.as_str(),
+                Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
             }
         })
         .collect::<String>();
@@ -159,12 +174,14 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output
         .push_str("//! Provides enum-based registry for builtin functions with support for both\n");
     output.push_str("//! JIT (function pointer) and emulator (ELF symbol) linking.\n");
-    output.push_str("\n");
+    output.push('\n');
 
     output.push_str("use crate::error::{ErrorCode, GlslError};\n");
     output.push_str("use cranelift_codegen::ir::{AbiParam, Signature, types};\n");
     output.push_str("use cranelift_codegen::isa::CallConv;\n");
     output.push_str("use cranelift_module::{Linkage, Module};\n\n");
+    output.push_str("#[cfg(not(feature = \"std\"))]\n");
+    output.push_str("use alloc::format;\n\n");
 
     // Generate enum
     output.push_str("/// Enum identifying builtin functions.\n");
@@ -216,51 +233,51 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         let unary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 1).collect();
 
         if !ternary_ops.is_empty() {
-        output.push_str("            ");
-        for (i, builtin) in ternary_ops.iter().enumerate() {
-            if i > 0 {
-                output.push_str(" | ");
+            output.push_str("            ");
+            for (i, builtin) in ternary_ops.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
-            output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            output.push_str(" => {\n");
+            output.push_str("                // (i32, i32, i32) -> i32\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+            output.push_str("            }\n");
         }
-        output.push_str(" => {\n");
-        output.push_str("                // (i32, i32, i32) -> i32\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
-        output.push_str("            }\n");
-    }
 
-    if !binary_ops.is_empty() {
-        output.push_str("            ");
-        for (i, builtin) in binary_ops.iter().enumerate() {
-            if i > 0 {
-                output.push_str(" | ");
+        if !binary_ops.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in binary_ops.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
-            output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            output.push_str(" => {\n");
+            output.push_str("                // (i32, i32) -> i32\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+            output.push_str("            }\n");
         }
-        output.push_str(" => {\n");
-        output.push_str("                // (i32, i32) -> i32\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
-        output.push_str("            }\n");
-    }
 
-    if !unary_ops.is_empty() {
-        output.push_str("            ");
-        for (i, builtin) in unary_ops.iter().enumerate() {
-            if i > 0 {
-                output.push_str(" | ");
+        if !unary_ops.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in unary_ops.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
-            output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
-        }
-        output.push_str(" => {\n");
-        output.push_str("                // (i32) -> i32\n");
-        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-        output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
-        output.push_str("            }\n");
+            output.push_str(" => {\n");
+            output.push_str("                // (i32) -> i32\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+            output.push_str("            }\n");
         }
     }
 
@@ -332,9 +349,7 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("            .map_err(|e| {\n");
     output.push_str("                GlslError::new(\n");
     output.push_str("                    ErrorCode::E0400,\n");
-    output.push_str(
-        "                    format!(\"Failed to declare builtin '{}': {}\", name, e),\n",
-    );
+    output.push_str("                    format!(\"Failed to declare builtin '{name}': {e}\"),\n");
     output.push_str("                )\n");
     output.push_str("            })?;\n");
     output.push_str("    }\n\n");
@@ -419,7 +434,7 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
         ));
     }
 
-    output.push_str("\n");
+    output.push('\n');
     output.push_str("        // Force these to be included by using them in a way that can't be optimized away\n");
     output.push_str("        // We'll use volatile reads to prevent optimization\n");
 
@@ -457,13 +472,13 @@ fn generate_mod_rs(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("//!\n");
     output.push_str("//! Functions operate on i32 values representing fixed-point numbers\n");
     output.push_str("//! with 16 bits of fractional precision.\n");
-    output.push_str("\n");
+    output.push('\n');
 
     // Generate mod declarations
     for builtin in builtins {
         output.push_str(&format!("mod {};\n", builtin.file_name));
     }
-    output.push_str("\n");
+    output.push('\n');
     output.push_str("#[cfg(test)]\n");
     output.push_str("mod test_helpers;\n\n");
 
@@ -523,26 +538,26 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
         // No builtins, so no mappings
     } else {
         for builtin in builtins {
-        let base_name = builtin.symbol_name.strip_prefix("__lp_fixed32_").unwrap();
+            let base_name = builtin.symbol_name.strip_prefix("__lp_fixed32_").unwrap();
 
-        // Generate C math function name (e.g., sinf)
-        let c_name = format!("{}f", base_name);
+            // Generate C math function name (e.g., sinf)
+            let c_name = format!("{}f", base_name);
 
-        // Generate intrinsic name (e.g., __lp_sin)
-        let intrinsic_name = format!("__lp_{}", base_name);
+            // Generate intrinsic name (e.g., __lp_sin)
+            let intrinsic_name = format!("__lp_{}", base_name);
 
-        // Special case: GLSL's mod() compiles to fmodf, not modf
-        let additional_names = if base_name == "mod" {
-            " | \"fmodf\""
-        } else {
-            ""
-        };
+            // Special case: GLSL's mod() compiles to fmodf, not modf
+            let additional_names = if base_name == "mod" {
+                " | \"fmodf\""
+            } else {
+                ""
+            };
 
-        new_function.push_str(&format!(
-            "        \"{}\" | \"{}\"{additional_names} => Some((BuiltinId::{}, {})),\n",
-            c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
-        ));
-    }
+            new_function.push_str(&format!(
+                "        \"{}\" | \"{}\"{additional_names} => Some((BuiltinId::{}, {})),\n",
+                c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
+            ));
+        }
     }
 
     new_function.push_str("        _ => None,\n");
@@ -551,4 +566,31 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
 
     let new_content = format!("{}{}{}", before, new_function, after);
     fs::write(path, new_content).expect("Failed to write math.rs");
+}
+
+fn format_generated_files(workspace_root: &Path, files: &[&Path]) {
+    use std::process::Command;
+
+    // Run cargo fmt on the generated files
+    let mut cmd = Command::new("cargo");
+    cmd.arg("fmt");
+    cmd.arg("--");
+
+    for file in files {
+        // Get relative path from workspace root
+        if let Ok(relative_path) = file.strip_prefix(workspace_root) {
+            cmd.arg(relative_path);
+        }
+    }
+
+    // Run from workspace root
+    let output = cmd
+        .current_dir(workspace_root)
+        .output()
+        .expect("Failed to run cargo fmt");
+
+    if !output.status.success() {
+        eprintln!("Warning: cargo fmt failed on generated files:");
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    }
 }
