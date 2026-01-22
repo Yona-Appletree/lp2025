@@ -1,7 +1,6 @@
 //! Memory layout calculation for ELF loading.
 
 use super::memory::{RAM_START, is_ram_address, is_rom_address};
-use crate::debug;
 use alloc::string::String;
 use object::{Object, ObjectSection};
 
