@@ -71,7 +71,6 @@ pub fn resolve_nested_array_indexing<M: cranelift_module::Module>(
     // Process dimensions starting from index 1 (skip the first array dimension)
     let mut current_ty = base_ty.clone();
     let current_vars = base_vars;
-    let mut row: Option<usize> = None;
     let mut col: Option<usize> = None;
 
     crate::debug!(
@@ -80,13 +79,12 @@ pub fn resolve_nested_array_indexing<M: cranelift_module::Module>(
         array_spec.dimensions.0.len() - 1
     );
 
-    for (dim_idx, dimension) in array_spec.dimensions.0.iter().skip(1).enumerate() {
+    for (_dim_idx, dimension) in array_spec.dimensions.0.iter().skip(1).enumerate() {
         crate::debug!(
-            "  Processing dimension {}: current_ty={:?}, col={:?}, row={:?}",
-            dim_idx + 1,
+            "  Processing dimension {}: current_ty={:?}, col={:?}",
+            _dim_idx + 1,
             current_ty,
-            col,
-            row
+            col
         );
         let index_expr = match dimension {
             ArraySpecifierDimension::ExplicitlySized(expr) => expr,
@@ -117,18 +115,18 @@ pub fn resolve_nested_array_indexing<M: cranelift_module::Module>(
             // Vector indexing: vec[index] returns scalar component
             // If we already have a column, this is a matrix element access
             if col.is_some() {
+                let row = index;
                 crate::debug!(
                     "  Matrix element access: col={}, row={}, base_ty={:?}",
                     col.unwrap(),
-                    index,
+                    row,
                     base_ty
                 );
-                row = Some(index);
                 let _ = process_vector_dimension(&current_ty, index, span)?;
                 return Ok(LValue::MatrixElement {
                     base_vars: current_vars,
                     base_ty: base_ty.clone(),
-                    row: row.unwrap(),
+                    row,
                     col: col.unwrap(),
                 });
             } else {

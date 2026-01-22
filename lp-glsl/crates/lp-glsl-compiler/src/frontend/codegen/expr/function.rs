@@ -467,8 +467,8 @@ fn emit_user_function_call<M: cranelift_module::Module>(
         return_vals.len(),
         func_sig.return_type
     );
-    for (i, val) in return_vals.iter().enumerate() {
-        crate::debug!("  return_vals[{}] = {:?}", i, val);
+    for (_i, _val) in return_vals.iter().enumerate() {
+        crate::debug!("  return_vals[{}] = {:?}", _i, _val);
     }
 
     // Step 7: Package return values
@@ -478,8 +478,8 @@ fn emit_user_function_call<M: cranelift_module::Module>(
         packaged_vals.len(),
         packaged_ty
     );
-    for (i, val) in packaged_vals.iter().enumerate() {
-        crate::debug!("  packaged_vals[{}] = {:?}", i, val);
+    for (_i, _val) in packaged_vals.iter().enumerate() {
+        crate::debug!("  packaged_vals[{}] = {:?}", _i, _val);
     }
     Ok((packaged_vals, packaged_ty))
 }

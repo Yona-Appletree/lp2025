@@ -88,7 +88,7 @@ impl Target {
             }
             Target::HostJit {
                 arch: _,
-                flags,
+                flags: _flags,
                 isa,
             } => {
                 if isa.is_none() {
@@ -101,7 +101,7 @@ impl Target {
                                 format!("host machine is not supported: {e}"),
                             )
                         })?;
-                        *isa = Some(isa_builder.finish(flags.clone()).map_err(|e| {
+                        *isa = Some(isa_builder.finish(_flags.clone()).map_err(|e| {
                             GlslError::new(ErrorCode::E0400, format!("ISA creation failed: {e}"))
                         })?);
                     }

@@ -29,6 +29,7 @@ use crate::backend::codegen::emu::EmulatorOptions;
 use crate::backend::module::gl_module::GlModule;
 #[cfg(feature = "std")]
 use crate::backend::target::Target;
+#[cfg(feature = "std")]
 use crate::backend::transform::fixed32::{Fixed32Transform, FixedPointFormat};
 use crate::error::GlslError;
 use crate::exec::executable::{GlslExecutable, GlslOptions, RunMode};
@@ -46,10 +47,17 @@ pub fn compile_glsl_to_gl_module_jit(
     source: &str,
     options: &GlslOptions,
 ) -> Result<GlModule<JITModule>, GlslError> {
+    #[allow(
+        unused_variables,
+        reason = "source is used conditionally in #[cfg(feature = \"std\")] block"
+    )]
+    let _source = source;
+    #[cfg(feature = "std")]
     use crate::exec::executable::DecimalFormat;
 
     options.validate()?;
 
+    #[cfg(feature = "std")]
     let mut compiler = GlslCompiler::new();
 
     // Determine target based on run mode
@@ -83,7 +91,7 @@ pub fn compile_glsl_to_gl_module_jit(
     #[cfg(feature = "std")]
     {
         // Compile to GlModule
-        let mut module = compiler.compile_to_gl_module_jit(source, target)?;
+        let mut module = compiler.compile_to_gl_module_jit(_source, target)?;
 
         // Apply transformations
         match options.decimal_format {

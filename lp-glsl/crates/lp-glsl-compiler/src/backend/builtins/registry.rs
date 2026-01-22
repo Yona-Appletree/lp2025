@@ -93,37 +93,13 @@ impl BuiltinId {
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
             }
-            BuiltinId::Fixed32Atan2
-            | BuiltinId::Fixed32Div
-            | BuiltinId::Fixed32Ldexp
-            | BuiltinId::Fixed32Mod
-            | BuiltinId::Fixed32Mul
-            | BuiltinId::Fixed32Pow => {
+            BuiltinId::Fixed32Atan2 | BuiltinId::Fixed32Div | BuiltinId::Fixed32Ldexp | BuiltinId::Fixed32Mod | BuiltinId::Fixed32Mul | BuiltinId::Fixed32Pow => {
                 // (i32, i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
             }
-            BuiltinId::Fixed32Acos
-            | BuiltinId::Fixed32Acosh
-            | BuiltinId::Fixed32Asin
-            | BuiltinId::Fixed32Asinh
-            | BuiltinId::Fixed32Atan
-            | BuiltinId::Fixed32Atanh
-            | BuiltinId::Fixed32Cos
-            | BuiltinId::Fixed32Cosh
-            | BuiltinId::Fixed32Exp
-            | BuiltinId::Fixed32Exp2
-            | BuiltinId::Fixed32Inversesqrt
-            | BuiltinId::Fixed32Log
-            | BuiltinId::Fixed32Log2
-            | BuiltinId::Fixed32Round
-            | BuiltinId::Fixed32Roundeven
-            | BuiltinId::Fixed32Sin
-            | BuiltinId::Fixed32Sinh
-            | BuiltinId::Fixed32Sqrt
-            | BuiltinId::Fixed32Tan
-            | BuiltinId::Fixed32Tanh => {
+            BuiltinId::Fixed32Acos | BuiltinId::Fixed32Acosh | BuiltinId::Fixed32Asin | BuiltinId::Fixed32Asinh | BuiltinId::Fixed32Atan | BuiltinId::Fixed32Atanh | BuiltinId::Fixed32Cos | BuiltinId::Fixed32Cosh | BuiltinId::Fixed32Exp | BuiltinId::Fixed32Exp2 | BuiltinId::Fixed32Inversesqrt | BuiltinId::Fixed32Log | BuiltinId::Fixed32Log2 | BuiltinId::Fixed32Round | BuiltinId::Fixed32Roundeven | BuiltinId::Fixed32Sin | BuiltinId::Fixed32Sinh | BuiltinId::Fixed32Sqrt | BuiltinId::Fixed32Tan | BuiltinId::Fixed32Tanh => {
                 // (i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
@@ -218,7 +194,7 @@ pub fn declare_builtins<M: Module>(module: &mut M) -> Result<(), GlslError> {
             .map_err(|e| {
                 GlslError::new(
                     ErrorCode::E0400,
-                    format!("Failed to declare builtin '{name}': {e}"),
+                    format!("Failed to declare builtin '{}': {}", name, e),
                 )
             })?;
     }

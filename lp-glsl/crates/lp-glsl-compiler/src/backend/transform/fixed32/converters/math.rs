@@ -58,6 +58,7 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
     }
 }
 
+
 /// Convert Ceil instruction.
 pub(crate) fn convert_ceil(
     old_func: &Function,
