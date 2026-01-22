@@ -152,7 +152,6 @@ int main(int x, int y) {
     let mut compiler = Compiler::new();
 
     // Create a Target from the ISA for JIT compilation
-    use cranelift_codegen::settings::Flags;
     use lp_glsl_compiler::backend::target::Target;
     let flags = isa.flags().clone();
     let target = Target::HostJit {
