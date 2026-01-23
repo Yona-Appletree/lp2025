@@ -32,6 +32,7 @@
       <sourceFolder url="file://$MODULE_DIR$/lp-glsl/crates/lp-riscv-tools/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lp-glsl/crates/lp-riscv-tools/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/lp-glsl/crates/runtime-embive/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lp-glsl/apps/embassy_hello_world_hashbrown/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/lp-glsl/apps/esp32-glsl-jit/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
