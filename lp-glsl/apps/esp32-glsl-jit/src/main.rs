@@ -16,6 +16,34 @@ use target_lexicon::Triple;
 // This creates a default app-descriptor required by the esp-idf bootloader.
 esp_bootloader_esp_idf::esp_app_desc!();
 
+/// Host function implementation for debug output (no_std mode).
+/// Called by JIT-compiled GLSL code when using __host_debug.
+#[no_mangle]
+pub extern "C" fn lp_jit_debug(ptr: *const u8, len: usize) {
+    unsafe {
+        let slice = core::slice::from_raw_parts(ptr, len);
+        if let Ok(msg) = core::str::from_utf8(slice) {
+            defmt::debug!("{}", msg);
+        } else {
+            defmt::debug!("[invalid UTF-8 debug message]");
+        }
+    }
+}
+
+/// Host function implementation for print output (no_std mode).
+/// Called by JIT-compiled GLSL code when using __host_println.
+#[no_mangle]
+pub extern "C" fn lp_jit_print(ptr: *const u8, len: usize) {
+    unsafe {
+        let slice = core::slice::from_raw_parts(ptr, len);
+        if let Ok(msg) = core::str::from_utf8(slice) {
+            defmt::info!("{}", msg);
+        } else {
+            defmt::info!("[invalid UTF-8 print message]");
+        }
+    }
+}
+
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
