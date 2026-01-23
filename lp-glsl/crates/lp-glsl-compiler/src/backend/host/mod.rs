@@ -15,9 +15,9 @@ pub use impls::{__host_debug, __host_println};
 unsafe extern "C" {
     // User-provided debug function (must be defined by user in no_std mode)
     // Signature: `fn(ptr: *const u8, len: usize)`
-    pub fn lp_jit_debug(ptr: *const u8, len: usize);
+    pub fn lp_jit_host_debug(ptr: *const u8, len: usize);
 
     // User-provided print function (must be defined by user in no_std mode)
     // Signature: `fn(ptr: *const u8, len: usize)`
-    pub fn lp_jit_print(ptr: *const u8, len: usize);
+    pub fn lp_jit_host_println(ptr: *const u8, len: usize);
 }
