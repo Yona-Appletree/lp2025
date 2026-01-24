@@ -10,10 +10,22 @@ TESTS_DIR="${WORKSPACE_ROOT}/lp-glsl/apps/fixed32-metrics/glsl"
 OUTPUT_DIR="${WORKSPACE_ROOT}/docs/reports/fixed32"
 FORMAT="Fixed16x16"
 
+# Report name is required
+if [ $# -eq 0 ]; then
+    echo "Error: Report name is required"
+    echo "Usage: $0 <report-name> [additional-args...]"
+    echo "Example: $0 pre-div-fix"
+    exit 1
+fi
+
+REPORT_NAME="$1"
+shift
+
 # Run the app with defaults
 cd "$WORKSPACE_ROOT"
 cargo run --bin fixed32-metrics -- \
     --tests-dir "$TESTS_DIR" \
     --output-dir "$OUTPUT_DIR" \
     --format "$FORMAT" \
+    "$REPORT_NAME" \
     "$@"
