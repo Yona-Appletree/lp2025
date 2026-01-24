@@ -2,6 +2,7 @@
 
 use crate::backend::transform::fixed32::types::FixedPointFormat;
 use crate::error::{ErrorCode, GlslError};
+use alloc::format;
 use cranelift_codegen::ir::{Function, Inst, InstBuilder, InstructionData, Value};
 use cranelift_frontend::FunctionBuilder;
 use hashbrown::HashMap;
