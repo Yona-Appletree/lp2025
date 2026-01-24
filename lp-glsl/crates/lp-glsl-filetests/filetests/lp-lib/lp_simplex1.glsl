@@ -35,10 +35,18 @@ float test_lp_simplex1_deterministic() {
 // run: test_lp_simplex1_deterministic() ~= 0.0
 
 float test_lp_simplex1_different_seeds() {
-    // Different seeds should produce different outputs
-    float n1 = lp_simplex1(0.5, 0u);
-    float n2 = lp_simplex1(0.5, 1u);
-    return abs(n1 - n2) > 0.01 ? 1.0 : 0.0;
+    // Different seeds should produce different outputs (at least sometimes)
+    // Test multiple points because seeds don't guarantee different outputs at every point
+    // (if both seeds produce gradients with the same sign, outputs will be the same)
+    float diff1 = abs(lp_simplex1(0.5, 0u) - lp_simplex1(0.5, 1u));
+    float diff2 = abs(lp_simplex1(1.5, 0u) - lp_simplex1(1.5, 1u));
+    float diff3 = abs(lp_simplex1(2.5, 0u) - lp_simplex1(2.5, 1u));
+    float diff4 = abs(lp_simplex1(3.5, 0u) - lp_simplex1(3.5, 1u));
+    float diff5 = abs(lp_simplex1(4.5, 0u) - lp_simplex1(4.5, 1u));
+    
+    // At least one should be different
+    bool has_diff = diff1 > 0.01 || diff2 > 0.01 || diff3 > 0.01 || diff4 > 0.01 || diff5 > 0.01;
+    return has_diff ? 1.0 : 0.0;
 }
 
 // run: test_lp_simplex1_different_seeds() == 1.0

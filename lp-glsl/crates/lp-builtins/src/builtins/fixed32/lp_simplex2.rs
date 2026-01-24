@@ -186,6 +186,7 @@ mod tests {
     extern crate std;
     use super::*;
     use crate::builtins::fixed32::test_helpers::{fixed_to_float, float_to_fixed};
+    use std::{println, print};
 
     #[test]
     fn test_simplex2_basic() {
@@ -274,6 +275,51 @@ mod tests {
 
             // Note: We don't compare exact values because we use a different hash function (noiz)
             // The important thing is that our implementation produces reasonable noise values
+        }
+    }
+
+    #[test]
+    fn test_simplex2_output_grid() {
+        // Output a grid of noise values for manual inspection
+        println!("\n=== Simplex2 Noise Grid (seed=0) ===");
+        println!("5x5 grid, X and Y from 0.0 to 4.0:");
+        println!("      ");
+        for x_idx in 0..5 {
+            print!("  X{:1}", x_idx);
+        }
+        println!();
+        for y_idx in 0..5 {
+            print!("Y{:1} ", y_idx);
+            for x_idx in 0..5 {
+                let x = x_idx as f32;
+                let y = y_idx as f32;
+                let result = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let result_float = fixed_to_float(result);
+                print!("{:6.3} ", result_float);
+            }
+            println!();
+        }
+        
+        println!("\n=== Simplex2 Seed Comparison (x=2.5, y=2.5) ===");
+        let x = float_to_fixed(2.5);
+        let y = float_to_fixed(2.5);
+        for seed in 0..5 {
+            let result = __lp_fixed32_lp_simplex2(x, y, seed);
+            let result_float = fixed_to_float(result);
+            println!("  seed={}: {:7.4}", seed, result_float);
+        }
+        
+        // Verify outputs are in reasonable range
+        for i in 0..50 {
+            let x = float_to_fixed(i as f32 * 0.1);
+            let y = float_to_fixed(i as f32 * 0.15);
+            let result = __lp_fixed32_lp_simplex2(x, y, 0);
+            let result_float = fixed_to_float(result);
+            assert!(
+                result_float >= -2.0 && result_float <= 2.0,
+                "Noise value should be in reasonable range, got {}",
+                result_float
+            );
         }
     }
 }
