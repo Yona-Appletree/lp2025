@@ -286,3 +286,95 @@ block0:
         fixed32_test_util::run_fixed32_test(clif, 0.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::map_testcase_to_builtin;
+    use crate::backend::builtins::registry::BuiltinId;
+
+    #[test]
+    fn test_map_testcase_to_builtin_simplex() {
+        // Test simplex function mappings
+        assert_eq!(
+            map_testcase_to_builtin("lp_simplex1f"),
+            Some((BuiltinId::LpSimplex1, 2))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_lp_simplex1"),
+            Some((BuiltinId::LpSimplex1, 2))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("lp_simplex2f"),
+            Some((BuiltinId::LpSimplex2, 3))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_lp_simplex2"),
+            Some((BuiltinId::LpSimplex2, 3))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("lp_simplex3f"),
+            Some((BuiltinId::LpSimplex3, 4))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_lp_simplex3"),
+            Some((BuiltinId::LpSimplex3, 4))
+        );
+    }
+
+    #[test]
+    fn test_map_testcase_to_builtin_hash() {
+        // Test hash function mappings
+        assert_eq!(map_testcase_to_builtin("1f"), Some((BuiltinId::LpHash1, 2)));
+        assert_eq!(
+            map_testcase_to_builtin("__lp_1"),
+            Some((BuiltinId::LpHash1, 2))
+        );
+        assert_eq!(map_testcase_to_builtin("2f"), Some((BuiltinId::LpHash2, 3)));
+        assert_eq!(
+            map_testcase_to_builtin("__lp_2"),
+            Some((BuiltinId::LpHash2, 3))
+        );
+        assert_eq!(map_testcase_to_builtin("3f"), Some((BuiltinId::LpHash3, 4)));
+        assert_eq!(
+            map_testcase_to_builtin("__lp_3"),
+            Some((BuiltinId::LpHash3, 4))
+        );
+    }
+
+    #[test]
+    fn test_map_testcase_to_builtin_standard_math() {
+        // Test a few standard math function mappings
+        assert_eq!(
+            map_testcase_to_builtin("sinf"),
+            Some((BuiltinId::Fixed32Sin, 1))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_sin"),
+            Some((BuiltinId::Fixed32Sin, 1))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("addf"),
+            Some((BuiltinId::Fixed32Add, 2))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_add"),
+            Some((BuiltinId::Fixed32Add, 2))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("fmaf"),
+            Some((BuiltinId::Fixed32Fma, 3))
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lp_fma"),
+            Some((BuiltinId::Fixed32Fma, 3))
+        );
+    }
+
+    #[test]
+    fn test_map_testcase_to_builtin_unknown() {
+        // Test that unknown functions return None
+        assert_eq!(map_testcase_to_builtin("unknown_function"), None);
+        assert_eq!(map_testcase_to_builtin("__lp_unknown"), None);
+        assert_eq!(map_testcase_to_builtin(""), None);
+    }
+}
