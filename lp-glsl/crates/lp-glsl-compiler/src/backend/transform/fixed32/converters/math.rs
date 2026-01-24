@@ -29,6 +29,7 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
     match testcase_name {
         "acosf" | "__lp_acos" => Some((BuiltinId::Fixed32Acos, 1)),
         "acoshf" | "__lp_acosh" => Some((BuiltinId::Fixed32Acosh, 1)),
+        "addf" | "__lp_add" => Some((BuiltinId::Fixed32Add, 2)),
         "asinf" | "__lp_asin" => Some((BuiltinId::Fixed32Asin, 1)),
         "asinhf" | "__lp_asinh" => Some((BuiltinId::Fixed32Asinh, 1)),
         "atanf" | "__lp_atan" => Some((BuiltinId::Fixed32Atan, 1)),
@@ -52,6 +53,7 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
         "sinf" | "__lp_sin" => Some((BuiltinId::Fixed32Sin, 1)),
         "sinhf" | "__lp_sinh" => Some((BuiltinId::Fixed32Sinh, 1)),
         "sqrtf" | "__lp_sqrt" => Some((BuiltinId::Fixed32Sqrt, 1)),
+        "subf" | "__lp_sub" => Some((BuiltinId::Fixed32Sub, 2)),
         "tanf" | "__lp_tan" => Some((BuiltinId::Fixed32Tan, 1)),
         "tanhf" | "__lp_tanh" => Some((BuiltinId::Fixed32Tanh, 1)),
         _ => None,

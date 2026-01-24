@@ -24,6 +24,7 @@ use alloc::format;
 pub enum BuiltinId {
     Fixed32Acos,
     Fixed32Acosh,
+    Fixed32Add,
     Fixed32Asin,
     Fixed32Asinh,
     Fixed32Atan,
@@ -47,6 +48,7 @@ pub enum BuiltinId {
     Fixed32Sin,
     Fixed32Sinh,
     Fixed32Sqrt,
+    Fixed32Sub,
     Fixed32Tan,
     Fixed32Tanh,
 }
@@ -57,6 +59,7 @@ impl BuiltinId {
         match self {
             BuiltinId::Fixed32Acos => "__lp_fixed32_acos",
             BuiltinId::Fixed32Acosh => "__lp_fixed32_acosh",
+            BuiltinId::Fixed32Add => "__lp_fixed32_add",
             BuiltinId::Fixed32Asin => "__lp_fixed32_asin",
             BuiltinId::Fixed32Asinh => "__lp_fixed32_asinh",
             BuiltinId::Fixed32Atan => "__lp_fixed32_atan",
@@ -80,6 +83,7 @@ impl BuiltinId {
             BuiltinId::Fixed32Sin => "__lp_fixed32_sin",
             BuiltinId::Fixed32Sinh => "__lp_fixed32_sinh",
             BuiltinId::Fixed32Sqrt => "__lp_fixed32_sqrt",
+            BuiltinId::Fixed32Sub => "__lp_fixed32_sub",
             BuiltinId::Fixed32Tan => "__lp_fixed32_tan",
             BuiltinId::Fixed32Tanh => "__lp_fixed32_tanh",
         }
@@ -96,12 +100,14 @@ impl BuiltinId {
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
             }
-            BuiltinId::Fixed32Atan2
+            BuiltinId::Fixed32Add
+            | BuiltinId::Fixed32Atan2
             | BuiltinId::Fixed32Div
             | BuiltinId::Fixed32Ldexp
             | BuiltinId::Fixed32Mod
             | BuiltinId::Fixed32Mul
-            | BuiltinId::Fixed32Pow => {
+            | BuiltinId::Fixed32Pow
+            | BuiltinId::Fixed32Sub => {
                 // (i32, i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
@@ -140,6 +146,7 @@ impl BuiltinId {
         &[
             BuiltinId::Fixed32Acos,
             BuiltinId::Fixed32Acosh,
+            BuiltinId::Fixed32Add,
             BuiltinId::Fixed32Asin,
             BuiltinId::Fixed32Asinh,
             BuiltinId::Fixed32Atan,
@@ -163,6 +170,7 @@ impl BuiltinId {
             BuiltinId::Fixed32Sin,
             BuiltinId::Fixed32Sinh,
             BuiltinId::Fixed32Sqrt,
+            BuiltinId::Fixed32Sub,
             BuiltinId::Fixed32Tan,
             BuiltinId::Fixed32Tanh,
         ]
@@ -177,6 +185,7 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
     match builtin {
         BuiltinId::Fixed32Acos => fixed32::__lp_fixed32_acos as *const u8,
         BuiltinId::Fixed32Acosh => fixed32::__lp_fixed32_acosh as *const u8,
+        BuiltinId::Fixed32Add => fixed32::__lp_fixed32_add as *const u8,
         BuiltinId::Fixed32Asin => fixed32::__lp_fixed32_asin as *const u8,
         BuiltinId::Fixed32Asinh => fixed32::__lp_fixed32_asinh as *const u8,
         BuiltinId::Fixed32Atan => fixed32::__lp_fixed32_atan as *const u8,
@@ -200,6 +209,7 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::Fixed32Sin => fixed32::__lp_fixed32_sin as *const u8,
         BuiltinId::Fixed32Sinh => fixed32::__lp_fixed32_sinh as *const u8,
         BuiltinId::Fixed32Sqrt => fixed32::__lp_fixed32_sqrt as *const u8,
+        BuiltinId::Fixed32Sub => fixed32::__lp_fixed32_sub as *const u8,
         BuiltinId::Fixed32Tan => fixed32::__lp_fixed32_tan as *const u8,
         BuiltinId::Fixed32Tanh => fixed32::__lp_fixed32_tanh as *const u8,
     }

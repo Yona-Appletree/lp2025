@@ -363,7 +363,6 @@ block0:
     /// The old backend has the same algorithm and may have the same bug. We'll fix this separately.
     #[test]
     #[cfg(feature = "emulator")]
-    #[ignore]
     fn test_fixed32_fdiv() {
         let clif = r#"
 function %main() -> f32 system_v {

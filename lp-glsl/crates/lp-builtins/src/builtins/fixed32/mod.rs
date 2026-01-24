@@ -13,6 +13,7 @@
 
 mod acos;
 mod acosh;
+mod add;
 mod asin;
 mod asinh;
 mod atan;
@@ -36,6 +37,7 @@ mod roundeven;
 mod sin;
 mod sinh;
 mod sqrt;
+mod sub;
 mod tan;
 mod tanh;
 
@@ -44,6 +46,7 @@ mod test_helpers;
 
 pub use acos::__lp_fixed32_acos;
 pub use acosh::__lp_fixed32_acosh;
+pub use add::__lp_fixed32_add;
 pub use asin::__lp_fixed32_asin;
 pub use asinh::__lp_fixed32_asinh;
 pub use atan::__lp_fixed32_atan;
@@ -67,5 +70,6 @@ pub use roundeven::__lp_fixed32_roundeven;
 pub use sin::__lp_fixed32_sin;
 pub use sinh::__lp_fixed32_sinh;
 pub use sqrt::__lp_fixed32_sqrt;
+pub use sub::__lp_fixed32_sub;
 pub use tan::__lp_fixed32_tan;
 pub use tanh::__lp_fixed32_tanh;
