@@ -48,6 +48,21 @@ impl LpLibFn {
         }
     }
 
+    /// Get the BuiltinId variant name as a string.
+    ///
+    /// This is used by code generators to get the enum variant name without
+    /// needing to parse Debug output. Single source of truth for variant names.
+    pub fn builtin_id_name(&self) -> &'static str {
+        match self {
+            LpLibFn::Hash1 => "LpHash1",
+            LpLibFn::Hash2 => "LpHash2",
+            LpLibFn::Hash3 => "LpHash3",
+            LpLibFn::Simplex1 => "LpSimplex1",
+            LpLibFn::Simplex2 => "LpSimplex2",
+            LpLibFn::Simplex3 => "LpSimplex3",
+        }
+    }
+
     /// Get the parameter types for this function
     pub fn param_types(&self) -> Vec<Type> {
         match self {
@@ -103,6 +118,20 @@ impl LpLibFn {
     /// Delegates to `fixed32_name()` to keep a single source of truth.
     pub fn needs_fixed32_mapping(&self) -> bool {
         self.fixed32_name().is_some()
+    }
+
+    /// Get all LpLibFn variants.
+    ///
+    /// This is the single source of truth for all LP library functions.
+    pub fn all() -> &'static [LpLibFn] {
+        &[
+            LpLibFn::Hash1,
+            LpLibFn::Hash2,
+            LpLibFn::Hash3,
+            LpLibFn::Simplex1,
+            LpLibFn::Simplex2,
+            LpLibFn::Simplex3,
+        ]
     }
 
     /// Get all variants for a given user-facing name

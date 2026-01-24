@@ -122,17 +122,10 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
     }
 
     // Now match discovered functions to LpLibFn enum variants
+    // Use LpLibFn::all() as single source of truth
     let mut builtins = Vec::new();
-    let lp_lib_fns = [
-        LpLibFn::Hash1,
-        LpLibFn::Hash2,
-        LpLibFn::Hash3,
-        LpLibFn::Simplex1,
-        LpLibFn::Simplex2,
-        LpLibFn::Simplex3,
-    ];
 
-    for lp_fn in lp_lib_fns {
+    for lp_fn in LpLibFn::all() {
         // Determine expected function name
         let expected_name = lp_fn.fixed32_name().unwrap_or_else(|| lp_fn.symbol_name());
 
@@ -141,20 +134,11 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
             .iter()
             .find(|(name, _, _, _)| name == expected_name)
         {
-            // Get BuiltinId variant name from LpLibFn
-            // LpLibFn::Simplex1 -> BuiltinId::LpSimplex1
-            // LpLibFn::Hash1 -> BuiltinId::LpHash1
-            let enum_variant = match lp_fn {
-                LpLibFn::Hash1 => "LpHash1",
-                LpLibFn::Hash2 => "LpHash2",
-                LpLibFn::Hash3 => "LpHash3",
-                LpLibFn::Simplex1 => "LpSimplex1",
-                LpLibFn::Simplex2 => "LpSimplex2",
-                LpLibFn::Simplex3 => "LpSimplex3",
-            };
+            // Get BuiltinId variant name from LpLibFn - single source of truth
+            let enum_variant = lp_fn.builtin_id_name().to_string();
 
             builtins.push(BuiltinInfo {
-                enum_variant: enum_variant.to_string(),
+                enum_variant,
                 symbol_name: func_name.clone(),
                 function_name: func_name.clone(),
                 param_count: *param_count,
