@@ -85,6 +85,26 @@ impl LpLibFn {
         }
     }
 
+    /// Get the fixed32 implementation name, if this function needs mapping.
+    ///
+    /// Returns `Some(name)` for functions that need float→fixed32 conversion (simplex functions),
+    /// and `None` for functions that don't need conversion (hash functions).
+    pub fn fixed32_name(&self) -> Option<&'static str> {
+        match self {
+            LpLibFn::Simplex1 => Some("__lp_fixed32_lp_simplex1"),
+            LpLibFn::Simplex2 => Some("__lp_fixed32_lp_simplex2"),
+            LpLibFn::Simplex3 => Some("__lp_fixed32_lp_simplex3"),
+            _ => None, // Hash functions don't have fixed32 versions
+        }
+    }
+
+    /// Check if this function needs fixed32 mapping (float→fixed32 conversion).
+    ///
+    /// Delegates to `fixed32_name()` to keep a single source of truth.
+    pub fn needs_fixed32_mapping(&self) -> bool {
+        self.fixed32_name().is_some()
+    }
+
     /// Get all variants for a given user-facing name
     pub fn variants_for_name(name: &str) -> Vec<LpLibFn> {
         match name {
@@ -293,5 +313,34 @@ mod tests {
         );
         assert_eq!(LpLibFn::from_name_and_args("lp_simplex2", 3), None);
         assert_eq!(LpLibFn::from_name_and_args("unknown", 2), None);
+    }
+
+    #[test]
+    fn test_needs_fixed32_mapping() {
+        assert!(LpLibFn::Simplex1.needs_fixed32_mapping());
+        assert!(LpLibFn::Simplex2.needs_fixed32_mapping());
+        assert!(LpLibFn::Simplex3.needs_fixed32_mapping());
+        assert!(!LpLibFn::Hash1.needs_fixed32_mapping());
+        assert!(!LpLibFn::Hash2.needs_fixed32_mapping());
+        assert!(!LpLibFn::Hash3.needs_fixed32_mapping());
+    }
+
+    #[test]
+    fn test_fixed32_name() {
+        assert_eq!(
+            LpLibFn::Simplex1.fixed32_name(),
+            Some("__lp_fixed32_lp_simplex1")
+        );
+        assert_eq!(
+            LpLibFn::Simplex2.fixed32_name(),
+            Some("__lp_fixed32_lp_simplex2")
+        );
+        assert_eq!(
+            LpLibFn::Simplex3.fixed32_name(),
+            Some("__lp_fixed32_lp_simplex3")
+        );
+        assert_eq!(LpLibFn::Hash1.fixed32_name(), None);
+        assert_eq!(LpLibFn::Hash2.fixed32_name(), None);
+        assert_eq!(LpLibFn::Hash3.fixed32_name(), None);
     }
 }
