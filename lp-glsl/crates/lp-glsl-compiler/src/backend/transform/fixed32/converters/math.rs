@@ -285,10 +285,8 @@ block0:
         // Result should be 0.0
         fixed32_test_util::run_fixed32_test(clif, 0.0);
     }
-}
 
-#[cfg(test)]
-mod tests {
+    // Unit tests for map_testcase_to_builtin
     use super::map_testcase_to_builtin;
     use crate::backend::builtins::registry::BuiltinId;
 
