@@ -448,8 +448,20 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("///\n");
     output.push_str("/// Returns the function pointer that can be registered with JITModule.\n");
     output.push_str("pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {\n");
-    if !builtins.is_empty() {
-        output.push_str("    use lp_builtins::builtins::fixed32;\n");
+    let has_hash = builtins
+        .iter()
+        .any(|b| b.function_name.starts_with("__lp_hash_"));
+    let has_fixed32 = builtins
+        .iter()
+        .any(|b| !b.function_name.starts_with("__lp_hash_"));
+    if has_hash || has_fixed32 {
+        if has_hash && has_fixed32 {
+            output.push_str("    use lp_builtins::builtins::{fixed32, shared};\n");
+        } else if has_hash {
+            output.push_str("    use lp_builtins::builtins::shared;\n");
+        } else {
+            output.push_str("    use lp_builtins::builtins::fixed32;\n");
+        }
     }
     output.push_str("    match builtin {\n");
     if builtins.is_empty() {
