@@ -743,15 +743,20 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
 
         for builtin in builtins {
             // Check if this is an LP library function by matching symbol name to enum
-            let lp_fn_opt = match builtin.symbol_name.as_str() {
-                "__lp_hash_1" => Some(LpLibFn::Hash1),
-                "__lp_hash_2" => Some(LpLibFn::Hash2),
-                "__lp_hash_3" => Some(LpLibFn::Hash3),
-                "__lp_simplex1" => Some(LpLibFn::Simplex1),
-                "__lp_simplex2" => Some(LpLibFn::Simplex2),
-                "__lp_simplex3" => Some(LpLibFn::Simplex3),
-                _ => None,
-            };
+            // Match against both fixed32_name() and symbol_name() to handle both cases
+            let lp_fn_opt = LpLibFn::all()
+                .iter()
+                .find(|lp_fn| {
+                    let fixed32_name_opt = lp_fn.fixed32_name();
+                    let symbol_name = lp_fn.symbol_name();
+                    // Match against fixed32_name if it exists, otherwise match against symbol_name
+                    if let Some(fixed32_name) = fixed32_name_opt {
+                        builtin.symbol_name == fixed32_name || builtin.symbol_name == symbol_name
+                    } else {
+                        builtin.symbol_name == symbol_name
+                    }
+                })
+                .copied();
 
             if let Some(lp_fn) = lp_fn_opt {
                 // LP library function - use enum to determine mapping
