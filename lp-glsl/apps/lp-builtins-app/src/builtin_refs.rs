@@ -14,8 +14,9 @@ use lp_builtins::builtins::fixed32::{
     __lp_fixed32_lp_simplex1, __lp_fixed32_lp_simplex2, __lp_fixed32_lp_simplex3, __lp_fixed32_mod,
     __lp_fixed32_mul, __lp_fixed32_pow, __lp_fixed32_round, __lp_fixed32_roundeven,
     __lp_fixed32_sin, __lp_fixed32_sinh, __lp_fixed32_sqrt, __lp_fixed32_sub, __lp_fixed32_tan,
-    __lp_fixed32_tanh, __lp_hash_1, __lp_hash_2, __lp_hash_3,
+    __lp_fixed32_tanh,
 };
+use lp_builtins::builtins::shared::{__lp_hash_1, __lp_hash_2, __lp_hash_3};
 
 /// Reference all builtin functions to prevent dead code elimination.
 ///

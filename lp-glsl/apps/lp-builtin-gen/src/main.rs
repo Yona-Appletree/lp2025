@@ -543,14 +543,40 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
     if builtins.is_empty() {
         output.push_str("// No builtins to import\n\n");
     } else {
-        output.push_str("use lp_builtins::builtins::fixed32::{\n");
-        for (i, builtin) in builtins.iter().enumerate() {
-            if i > 0 {
-                output.push_str(",\n");
+        // Split builtins by module (fixed32 vs shared)
+        let fixed32_builtins: Vec<_> = builtins
+            .iter()
+            .filter(|b| !b.function_name.starts_with("__lp_hash_"))
+            .collect();
+        let shared_builtins: Vec<_> = builtins
+            .iter()
+            .filter(|b| b.function_name.starts_with("__lp_hash_"))
+            .collect();
+
+        // Generate imports for fixed32 functions
+        if !fixed32_builtins.is_empty() {
+            output.push_str("use lp_builtins::builtins::fixed32::{\n");
+            for (i, builtin) in fixed32_builtins.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(",\n");
+                }
+                output.push_str(&format!("    {}", builtin.function_name));
             }
-            output.push_str(&format!("    {}", builtin.function_name));
+            output.push_str(",\n};\n");
         }
-        output.push_str(",\n};\n\n");
+
+        // Generate imports for shared functions
+        if !shared_builtins.is_empty() {
+            output.push_str("use lp_builtins::builtins::shared::{\n");
+            for (i, builtin) in shared_builtins.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(",\n");
+                }
+                output.push_str(&format!("    {}", builtin.function_name));
+            }
+            output.push_str(",\n};\n");
+        }
+        output.push('\n');
     }
 
     output.push_str("/// Reference all builtin functions to prevent dead code elimination.\n");
