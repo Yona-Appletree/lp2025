@@ -19,8 +19,8 @@ pub(crate) fn convert_band(
     value_map: &mut HashMap<cranelift_codegen::ir::Value, cranelift_codegen::ir::Value>,
 ) -> Result<(), GlslError> {
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Type is inferred from operands
     let result = builder.ins().band(arg1, arg2);
@@ -39,8 +39,8 @@ pub(crate) fn convert_bor(
     value_map: &mut HashMap<cranelift_codegen::ir::Value, cranelift_codegen::ir::Value>,
 ) -> Result<(), GlslError> {
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Type is inferred from operands
     let result = builder.ins().bor(arg1, arg2);
@@ -59,8 +59,8 @@ pub(crate) fn convert_bxor(
     value_map: &mut HashMap<cranelift_codegen::ir::Value, cranelift_codegen::ir::Value>,
 ) -> Result<(), GlslError> {
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Type is inferred from operands
     let result = builder.ins().bxor(arg1, arg2);
@@ -79,7 +79,7 @@ pub(crate) fn convert_bnot(
     value_map: &mut HashMap<cranelift_codegen::ir::Value, cranelift_codegen::ir::Value>,
 ) -> Result<(), GlslError> {
     let arg_old = extract_unary_operand(old_func, old_inst)?;
-    let arg = map_operand(value_map, arg_old);
+    let arg = map_operand(old_func, value_map, arg_old)?;
 
     // Type is inferred from operand
     let result = builder.ins().bnot(arg);

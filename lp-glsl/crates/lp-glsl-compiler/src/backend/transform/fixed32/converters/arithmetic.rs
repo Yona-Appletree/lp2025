@@ -25,8 +25,8 @@ pub(crate) fn convert_fadd(
     use cranelift_codegen::isa::CallConv;
 
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Get FuncId for __lp_fixed32_add from func_id_map
     let builtin_name = "__lp_fixed32_add";
@@ -86,8 +86,8 @@ pub(crate) fn convert_fsub(
     use cranelift_codegen::isa::CallConv;
 
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Get FuncId for __lp_fixed32_sub from func_id_map
     let builtin_name = "__lp_fixed32_sub";
@@ -147,8 +147,8 @@ pub(crate) fn convert_fmul(
     use cranelift_codegen::isa::CallConv;
 
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Get FuncId for __lp_fixed32_mul from func_id_map
     let builtin_name = "__lp_fixed32_mul";
@@ -208,8 +208,8 @@ pub(crate) fn convert_fdiv(
     use cranelift_codegen::isa::CallConv;
 
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Get FuncId for __lp_fixed32_div from func_id_map
     let builtin_name = "__lp_fixed32_div";
@@ -265,7 +265,7 @@ pub(crate) fn convert_fneg(
     _format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
 
     let result = builder.ins().ineg(mapped_arg);
 
@@ -284,7 +284,7 @@ pub(crate) fn convert_fabs(
     format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
 
     // Absolute value: if (arg < 0) then -arg else arg
     let zero = create_zero_const(builder, format);

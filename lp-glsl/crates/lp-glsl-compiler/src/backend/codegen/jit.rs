@@ -39,10 +39,42 @@ pub fn build_jit_executable(
             .module_mut_internal()
             .define_function(func_id, &mut ctx)
             .map_err(|e| {
-                GlslError::new(
-                    ErrorCode::E0400,
-                    format!("Failed to define function '{name}': {e}"),
-                )
+                // Check if this is a verifier error by checking the error message
+                // If it is, verify the function again to get detailed error messages
+                let error_str = format!("{e}");
+                let error_msg = if error_str.contains("Verifier errors") {
+                    // It's a verifier error - verify the function again to get detailed errors
+                    use cranelift_codegen::verifier::verify_function;
+                    let module_ref = gl_module.module_internal();
+                    let isa = module_ref.isa();
+
+                    if let Err(verifier_errors) = verify_function(&ctx.func, isa) {
+                        // Format verifier errors with the function IR for context
+                        #[cfg(feature = "std")]
+                        {
+                            use cranelift_codegen::print_errors::pretty_verifier_error;
+                            format!(
+                                "Failed to define function '{}': Verifier errors\n\n{}",
+                                name,
+                                pretty_verifier_error(&ctx.func, None, verifier_errors)
+                            )
+                        }
+                        #[cfg(not(feature = "std"))]
+                        {
+                            format!(
+                                "Failed to define function '{}': Verifier errors\n\n{}",
+                                name, verifier_errors
+                            )
+                        }
+                    } else {
+                        // Fallback if verification somehow succeeds
+                        format!("Failed to define function '{name}': {e}")
+                    }
+                } else {
+                    format!("Failed to define function '{name}': {e}")
+                };
+
+                GlslError::new(ErrorCode::E0400, error_msg)
             })?;
         // Clear context using immutable borrow
         {
@@ -161,10 +193,42 @@ pub fn build_jit_executable_memory_optimized(
             .module_mut_internal()
             .define_function(*func_id, &mut ctx)
             .map_err(|e| {
-                GlslError::new(
-                    ErrorCode::E0400,
-                    format!("Failed to define function '{name}': {e}"),
-                )
+                // Check if this is a verifier error by checking the error message
+                // If it is, verify the function again to get detailed error messages
+                let error_str = format!("{e}");
+                let error_msg = if error_str.contains("Verifier errors") {
+                    // It's a verifier error - verify the function again to get detailed errors
+                    use cranelift_codegen::verifier::verify_function;
+                    let module_ref = gl_module.module_internal();
+                    let isa = module_ref.isa();
+
+                    if let Err(verifier_errors) = verify_function(&ctx.func, isa) {
+                        // Format verifier errors with the function IR for context
+                        #[cfg(feature = "std")]
+                        {
+                            use cranelift_codegen::print_errors::pretty_verifier_error;
+                            format!(
+                                "Failed to define function '{}': Verifier errors\n\n{}",
+                                name,
+                                pretty_verifier_error(&ctx.func, None, verifier_errors)
+                            )
+                        }
+                        #[cfg(not(feature = "std"))]
+                        {
+                            format!(
+                                "Failed to define function '{}': Verifier errors\n\n{}",
+                                name, verifier_errors
+                            )
+                        }
+                    } else {
+                        // Fallback if verification somehow succeeds
+                        format!("Failed to define function '{name}': {e}")
+                    }
+                } else {
+                    format!("Failed to define function '{name}': {e}")
+                };
+
+                GlslError::new(ErrorCode::E0400, error_msg)
             })?;
         {
             let module_ref = gl_module.module_internal();

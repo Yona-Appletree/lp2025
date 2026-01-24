@@ -69,7 +69,7 @@ pub(crate) fn convert_ceil(
     format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let target_type = format.cranelift_type();
     let shift_amount = format.shift_amount();
 
@@ -97,7 +97,7 @@ pub(crate) fn convert_floor(
     format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let target_type = format.cranelift_type();
     let shift_amount = format.shift_amount();
 
@@ -135,7 +135,7 @@ pub(crate) fn convert_nearest(
     format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let target_type = format.cranelift_type();
     let shift_amount = format.shift_amount();
 
@@ -167,7 +167,7 @@ pub(crate) fn convert_sqrt(
     use cranelift_codegen::isa::CallConv;
 
     let arg = extract_unary_operand(old_func, old_inst)?;
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
 
     // Get FuncId for __lp_fixed32_sqrt from func_id_map
     let builtin_name = "__lp_fixed32_sqrt";

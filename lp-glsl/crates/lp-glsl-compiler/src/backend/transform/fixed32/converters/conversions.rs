@@ -27,7 +27,7 @@ pub(crate) fn convert_fcvt_from_sint(
     let arg = extract_unary_operand(old_func, old_inst)?;
 
     // Map argument
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let target_type = format.cranelift_type();
     let shift_amount = format.shift_amount();
 
@@ -77,7 +77,7 @@ pub(crate) fn convert_fcvt_from_uint(
     let arg = extract_unary_operand(old_func, old_inst)?;
 
     // Map argument
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let target_type = format.cranelift_type();
     let shift_amount = format.shift_amount();
 
@@ -139,7 +139,7 @@ pub(crate) fn convert_fcvt_to_sint(
     }
 
     // Map the fixed-point integer argument (representing a float)
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let shift_amount = format.shift_amount();
     let target_type = format.cranelift_type();
 
@@ -204,7 +204,7 @@ pub(crate) fn convert_fcvt_to_uint(
     }
 
     // Map the fixed-point integer argument (representing a float)
-    let mapped_arg = map_operand(value_map, arg);
+    let mapped_arg = map_operand(old_func, value_map, arg)?;
     let shift_amount = format.shift_amount();
     let target_type = format.cranelift_type();
 

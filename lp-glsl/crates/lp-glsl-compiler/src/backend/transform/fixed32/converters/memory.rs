@@ -29,7 +29,7 @@ pub(crate) fn convert_load(
     } = inst_data
     {
         // Map address
-        let address = map_value(value_map, *arg);
+        let address = map_value(old_func, value_map, *arg)?;
 
         if old_result_type == types::F32 {
             // F32 load: convert to fixed-point type
@@ -79,7 +79,7 @@ pub(crate) fn convert_store(
 
         if value_type == types::F32 {
             // Map value (should already be converted)
-            let mapped_value = map_value(value_map, value);
+            let mapped_value = map_value(old_func, value_map, value)?;
             let target_type = format.cranelift_type();
 
             // Verify mapped value has correct type
@@ -94,7 +94,7 @@ pub(crate) fn convert_store(
             }
 
             // Map address
-            let mapped_address = map_value(value_map, address);
+            let mapped_address = map_value(old_func, value_map, address)?;
 
             // Emit store with new type
             builder
@@ -103,8 +103,8 @@ pub(crate) fn convert_store(
         } else {
             // Not an F32 store, copy as-is (will be handled by copy_instruction fallback)
             // But we still need to map the address in case it's F32-derived
-            let mapped_address = map_value(value_map, address);
-            let mapped_value = map_value(value_map, value);
+            let mapped_address = map_value(old_func, value_map, address)?;
+            let mapped_value = map_value(old_func, value_map, value)?;
             builder
                 .ins()
                 .store(*flags, mapped_value, mapped_address, *offset);

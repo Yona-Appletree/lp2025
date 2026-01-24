@@ -29,8 +29,8 @@ pub(crate) fn convert_fcmp(
 
     if let InstructionData::FloatCompare { cond, args, .. } = inst_data {
         // Map operands
-        let arg1 = map_operand(value_map, args[0]);
-        let arg2 = map_operand(value_map, args[1]);
+        let arg1 = map_operand(old_func, value_map, args[0])?;
+        let arg2 = map_operand(old_func, value_map, args[1])?;
 
         // Convert float condition to integer condition
         let int_cond = match cond {
@@ -92,8 +92,8 @@ pub(crate) fn convert_fmax(
     _format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Compare and select maximum
     let cmp = builder.ins().icmp(IntCC::SignedGreaterThan, arg1, arg2);
@@ -114,8 +114,8 @@ pub(crate) fn convert_fmin(
     _format: FixedPointFormat,
 ) -> Result<(), GlslError> {
     let (arg1_old, arg2_old) = extract_binary_operands(old_func, old_inst)?;
-    let arg1 = map_operand(value_map, arg1_old);
-    let arg2 = map_operand(value_map, arg2_old);
+    let arg1 = map_operand(old_func, value_map, arg1_old)?;
+    let arg2 = map_operand(old_func, value_map, arg2_old)?;
 
     // Compare and select minimum
     let cmp = builder.ins().icmp(IntCC::SignedLessThan, arg1, arg2);

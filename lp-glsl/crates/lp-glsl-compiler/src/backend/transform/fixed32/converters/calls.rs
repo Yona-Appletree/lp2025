@@ -159,7 +159,7 @@ pub(crate) fn convert_call(
                         format!("Expected 1 argument for fract, got {}", old_args.len()),
                     ));
                 }
-                let arg = map_value(value_map, old_args[0]);
+                let arg = map_value(old_func, value_map, old_args[0])?;
                 // fract(x) = x - floor(x)
                 let target_type = format.cranelift_type();
                 let shift_amount = format.shift_amount();
@@ -178,7 +178,7 @@ pub(crate) fn convert_call(
                     ));
                 }
                 use cranelift_codegen::ir::condcodes::IntCC;
-                let arg = map_value(value_map, old_args[0]);
+                let arg = map_value(old_func, value_map, old_args[0])?;
                 let target_type = format.cranelift_type();
                 let zero = builder.ins().iconst(target_type, 0);
                 let one = builder.ins().iconst(target_type, 0x00010000i64); // 1.0 in fixed16x16
@@ -201,7 +201,7 @@ pub(crate) fn convert_call(
                 // After transform, val is i32 (fixed-point)
                 // Check if val equals MAX_FIXED (0x7FFF_FFFF) or MIN_FIXED (i32::MIN)
                 // These are sentinel values from division by zero
-                let arg = map_value(value_map, old_args[0]);
+                let arg = map_value(old_func, value_map, old_args[0])?;
                 let target_type = format.cranelift_type();
                 let max_fixed = builder.ins().iconst(target_type, 0x7FFF_FFFFi64);
                 let min_fixed = builder.ins().iconst(target_type, i32::MIN as i64);
@@ -236,7 +236,7 @@ pub(crate) fn convert_call(
                 // After transform, val is i32 (fixed-point)
                 // Check if val equals MAX_FIXED (0x7FFF_FFFF) or MIN_FIXED (i32::MIN)
                 // These are sentinel values from division by zero
-                let arg = map_value(value_map, old_args[0]);
+                let arg = map_value(old_func, value_map, old_args[0])?;
                 let target_type = format.cranelift_type();
                 let max_fixed = builder.ins().iconst(target_type, 0x7FFF_FFFFi64);
                 let min_fixed = builder.ins().iconst(target_type, i32::MIN as i64);
@@ -266,8 +266,10 @@ pub(crate) fn convert_call(
                 }
 
                 // Map all arguments
-                let mapped_args: Vec<Value> =
-                    old_args.iter().map(|&v| map_value(value_map, v)).collect();
+                let mapped_args: Vec<Value> = old_args
+                    .iter()
+                    .map(|&v| map_value(old_func, value_map, v))
+                    .collect::<Result<Vec<_>, _>>()?;
 
                 // Get FuncId for the builtin from func_id_map
                 let builtin_name = builtin_id.name();
@@ -420,7 +422,10 @@ pub(crate) fn convert_call(
         };
 
         let old_args = args.as_slice(&old_func.dfg.value_lists);
-        let new_args: Vec<Value> = old_args.iter().map(|&v| map_value(value_map, v)).collect();
+        let new_args: Vec<Value> = old_args
+            .iter()
+            .map(|&v| map_value(old_func, value_map, v))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let call_inst = builder.ins().call(new_func_ref, &new_args);
 
@@ -479,11 +484,11 @@ pub(crate) fn convert_call_indirect(
         };
 
         let old_args = args.as_slice(&old_func.dfg.value_lists);
-        let func_addr = map_value(value_map, old_args[0]);
+        let func_addr = map_value(old_func, value_map, old_args[0])?;
         let call_args: Vec<Value> = old_args[1..]
             .iter()
-            .map(|&v| map_value(value_map, v))
-            .collect();
+            .map(|&v| map_value(old_func, value_map, v))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let call_inst = builder
             .ins()
