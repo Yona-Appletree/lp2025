@@ -40,7 +40,7 @@ impl Target {
             )),
             Target::HostJit { .. } => {
                 // HostJit creates JITModule
-                let mut builder = JITBuilder::with_isa(isa, default_libcall_names());
+                let builder = JITBuilder::with_isa(isa, default_libcall_names());
 
                 // In no_std mode, set default memory provider
                 #[cfg(not(feature = "std"))]
@@ -58,7 +58,7 @@ impl Target {
     /// This allows Rv32Emu to create JITModule (for embedded JIT) instead of ObjectModule
     pub fn create_jit_builder(&mut self) -> Result<JITBuilder, GlslError> {
         let isa = self.create_isa()?.clone();
-        let mut builder = JITBuilder::with_isa(isa, default_libcall_names());
+        let builder = JITBuilder::with_isa(isa, default_libcall_names());
 
         // In no_std mode, set default memory provider
         #[cfg(not(feature = "std"))]

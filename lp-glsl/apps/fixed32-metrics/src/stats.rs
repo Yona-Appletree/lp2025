@@ -160,19 +160,18 @@ pub fn collect_function_reports(
         if let Some(gl_func_before) = module_before.fns.get(name)
             && let Some(gl_func_after) = module_after.fns.get(name)
         {
-                let stats_before =
-                    collect_function_stats(&gl_func_before.function, name, &name_mapping_before)?;
-                let stats_after =
-                    collect_function_stats(&gl_func_after.function, name, &name_mapping_after)?;
-                let delta = calculate_function_delta(&stats_before, &stats_after);
+            let stats_before =
+                collect_function_stats(&gl_func_before.function, name, &name_mapping_before)?;
+            let stats_after =
+                collect_function_stats(&gl_func_after.function, name, &name_mapping_after)?;
+            let delta = calculate_function_delta(&stats_before, &stats_after);
 
-                reports.push(crate::report::FunctionReport {
-                    name: name.clone(),
-                    before: stats_before,
-                    after: stats_after,
-                    delta,
-                });
-            }
+            reports.push(crate::report::FunctionReport {
+                name: name.clone(),
+                before: stats_before,
+                after: stats_after,
+                delta,
+            });
         }
     }
 
