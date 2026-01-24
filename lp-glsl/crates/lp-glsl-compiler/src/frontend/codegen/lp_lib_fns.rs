@@ -81,10 +81,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
                 _ => {
                     return Err(GlslError::new(
                         ErrorCode::E0400,
-                        format!(
-                            "Unsupported argument type for LP library function: {:?}",
-                            ty
-                        ),
+                        format!("Unsupported argument type for LP library function: {ty:?}",),
                     ));
                 }
             }

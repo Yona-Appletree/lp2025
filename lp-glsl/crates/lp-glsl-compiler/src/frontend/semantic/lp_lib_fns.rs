@@ -215,7 +215,7 @@ pub fn lookup_lp_lib_fn(name: &str) -> Option<Vec<LpLibFnSignature>> {
 /// Check if an LP library function call matches a signature
 pub fn check_lp_lib_fn_call(name: &str, arg_types: &[Type]) -> Result<Type, String> {
     let signatures =
-        lookup_lp_lib_fn(name).ok_or_else(|| format!("Unknown LP library function: {}", name))?;
+        lookup_lp_lib_fn(name).ok_or_else(|| format!("Unknown LP library function: {name}"))?;
 
     // Find matching signature
     for sig in &signatures {
@@ -235,8 +235,7 @@ pub fn check_lp_lib_fn_call(name: &str, arg_types: &[Type]) -> Result<Type, Stri
 
     // No matching signature found
     Err(format!(
-        "No matching signature for {} with arguments: {:?}",
-        name, arg_types
+        "No matching signature for {name} with arguments: {arg_types:?}",
     ))
 }
 
