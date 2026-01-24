@@ -126,6 +126,7 @@ BuiltinId::LpSimplex3.name() - # UPDATE: Return actual function name
 ### 1. LpLibFn as Source of Truth
 
 `LpLibFn` enum is the single source of truth for:
+
 - Which functions exist
 - Whether they need fixed32 mapping
 - What their TestCase names are
@@ -137,6 +138,7 @@ This ensures consistency across codegen, transform, and generator.
 ### 2. TestCase Names Represent Semantic Functions
 
 TestCase names like `"__lp_simplex3"` represent the semantic function (float version), not the implementation. The transform decides which implementation to use based on the target:
+
 - Fixed32 target: `"__lp_simplex3"` → `__lp_fixed32_lp_simplex3`
 - Float target (future): `"__lp_simplex3"` → `__lp_float_lp_simplex3` (or similar)
 
@@ -151,6 +153,7 @@ The generator reads `LpLibFn` enum to know what functions should exist, then mat
 ### 5. Consistent with sin/cos Pattern
 
 This matches the existing pattern for `sin`/`cos`:
+
 - Codegen emits TestCase call to `"sinf"` or `"__lp_sin"`
 - Transform converts to `__lp_fixed32_sin` via `map_testcase_to_builtin()`
 - Same pattern applies to LP library functions
@@ -167,7 +170,13 @@ impl LpLibFn {
             LpLibFn::Simplex1 => Some("__lp_fixed32_lp_simplex1"),
             LpLibFn::Simplex2 => Some("__lp_fixed32_lp_simplex2"),
             LpLibFn::Simplex3 => Some("__lp_fixed32_lp_simplex3"),
-            _ => None, // Hash functions don't have fixed32 versions
+
+            // Hash functions don't have fixed32 versions
+            LpLibFn::Hash1 => None,
+            LpLibFn::Hash2 => None,
+            LpLibFn::Hash3 => None,
+
+            // Note: no catch-all case, so that we can detect missing fixed32 versions
         }
     }
 
@@ -185,14 +194,14 @@ impl LpLibFn {
 // Similar to get_math_libcall() but for LP library functions
 fn get_lp_lib_testcase_call(&mut self, lp_fn: LpLibFn, arg_count: usize) -> Result<FuncRef, GlslError> {
     let testcase_name = lp_fn.symbol_name(); // e.g., "__lp_simplex3"
-    
+
     // Create signature based on argument count
     let mut sig = Signature::new(CallConv::SystemV);
     for _ in 0..arg_count {
         sig.params.push(AbiParam::new(types::F32)); // Float before transform
     }
     sig.returns.push(AbiParam::new(types::F32));
-    
+
     // Create TestCase name
     let sig_ref = self.builder.func.import_signature(sig);
     let ext_name = ExternalName::testcase(testcase_name.as_bytes());
@@ -211,12 +220,12 @@ fn get_lp_lib_testcase_call(&mut self, lp_fn: LpLibFn, arg_count: usize) -> Resu
 // Pseudo-code for generator changes
 fn discover_lp_lib_functions() -> Vec<BuiltinInfo> {
     let mut builtins = Vec::new();
-    
+
     // Read LpLibFn enum variants
     for lp_fn in [LpLibFn::Simplex1, LpLibFn::Simplex2, LpLibFn::Simplex3, ...] {
         // Find matching function name
         let expected_name = lp_fn.fixed32_name().unwrap_or_else(|| lp_fn.symbol_name());
-        
+
         // Discover function with matching name
         if let Some(func) = find_function_by_name(expected_name) {
             builtins.push(BuiltinInfo {
@@ -227,7 +236,7 @@ fn discover_lp_lib_functions() -> Vec<BuiltinInfo> {
             });
         }
     }
-    
+
     builtins
 }
 ```

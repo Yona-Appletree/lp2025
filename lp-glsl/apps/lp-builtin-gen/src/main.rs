@@ -15,8 +15,12 @@ struct BuiltinInfo {
 fn main() {
     let workspace_root = find_workspace_root().expect("Failed to find workspace root");
     let fixed32_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/fixed32");
+    let shared_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/shared");
 
-    let builtins = discover_builtins(&fixed32_dir).expect("Failed to discover builtins");
+    let mut builtins = discover_builtins(&fixed32_dir).expect("Failed to discover builtins");
+    let shared_builtins =
+        discover_builtins(&shared_dir).expect("Failed to discover shared builtins");
+    builtins.extend(shared_builtins);
 
     // Generate registry.rs
     let registry_path =
@@ -68,7 +72,10 @@ fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
 }
 
 fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error::Error>> {
-    let mut builtins = Vec::new();
+    use lp_glsl_compiler::frontend::semantic::lp_lib_fns::LpLibFn;
+
+    // First, discover all functions from files
+    let mut discovered_functions = Vec::new();
 
     for entry in WalkDir::new(dir).max_depth(1) {
         let entry = entry?;
@@ -92,11 +99,93 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
         let ast = parse_file(&content)?;
 
         for item in ast.items {
-            if let Item::Fn(func) = item
-                && let Some(builtin) = extract_builtin(&func, file_name)
-            {
-                builtins.push(builtin);
+            if let Item::Fn(func) = item {
+                let func_name = func.sig.ident.to_string();
+                // Check for #[unsafe(no_mangle)] attribute
+                let has_no_mangle = func.attrs.iter().any(|attr| attr.path().is_ident("unsafe"));
+                if has_no_mangle {
+                    let param_count = func.sig.inputs.len();
+                    discovered_functions.push((
+                        func_name.clone(),
+                        func_name,
+                        param_count,
+                        file_name.to_string(),
+                    ));
+                }
             }
+        }
+    }
+
+    // Now match discovered functions to LpLibFn enum variants
+    let mut builtins = Vec::new();
+    let lp_lib_fns = [
+        LpLibFn::Hash1,
+        LpLibFn::Hash2,
+        LpLibFn::Hash3,
+        LpLibFn::Simplex1,
+        LpLibFn::Simplex2,
+        LpLibFn::Simplex3,
+    ];
+
+    for lp_fn in lp_lib_fns {
+        // Determine expected function name
+        let expected_name = lp_fn.fixed32_name().unwrap_or_else(|| lp_fn.symbol_name());
+
+        // Find matching discovered function
+        if let Some((_, func_name, param_count, file_name)) = discovered_functions
+            .iter()
+            .find(|(name, _, _, _)| name == expected_name)
+        {
+            // Get BuiltinId variant name from LpLibFn
+            // LpLibFn::Simplex1 -> BuiltinId::LpSimplex1
+            // LpLibFn::Hash1 -> BuiltinId::LpHash1
+            let enum_variant = match lp_fn {
+                LpLibFn::Hash1 => "LpHash1",
+                LpLibFn::Hash2 => "LpHash2",
+                LpLibFn::Hash3 => "LpHash3",
+                LpLibFn::Simplex1 => "LpSimplex1",
+                LpLibFn::Simplex2 => "LpSimplex2",
+                LpLibFn::Simplex3 => "LpSimplex3",
+            };
+
+            builtins.push(BuiltinInfo {
+                enum_variant: enum_variant.to_string(),
+                symbol_name: func_name.clone(),
+                function_name: func_name.clone(),
+                param_count: *param_count,
+                file_name: file_name.clone(),
+            });
+        }
+    }
+
+    // Also discover regular fixed32 functions (not LP library functions)
+    for (func_name, symbol_name, param_count, file_name) in discovered_functions {
+        // Skip if already matched as LP library function
+        if builtins.iter().any(|b| b.function_name == func_name) {
+            continue;
+        }
+
+        // Check if it's a regular fixed32 function
+        if func_name.starts_with("__lp_fixed32_") {
+            let suffix = func_name.strip_prefix("__lp_fixed32_").unwrap();
+            let enum_variant = suffix
+                .split('_')
+                .map(|s| {
+                    let mut chars = s.chars();
+                    match chars.next() {
+                        None => String::new(),
+                        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+                    }
+                })
+                .collect::<String>();
+
+            builtins.push(BuiltinInfo {
+                enum_variant: format!("Fixed32{}", enum_variant),
+                symbol_name: symbol_name.clone(),
+                function_name: func_name.clone(),
+                param_count,
+                file_name: file_name.clone(),
+            });
         }
     }
 

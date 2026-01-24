@@ -1,2 +1,2 @@
 pub mod fixed32;
-mod shared;
+pub mod shared;
