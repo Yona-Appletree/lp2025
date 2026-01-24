@@ -114,34 +114,49 @@ fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
         return None;
     }
 
-    // Check if function name starts with __lp_fixed32_
     let func_name = func.sig.ident.to_string();
-    if !func_name.starts_with("__lp_fixed32_") {
+
+    // Check if function name starts with __lp_fixed32_, __lp_hash_, or __lp_simplex
+    let (prefix, enum_prefix) = if func_name.starts_with("__lp_fixed32_") {
+        ("__lp_fixed32_", "Fixed32")
+    } else if func_name.starts_with("__lp_hash_") {
+        ("__lp_hash_", "LpHash")
+    } else if func_name.starts_with("__lp_simplex") {
+        ("__lp_simplex", "LpSimplex")
+    } else {
         return None;
-    }
+    };
 
     // Extract symbol name (function name)
     let symbol_name = func_name.clone();
 
-    // Derive enum variant name: __lp_fixed32_sqrt -> Fixed32Sqrt
-    let enum_variant = symbol_name
-        .strip_prefix("__lp_fixed32_")
-        .unwrap()
-        .split('_')
-        .map(|s| {
-            let mut chars = s.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
-            }
-        })
-        .collect::<String>();
+    // Derive enum variant name
+    // __lp_fixed32_sqrt -> Fixed32Sqrt
+    // __lp_hash_1 -> LpHash1
+    // __lp_simplex2 -> LpSimplex2
+    let suffix = symbol_name.strip_prefix(prefix).unwrap();
+    let enum_variant = if prefix == "__lp_fixed32_" {
+        // For fixed32 functions, capitalize each word
+        suffix
+            .split('_')
+            .map(|s| {
+                let mut chars = s.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            })
+            .collect::<String>()
+    } else {
+        // For hash and simplex, just capitalize first letter and keep rest
+        capitalize_first(suffix)
+    };
 
     // Count parameters (extern "C" functions don't have self)
     let param_count = func.sig.inputs.len();
 
     Some(BuiltinInfo {
-        enum_variant: format!("Fixed32{}", capitalize_first(&enum_variant)),
+        enum_variant: format!("{}{}", enum_prefix, enum_variant),
         symbol_name,
         function_name: func_name,
         param_count,
@@ -154,6 +169,19 @@ fn capitalize_first(s: &str) -> String {
     match chars.next() {
         None => String::new(),
         Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+    }
+}
+
+/// Strip the prefix from a function name to get the base name
+fn strip_function_prefix(name: &str) -> &str {
+    if name.starts_with("__lp_fixed32_") {
+        name.strip_prefix("__lp_fixed32_").unwrap()
+    } else if name.starts_with("__lp_hash_") {
+        name.strip_prefix("__lp_hash_").unwrap()
+    } else if name.starts_with("__lp_simplex") {
+        name.strip_prefix("__lp_simplex").unwrap()
+    } else {
+        name
     }
 }
 
@@ -228,9 +256,28 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         output.push_str("            }\n");
     } else {
         // Group by parameter count
+        let quaternary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 4).collect();
         let ternary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 3).collect();
         let binary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 2).collect();
         let unary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 1).collect();
+
+        if !quaternary_ops.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in quaternary_ops.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str("                // (i32, i32, i32, i32) -> i32\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+            output.push_str("            }\n");
+        }
 
         if !ternary_ops.is_empty() {
             output.push_str("            ");
@@ -420,14 +467,39 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
 
     // Generate function pointer declarations
     for builtin in builtins {
-        let fn_type = if builtin.param_count == 3 {
-            "extern \"C\" fn(i32, i32, i32) -> i32"
-        } else if builtin.param_count == 2 {
-            "extern \"C\" fn(i32, i32) -> i32"
+        // Determine function signature based on function name
+        let fn_type = if builtin.function_name.starts_with("__lp_hash_") {
+            // Hash functions use u32 for all parameters and return u32
+            match builtin.param_count {
+                2 => "extern \"C\" fn(u32, u32) -> u32",
+                3 => "extern \"C\" fn(u32, u32, u32) -> u32",
+                4 => "extern \"C\" fn(u32, u32, u32, u32) -> u32",
+                _ => "extern \"C\" fn(u32) -> u32",
+            }
+        } else if builtin.function_name.starts_with("__lp_simplex") {
+            // Simplex functions use i32 for coordinates, u32 for seed, return i32
+            match builtin.param_count {
+                2 => "extern \"C\" fn(i32, u32) -> i32",
+                3 => "extern \"C\" fn(i32, i32, u32) -> i32",
+                4 => "extern \"C\" fn(i32, i32, i32, u32) -> i32",
+                _ => "extern \"C\" fn(i32) -> i32",
+            }
         } else {
-            "extern \"C\" fn(i32) -> i32"
+            // Fixed32 functions use i32 for all parameters and return i32
+            match builtin.param_count {
+                1 => "extern \"C\" fn(i32) -> i32",
+                2 => "extern \"C\" fn(i32, i32) -> i32",
+                3 => "extern \"C\" fn(i32, i32, i32) -> i32",
+                4 => "extern \"C\" fn(i32, i32, i32, i32) -> i32",
+                _ => "extern \"C\" fn(i32) -> i32",
+            }
         };
-        let var_suffix = builtin.function_name.strip_prefix("__lp_fixed32_").unwrap();
+        // Use full function name suffix for unique variable names
+        let var_suffix = builtin
+            .function_name
+            .strip_prefix("__lp_")
+            .unwrap_or(&builtin.function_name);
+        let var_suffix = var_suffix.replace("__", "_").replace("-", "_");
         output.push_str(&format!(
             "        let _{var_suffix}_fn: {fn_type} = {};\n",
             builtin.function_name
@@ -440,10 +512,13 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
 
     // Generate read_volatile calls
     for builtin in builtins {
-        let var_name = format!(
-            "_{}_fn",
-            builtin.function_name.strip_prefix("__lp_fixed32_").unwrap()
-        );
+        // Use full function name suffix for unique variable names (same as above)
+        let var_suffix = builtin
+            .function_name
+            .strip_prefix("__lp_")
+            .unwrap_or(&builtin.function_name);
+        let var_suffix = var_suffix.replace("__", "_").replace("-", "_");
+        let var_name = format!("_{var_suffix}_fn");
         output.push_str(&format!(
             "        let _ = core::ptr::read_volatile(&{} as *const _);\n",
             var_name
@@ -474,9 +549,12 @@ fn generate_mod_rs(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("//! with 16 bits of fractional precision.\n");
     output.push('\n');
 
-    // Generate mod declarations
+    // Generate mod declarations (deduplicate by file name)
+    let mut seen_files = std::collections::HashSet::new();
     for builtin in builtins {
-        output.push_str(&format!("mod {};\n", builtin.file_name));
+        if seen_files.insert(&builtin.file_name) {
+            output.push_str(&format!("mod {};\n", builtin.file_name));
+        }
     }
     output.push('\n');
     output.push_str("#[cfg(test)]\n");
@@ -537,26 +615,62 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
     if builtins.is_empty() {
         // No builtins, so no mappings
     } else {
+        use lp_glsl_compiler::frontend::semantic::lp_lib_fns::LpLibFn;
+
         for builtin in builtins {
-            let base_name = builtin.symbol_name.strip_prefix("__lp_fixed32_").unwrap();
-
-            // Generate C math function name (e.g., sinf)
-            let c_name = format!("{}f", base_name);
-
-            // Generate intrinsic name (e.g., __lp_sin)
-            let intrinsic_name = format!("__lp_{}", base_name);
-
-            // Special case: GLSL's mod() compiles to fmodf, not modf
-            let additional_names = if base_name == "mod" {
-                " | \"fmodf\""
-            } else {
-                ""
+            // Check if this is an LP library function by matching symbol name to enum
+            let lp_fn_opt = match builtin.symbol_name.as_str() {
+                "__lp_hash_1" => Some(LpLibFn::Hash1),
+                "__lp_hash_2" => Some(LpLibFn::Hash2),
+                "__lp_hash_3" => Some(LpLibFn::Hash3),
+                "__lp_simplex1" => Some(LpLibFn::Simplex1),
+                "__lp_simplex2" => Some(LpLibFn::Simplex2),
+                "__lp_simplex3" => Some(LpLibFn::Simplex3),
+                _ => None,
             };
 
-            new_function.push_str(&format!(
-                "        \"{}\" | \"{}\"{additional_names} => Some((BuiltinId::{}, {})),\n",
-                c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
-            ));
+            if let Some(lp_fn) = lp_fn_opt {
+                // LP library function - use enum to determine mapping
+                if builtin.symbol_name.starts_with("__lp_hash_") {
+                    // Hash functions: use testcase pattern "1f" | "__lp_1"
+                    let base_name = strip_function_prefix(&builtin.symbol_name);
+                    let c_name = format!("{}f", base_name);
+                    let intrinsic_name = format!("__lp_{}", base_name);
+                    new_function.push_str(&format!(
+                        "        \"{}\" | \"{}\" => Some((BuiltinId::{}, {})),\n",
+                        c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
+                    ));
+                } else {
+                    // Simplex functions: use full symbol name to avoid conflicts
+                    new_function.push_str(&format!(
+                        "        \"{}\" => Some((BuiltinId::{}, {})),\n",
+                        lp_fn.symbol_name(),
+                        builtin.enum_variant,
+                        builtin.param_count
+                    ));
+                }
+            } else {
+                // Regular fixed32 functions
+                let base_name = strip_function_prefix(&builtin.symbol_name);
+
+                // Generate C math function name (e.g., sinf)
+                let c_name = format!("{}f", base_name);
+
+                // Generate intrinsic name (e.g., __lp_sin)
+                let intrinsic_name = format!("__lp_{}", base_name);
+
+                // Special case: GLSL's mod() compiles to fmodf, not modf
+                let additional_names = if base_name == "mod" {
+                    " | \"fmodf\""
+                } else {
+                    ""
+                };
+
+                new_function.push_str(&format!(
+                    "        \"{}\" | \"{}\"{additional_names} => Some((BuiltinId::{}, {})),\n",
+                    c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
+                ));
+            }
         }
     }
 

@@ -40,6 +40,9 @@ pub enum BuiltinId {
     Fixed32Ldexp,
     Fixed32Log,
     Fixed32Log2,
+    Fixed32LpSimplex1,
+    Fixed32LpSimplex2,
+    Fixed32LpSimplex3,
     Fixed32Mod,
     Fixed32Mul,
     Fixed32Pow,
@@ -75,6 +78,9 @@ impl BuiltinId {
             BuiltinId::Fixed32Ldexp => "__lp_fixed32_ldexp",
             BuiltinId::Fixed32Log => "__lp_fixed32_log",
             BuiltinId::Fixed32Log2 => "__lp_fixed32_log2",
+            BuiltinId::Fixed32LpSimplex1 => "__lp_fixed32_lp_simplex1",
+            BuiltinId::Fixed32LpSimplex2 => "__lp_fixed32_lp_simplex2",
+            BuiltinId::Fixed32LpSimplex3 => "__lp_fixed32_lp_simplex3",
             BuiltinId::Fixed32Mod => "__lp_fixed32_mod",
             BuiltinId::Fixed32Mul => "__lp_fixed32_mul",
             BuiltinId::Fixed32Pow => "__lp_fixed32_pow",
@@ -93,7 +99,15 @@ impl BuiltinId {
     pub fn signature(&self) -> Signature {
         let mut sig = Signature::new(CallConv::SystemV);
         match self {
-            BuiltinId::Fixed32Fma => {
+            BuiltinId::Fixed32LpSimplex3 => {
+                // (i32, i32, i32, i32) -> i32
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.returns.push(AbiParam::new(types::I32));
+            }
+            BuiltinId::Fixed32Fma | BuiltinId::Fixed32LpSimplex2 => {
                 // (i32, i32, i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
@@ -104,6 +118,7 @@ impl BuiltinId {
             | BuiltinId::Fixed32Atan2
             | BuiltinId::Fixed32Div
             | BuiltinId::Fixed32Ldexp
+            | BuiltinId::Fixed32LpSimplex1
             | BuiltinId::Fixed32Mod
             | BuiltinId::Fixed32Mul
             | BuiltinId::Fixed32Pow
@@ -162,6 +177,9 @@ impl BuiltinId {
             BuiltinId::Fixed32Ldexp,
             BuiltinId::Fixed32Log,
             BuiltinId::Fixed32Log2,
+            BuiltinId::Fixed32LpSimplex1,
+            BuiltinId::Fixed32LpSimplex2,
+            BuiltinId::Fixed32LpSimplex3,
             BuiltinId::Fixed32Mod,
             BuiltinId::Fixed32Mul,
             BuiltinId::Fixed32Pow,
@@ -201,6 +219,9 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::Fixed32Ldexp => fixed32::__lp_fixed32_ldexp as *const u8,
         BuiltinId::Fixed32Log => fixed32::__lp_fixed32_log as *const u8,
         BuiltinId::Fixed32Log2 => fixed32::__lp_fixed32_log2 as *const u8,
+        BuiltinId::Fixed32LpSimplex1 => fixed32::__lp_fixed32_lp_simplex1 as *const u8,
+        BuiltinId::Fixed32LpSimplex2 => fixed32::__lp_fixed32_lp_simplex2 as *const u8,
+        BuiltinId::Fixed32LpSimplex3 => fixed32::__lp_fixed32_lp_simplex3 as *const u8,
         BuiltinId::Fixed32Mod => fixed32::__lp_fixed32_mod as *const u8,
         BuiltinId::Fixed32Mul => fixed32::__lp_fixed32_mul as *const u8,
         BuiltinId::Fixed32Pow => fixed32::__lp_fixed32_pow as *const u8,

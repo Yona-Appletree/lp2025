@@ -11,9 +11,10 @@ use lp_builtins::builtins::fixed32::{
     __lp_fixed32_atan, __lp_fixed32_atan2, __lp_fixed32_atanh, __lp_fixed32_cos, __lp_fixed32_cosh,
     __lp_fixed32_div, __lp_fixed32_exp, __lp_fixed32_exp2, __lp_fixed32_fma,
     __lp_fixed32_inversesqrt, __lp_fixed32_ldexp, __lp_fixed32_log, __lp_fixed32_log2,
-    __lp_fixed32_mod, __lp_fixed32_mul, __lp_fixed32_pow, __lp_fixed32_round,
-    __lp_fixed32_roundeven, __lp_fixed32_sin, __lp_fixed32_sinh, __lp_fixed32_sqrt,
-    __lp_fixed32_sub, __lp_fixed32_tan, __lp_fixed32_tanh,
+    __lp_fixed32_lp_simplex1, __lp_fixed32_lp_simplex2, __lp_fixed32_lp_simplex3, __lp_fixed32_mod,
+    __lp_fixed32_mul, __lp_fixed32_pow, __lp_fixed32_round, __lp_fixed32_roundeven,
+    __lp_fixed32_sin, __lp_fixed32_sinh, __lp_fixed32_sqrt, __lp_fixed32_sub, __lp_fixed32_tan,
+    __lp_fixed32_tanh,
 };
 
 /// Reference all builtin functions to prevent dead code elimination.
@@ -22,66 +23,73 @@ use lp_builtins::builtins::fixed32::{
 /// by creating function pointers and reading them with volatile operations.
 pub fn ensure_builtins_referenced() {
     unsafe {
-        let _acos_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_acos;
-        let _acosh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_acosh;
-        let _add_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_add;
-        let _asin_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_asin;
-        let _asinh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_asinh;
-        let _atan_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_atan;
-        let _atan2_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_atan2;
-        let _atanh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_atanh;
-        let _cos_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_cos;
-        let _cosh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_cosh;
-        let _div_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_div;
-        let _exp_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_exp;
-        let _exp2_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_exp2;
-        let _fma_fn: extern "C" fn(i32, i32, i32) -> i32 = __lp_fixed32_fma;
-        let _inversesqrt_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_inversesqrt;
-        let _ldexp_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_ldexp;
-        let _log_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_log;
-        let _log2_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_log2;
-        let _mod_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_mod;
-        let _mul_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_mul;
-        let _pow_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_pow;
-        let _round_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_round;
-        let _roundeven_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_roundeven;
-        let _sin_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sin;
-        let _sinh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sinh;
-        let _sqrt_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sqrt;
-        let _sub_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_sub;
-        let _tan_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_tan;
-        let _tanh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_tanh;
+        let _fixed32_acos_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_acos;
+        let _fixed32_acosh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_acosh;
+        let _fixed32_add_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_add;
+        let _fixed32_asin_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_asin;
+        let _fixed32_asinh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_asinh;
+        let _fixed32_atan_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_atan;
+        let _fixed32_atan2_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_atan2;
+        let _fixed32_atanh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_atanh;
+        let _fixed32_cos_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_cos;
+        let _fixed32_cosh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_cosh;
+        let _fixed32_div_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_div;
+        let _fixed32_exp_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_exp;
+        let _fixed32_exp2_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_exp2;
+        let _fixed32_fma_fn: extern "C" fn(i32, i32, i32) -> i32 = __lp_fixed32_fma;
+        let _fixed32_inversesqrt_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_inversesqrt;
+        let _fixed32_ldexp_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_ldexp;
+        let _fixed32_log_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_log;
+        let _fixed32_log2_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_log2;
+        let _fixed32_lp_simplex1_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_lp_simplex1;
+        let _fixed32_lp_simplex2_fn: extern "C" fn(i32, i32, i32) -> i32 = __lp_fixed32_lp_simplex2;
+        let _fixed32_lp_simplex3_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+            __lp_fixed32_lp_simplex3;
+        let _fixed32_mod_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_mod;
+        let _fixed32_mul_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_mul;
+        let _fixed32_pow_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_pow;
+        let _fixed32_round_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_round;
+        let _fixed32_roundeven_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_roundeven;
+        let _fixed32_sin_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sin;
+        let _fixed32_sinh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sinh;
+        let _fixed32_sqrt_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_sqrt;
+        let _fixed32_sub_fn: extern "C" fn(i32, i32) -> i32 = __lp_fixed32_sub;
+        let _fixed32_tan_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_tan;
+        let _fixed32_tanh_fn: extern "C" fn(i32) -> i32 = __lp_fixed32_tanh;
 
         // Force these to be included by using them in a way that can't be optimized away
         // We'll use volatile reads to prevent optimization
-        let _ = core::ptr::read_volatile(&_acos_fn as *const _);
-        let _ = core::ptr::read_volatile(&_acosh_fn as *const _);
-        let _ = core::ptr::read_volatile(&_add_fn as *const _);
-        let _ = core::ptr::read_volatile(&_asin_fn as *const _);
-        let _ = core::ptr::read_volatile(&_asinh_fn as *const _);
-        let _ = core::ptr::read_volatile(&_atan_fn as *const _);
-        let _ = core::ptr::read_volatile(&_atan2_fn as *const _);
-        let _ = core::ptr::read_volatile(&_atanh_fn as *const _);
-        let _ = core::ptr::read_volatile(&_cos_fn as *const _);
-        let _ = core::ptr::read_volatile(&_cosh_fn as *const _);
-        let _ = core::ptr::read_volatile(&_div_fn as *const _);
-        let _ = core::ptr::read_volatile(&_exp_fn as *const _);
-        let _ = core::ptr::read_volatile(&_exp2_fn as *const _);
-        let _ = core::ptr::read_volatile(&_fma_fn as *const _);
-        let _ = core::ptr::read_volatile(&_inversesqrt_fn as *const _);
-        let _ = core::ptr::read_volatile(&_ldexp_fn as *const _);
-        let _ = core::ptr::read_volatile(&_log_fn as *const _);
-        let _ = core::ptr::read_volatile(&_log2_fn as *const _);
-        let _ = core::ptr::read_volatile(&_mod_fn as *const _);
-        let _ = core::ptr::read_volatile(&_mul_fn as *const _);
-        let _ = core::ptr::read_volatile(&_pow_fn as *const _);
-        let _ = core::ptr::read_volatile(&_round_fn as *const _);
-        let _ = core::ptr::read_volatile(&_roundeven_fn as *const _);
-        let _ = core::ptr::read_volatile(&_sin_fn as *const _);
-        let _ = core::ptr::read_volatile(&_sinh_fn as *const _);
-        let _ = core::ptr::read_volatile(&_sqrt_fn as *const _);
-        let _ = core::ptr::read_volatile(&_sub_fn as *const _);
-        let _ = core::ptr::read_volatile(&_tan_fn as *const _);
-        let _ = core::ptr::read_volatile(&_tanh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_acos_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_acosh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_add_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_asin_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_asinh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_atan_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_atan2_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_atanh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_cos_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_cosh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_div_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_exp_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_exp2_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_fma_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_inversesqrt_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_ldexp_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_log_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_log2_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_lp_simplex1_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_lp_simplex2_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_lp_simplex3_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_mod_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_mul_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_pow_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_round_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_roundeven_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_sin_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_sinh_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_sqrt_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_sub_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_tan_fn as *const _);
+        let _ = core::ptr::read_volatile(&_fixed32_tanh_fn as *const _);
     }
 }

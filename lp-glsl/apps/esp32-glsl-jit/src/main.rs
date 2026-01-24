@@ -83,65 +83,12 @@ async fn main(spawner: Spawner) {
     // This simulates real image rendering where each pixel is computed independently
     // Note: Using main() with parameters (non-standard GLSL, but supported by our compiler)
     let source = r#"
-   // Hash function for pseudo-random gradient vectors
-// Adapted for fixed-point arithmetic (clamped at 2^16)
-float hash(vec2 p) {
-    // Use smaller constants to avoid exceeding 2^16 limit
-    // First compute dot product and keep it in reasonable range
-    float h = dot(p, vec2(12.9898, 78.233));
-    // Use mod to wrap large values, keeping within safe range
-    h = mod(h, 1000.0);
-    // Use smaller multiplier to ensure result stays well under 2^16
-    // sin returns [-1, 1], so max result is 10000.0, well under 65536
-    return fract(sin(h) * 10000.0);
-}
-
-// Smooth interpolation function
-float smoothf(float t) {
-    return t * t * (3.0 - 2.0 * t);
-}
-
-// 2D Perlin noise function
-float perlin_noise(vec2 p) {
-    // Get integer coordinates of the grid cell
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-
-    // Get hash values for the four corners
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-
-    // Create gradient vectors from hash values
-    vec2 grad_a = vec2(cos(a * 6.28318), sin(a * 6.28318));
-    vec2 grad_b = vec2(cos(b * 6.28318), sin(b * 6.28318));
-    vec2 grad_c = vec2(cos(c * 6.28318), sin(c * 6.28318));
-    vec2 grad_d = vec2(cos(d * 6.28318), sin(d * 6.28318));
-
-    // Distance vectors from corners to point
-    vec2 dist_a = f;
-    vec2 dist_b = f - vec2(1.0, 0.0);
-    vec2 dist_c = f - vec2(0.0, 1.0);
-    vec2 dist_d = f - vec2(1.0, 1.0);
-
-    // Dot products (gradient * distance)
-    float dot_a = dot(grad_a, dist_a);
-    float dot_b = dot(grad_b, dist_b);
-    float dot_c = dot(grad_c, dist_c);
-    float dot_d = dot(grad_d, dist_d);
-
-    // Smooth interpolation
-    float u = smoothf(f.x);
-    float v = smoothf(f.y);
-
-    // Bilinear interpolation
-    float x1 = mix(dot_a, dot_b, u);
-    float x2 = mix(dot_c, dot_d, u);
-    float result = mix(x1, x2, v);
-
-    // Normalize to approximately [0, 1] range
-    return result * 0.5 + 0.5;
+// Use LP library function for Simplex noise
+// lp_simplex2 returns values in approximately [-1, 1] range
+float noise(vec2 p, uint seed) {
+    float n = lp_simplex2(p, seed);
+    // Normalize from [-1, 1] to [0, 1] for compatibility with existing code
+    return n * 0.5 + 0.5;
 }
 
 // HSV to RGB conversion function
@@ -188,12 +135,12 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     // sin returns [-1, 1], map to [minZoom, maxZoom]
     float zoom = minZoom + (maxZoom - minZoom) * 0.5 * (sin(time * zoomSpeed) + 1.0);
 
-    // Sample Perlin noise with zoom
+    // Sample Simplex noise with zoom using LP library function
     vec2 noiseCoord = uv * zoom;
-    float noise = perlin_noise(noiseCoord);
+    float noiseValue = noise(noiseCoord, 0u);
 
     // Apply cosine to the noise and normalize to [0, 1] for hue
-    float cosNoise = cos(noise * 6.28318); // Multiply by 2*PI for full cycle
+    float cosNoise = cos(noiseValue * 6.28318); // Multiply by 2*PI for full cycle
     float hue = (cosNoise + 1.0) * 0.5; // Map from [-1, 1] to [0, 1]
 
     // Distance from center (normalized to [0, 1])

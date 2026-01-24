@@ -61,6 +61,11 @@ pub fn emit_function_call<M: cranelift_module::Module>(
         return emit_builtin_call_expr(ctx, func_name, args, span.clone());
     }
 
+    // Check if it's an LP library function
+    if crate::frontend::semantic::lp_lib_fns::is_lp_lib_fn(func_name) {
+        return emit_lp_lib_fn_call_expr(ctx, func_name, args, span.clone());
+    }
+
     // User-defined function
     emit_user_function_call(ctx, func_name, args, span.clone())
 }
@@ -97,6 +102,51 @@ fn emit_builtin_call_expr<M: cranelift_module::Module>(
     // Delegate to built-in implementation and add span to any errors
     match ctx.emit_builtin_call(name, translated_args) {
         Ok(result) => Ok(result),
+        Err(mut error) => {
+            // Add location and span_text if not already present
+            if error.location.is_none() {
+                error = error.with_location(source_span_to_location(&call_span));
+            }
+            Err(ctx.add_span_to_error(error, &call_span))
+        }
+    }
+}
+
+fn emit_lp_lib_fn_call_expr<M: cranelift_module::Module>(
+    ctx: &mut CodegenContext<'_, M>,
+    name: &str,
+    args: &[glsl::syntax::Expr],
+    call_span: glsl::syntax::SourceSpan,
+) -> Result<(Vec<cranelift_codegen::ir::Value>, GlslType), GlslError> {
+    // Translate all arguments
+    let mut translated_args = Vec::new();
+    let mut arg_types = Vec::new();
+
+    for arg in args {
+        let (vals, ty) = ctx.emit_expr_typed(arg)?;
+        translated_args.push((vals, ty.clone()));
+        arg_types.push(ty);
+    }
+
+    // Validate LP library function call before codegen
+    match crate::frontend::semantic::lp_lib_fns::check_lp_lib_fn_call(name, &arg_types) {
+        Ok(_return_type) => {
+            // Validation passed, proceed with codegen
+        }
+        Err(err_msg) => {
+            // Convert validation error to GlslError
+            let error = GlslError::new(crate::error::ErrorCode::E0114, err_msg)
+                .with_location(source_span_to_location(&call_span));
+            return Err(ctx.add_span_to_error(error, &call_span));
+        }
+    }
+
+    // Delegate to LP library function implementation and add span to any errors
+    match ctx.emit_lp_lib_fn_call(name, translated_args) {
+        Ok((result_vals, return_type)) => {
+            // Type and GlslType are the same, so we can use it directly
+            Ok((result_vals, return_type))
+        }
         Err(mut error) => {
             // Add location and span_text if not already present
             if error.location.is_none() {

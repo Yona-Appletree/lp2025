@@ -12,4 +12,5 @@ path = "src/main.rs"
 syn = { version = "2.0", features = ["full", "parsing"] }
 quote = "1.0"
 walkdir = "2.5"
+lp-glsl-compiler = { path = "../../crates/lp-glsl-compiler" }
 

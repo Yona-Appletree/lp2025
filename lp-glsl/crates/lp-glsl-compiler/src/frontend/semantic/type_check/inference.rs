@@ -175,6 +175,16 @@ pub fn infer_expr_type_with_registry(
                     Err(err_msg) => Err(GlslError::new(ErrorCode::E0114, err_msg)
                         .with_location(source_span_to_location(span))),
                 }
+            }
+            // Check if it's an LP library function
+            else if crate::frontend::semantic::lp_lib_fns::is_lp_lib_fn(func_name) {
+                match crate::frontend::semantic::lp_lib_fns::check_lp_lib_fn_call(
+                    func_name, &arg_types,
+                ) {
+                    Ok(return_type) => Ok(return_type),
+                    Err(err_msg) => Err(GlslError::new(ErrorCode::E0114, err_msg)
+                        .with_location(source_span_to_location(span))),
+                }
             } else if let Some(registry) = func_registry {
                 // User-defined function
                 let span_clone = span.clone();
