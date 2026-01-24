@@ -243,9 +243,9 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::Fixed32Sub => fixed32::__lp_fixed32_sub as *const u8,
         BuiltinId::Fixed32Tan => fixed32::__lp_fixed32_tan as *const u8,
         BuiltinId::Fixed32Tanh => fixed32::__lp_fixed32_tanh as *const u8,
-        BuiltinId::LpHash1 => fixed32::__lp_hash_1 as *const u8,
-        BuiltinId::LpHash2 => fixed32::__lp_hash_2 as *const u8,
-        BuiltinId::LpHash3 => fixed32::__lp_hash_3 as *const u8,
+        BuiltinId::LpHash1 => shared::__lp_hash_1 as *const u8,
+        BuiltinId::LpHash2 => shared::__lp_hash_2 as *const u8,
+        BuiltinId::LpHash3 => shared::__lp_hash_3 as *const u8,
     }
 }
 
