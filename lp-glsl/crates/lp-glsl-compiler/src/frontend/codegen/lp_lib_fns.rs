@@ -41,6 +41,9 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         })?;
         let builtin_id = lp_fn.builtin_id();
 
+        // Collect parameter types before flattening (needed for signature)
+        let param_types: Vec<Type> = args.iter().map(|(_, ty)| ty.clone()).collect();
+
         // Flatten vector arguments to individual components
         let mut flat_args = Vec::new();
         for (vals, ty) in args {
@@ -90,7 +93,7 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         // Check if this function needs fixed32 mapping
         if lp_fn.needs_fixed32_mapping() {
             // Emit TestCase call - transform will convert to fixed32 builtin
-            let func_ref = self.get_lp_lib_testcase_call(&lp_fn, flat_args.len())?;
+            let func_ref = self.get_lp_lib_testcase_call(&lp_fn, &param_types)?;
 
             // Emit call instruction
             let call_inst = self.builder.ins().call(func_ref, &flat_args);
@@ -149,14 +152,37 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
     fn get_lp_lib_testcase_call(
         &mut self,
         lp_fn: &LpLibFn,
-        arg_count: usize,
+        param_types: &[Type],
     ) -> Result<FuncRef, GlslError> {
         let testcase_name = lp_fn.symbol_name();
 
-        // Create signature with F32 types (before transform)
+        // Create signature using actual parameter types
+        // For simplex functions: coordinates are F32, seed is U32
+        // For hash functions: all parameters are U32
         let mut sig = Signature::new(CallConv::SystemV);
-        for _ in 0..arg_count {
-            sig.params.push(AbiParam::new(types::F32));
+        for ty in param_types {
+            match ty {
+                Type::Float => sig.params.push(AbiParam::new(types::F32)),
+                Type::UInt => sig.params.push(AbiParam::new(types::I32)), // U32 maps to I32 in Cranelift
+                Type::Int => sig.params.push(AbiParam::new(types::I32)),
+                Type::Vec2 | Type::Vec3 => {
+                    // Vector arguments are flattened, so we add F32 for each component
+                    let component_count = match ty {
+                        Type::Vec2 => 2,
+                        Type::Vec3 => 3,
+                        _ => unreachable!(),
+                    };
+                    for _ in 0..component_count {
+                        sig.params.push(AbiParam::new(types::F32));
+                    }
+                }
+                _ => {
+                    return Err(GlslError::new(
+                        ErrorCode::E0400,
+                        format!("Unsupported parameter type for LP library function: {ty:?}"),
+                    ));
+                }
+            }
         }
         sig.returns.push(AbiParam::new(types::F32));
 
