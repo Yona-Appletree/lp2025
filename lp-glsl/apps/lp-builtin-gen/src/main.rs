@@ -456,9 +456,15 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         output.push_str("        BuiltinId::_Placeholder => core::ptr::null(),\n");
     } else {
         for builtin in builtins {
+            // Determine module path based on function name
+            let module_path = if builtin.function_name.starts_with("__lp_hash_") {
+                "shared"
+            } else {
+                "fixed32"
+            };
             output.push_str(&format!(
-                "        BuiltinId::{} => fixed32::{} as *const u8,\n",
-                builtin.enum_variant, builtin.function_name
+                "        BuiltinId::{} => {}::{} as *const u8,\n",
+                builtin.enum_variant, module_path, builtin.function_name
             ));
         }
     }
