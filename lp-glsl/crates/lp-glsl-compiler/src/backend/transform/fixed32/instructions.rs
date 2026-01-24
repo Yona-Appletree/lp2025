@@ -83,10 +83,24 @@ fn convert_instruction(
             )?;
         }
         Opcode::Fadd => {
-            converters::arithmetic::convert_fadd(old_func, old_inst, builder, value_map, format)?;
+            converters::arithmetic::convert_fadd(
+                old_func,
+                old_inst,
+                builder,
+                value_map,
+                format,
+                func_id_map,
+            )?;
         }
         Opcode::Fsub => {
-            converters::arithmetic::convert_fsub(old_func, old_inst, builder, value_map, format)?;
+            converters::arithmetic::convert_fsub(
+                old_func,
+                old_inst,
+                builder,
+                value_map,
+                format,
+                func_id_map,
+            )?;
         }
         Opcode::Fmul => {
             converters::arithmetic::convert_fmul(
@@ -99,7 +113,14 @@ fn convert_instruction(
             )?;
         }
         Opcode::Fdiv => {
-            converters::arithmetic::convert_fdiv(old_func, old_inst, builder, value_map, format)?;
+            converters::arithmetic::convert_fdiv(
+                old_func,
+                old_inst,
+                builder,
+                value_map,
+                format,
+                func_id_map,
+            )?;
         }
         Opcode::Fneg => {
             converters::arithmetic::convert_fneg(old_func, old_inst, builder, value_map, format)?;
