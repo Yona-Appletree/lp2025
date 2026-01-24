@@ -72,7 +72,7 @@ vec2 b = vec2(200000.0, 30000.0);
 return a + b;
 }
 
-// run: test_vec2_add_large_numbers() ~= vec2(32767.0, 32767.0)
+// run: test_vec2_add_large_numbers() ~= vec2(32768.0, 32768.0)
 
 vec2 test_vec2_add_mixed_components() {
 vec2 a = vec2(1.0, -2.0);

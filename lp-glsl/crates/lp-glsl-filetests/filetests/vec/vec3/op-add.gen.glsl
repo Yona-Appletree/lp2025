@@ -72,7 +72,7 @@ vec3 b = vec3(200000.0, 30000.0, 15000.0);
 return a + b;
 }
 
-// run: test_vec3_add_large_numbers() ~= vec3(32767.0, 32767.0, 32767.0)
+// run: test_vec3_add_large_numbers() ~= vec3(32768.0, 32768.0, 32768.0)
 
 vec3 test_vec3_add_mixed_components() {
 vec3 a = vec3(1.0, -2.0, 3.0);

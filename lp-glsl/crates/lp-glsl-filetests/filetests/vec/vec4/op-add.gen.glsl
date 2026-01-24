@@ -72,7 +72,7 @@ vec4 b = vec4(200000.0, 30000.0, 15000.0, 5000.0);
 return a + b;
 }
 
-// run: test_vec4_add_large_numbers() ~= vec4(32767.0, 32767.0, 32767.0, 15000.0)
+// run: test_vec4_add_large_numbers() ~= vec4(32768.0, 32768.0, 32768.0, 15000.0)
 
 vec4 test_vec4_add_mixed_components() {
 vec4 a = vec4(1.0, -2.0, 3.0, -4.0);
