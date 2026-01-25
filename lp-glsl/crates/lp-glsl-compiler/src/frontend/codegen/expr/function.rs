@@ -61,8 +61,8 @@ pub fn emit_function_call<M: cranelift_module::Module>(
         return emit_builtin_call_expr(ctx, func_name, args, span.clone());
     }
 
-    // Check if it's an LP library function
-    if crate::frontend::semantic::lpfx::lpfx_fn_registry::is_lp_lib_fn(func_name) {
+    // Check if it's an LPFX function
+    if crate::frontend::semantic::lpfx::lpfx_fn_registry::is_lpfx_fn(func_name) {
         return emit_lp_lib_fn_call_expr(ctx, func_name, args, span.clone());
     }
 
@@ -128,8 +128,8 @@ fn emit_lp_lib_fn_call_expr<M: cranelift_module::Module>(
         arg_types.push(ty);
     }
 
-    // Validate LP library function call before codegen
-    match crate::frontend::semantic::lpfx::lpfx_fn_registry::check_lp_lib_fn_call(name, &arg_types) {
+    // Validate LPFX function call before codegen
+    match crate::frontend::semantic::lpfx::lpfx_fn_registry::check_lpfx_fn_call(name, &arg_types) {
         Ok(_return_type) => {
             // Validation passed, proceed with codegen
         }

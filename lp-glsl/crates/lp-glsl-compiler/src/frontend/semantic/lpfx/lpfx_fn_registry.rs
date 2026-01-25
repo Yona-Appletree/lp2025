@@ -101,3 +101,22 @@ pub fn get_impl_for_format(
         .iter()
         .find(|impl_| impl_.decimal_format.is_none())
 }
+
+/// Map rust function name to BuiltinId
+///
+/// This maps the internal Rust function names (e.g., "__lpfx_hash_1") to BuiltinId enum variants.
+/// Returns `None` if the function name doesn't correspond to a builtin.
+pub fn rust_fn_name_to_builtin_id(
+    rust_fn_name: &str,
+) -> Option<crate::backend::builtins::registry::BuiltinId> {
+    use crate::backend::builtins::registry::BuiltinId;
+    match rust_fn_name {
+        "__lpfx_hash_1" => Some(BuiltinId::LpHash1),
+        "__lpfx_hash_2" => Some(BuiltinId::LpHash2),
+        "__lpfx_hash_3" => Some(BuiltinId::LpHash3),
+        "__lpfx_simplex1_q32" => Some(BuiltinId::LpSimplex1),
+        "__lpfx_simplex2_q32" => Some(BuiltinId::LpSimplex2),
+        "__lpfx_simplex3_q32" => Some(BuiltinId::LpSimplex3),
+        _ => None,
+    }
+}
