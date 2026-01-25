@@ -36,6 +36,13 @@ const KEY: u32 = 249_222_277;
 /// Hash value as u32
 #[unsafe(no_mangle)]
 pub extern "C" fn __lp_hash_1(x: u32, seed: u32) -> u32 {
+    #[cfg(feature = "test_hash_fixed")]
+    {
+        use crate::builtins::shared::test_hash::hash_1;
+        return hash_1(x, seed);
+    }
+
+    #[cfg(not(feature = "test_hash_fixed"))]
     hash_impl(x, seed)
 }
 
@@ -50,9 +57,18 @@ pub extern "C" fn __lp_hash_1(x: u32, seed: u32) -> u32 {
 /// Hash value as u32
 #[unsafe(no_mangle)]
 pub extern "C" fn __lp_hash_2(x: u32, y: u32, seed: u32) -> u32 {
-    // Combine coordinates non-commutatively (similar to noiz's UVec2::collapse_for_rng)
-    let combined = (x ^ 983742189).wrapping_add((y ^ 102983473).rotate_left(8));
-    hash_impl(combined, seed)
+    #[cfg(feature = "test_hash_fixed")]
+    {
+        use crate::builtins::shared::test_hash::hash_2;
+        return hash_2(x, y, seed);
+    }
+
+    #[cfg(not(feature = "test_hash_fixed"))]
+    {
+        // Combine coordinates non-commutatively (similar to noiz's UVec2::collapse_for_rng)
+        let combined = (x ^ 983742189).wrapping_add((y ^ 102983473).rotate_left(8));
+        hash_impl(combined, seed)
+    }
 }
 
 /// Hash function for 3D coordinates.
@@ -67,11 +83,20 @@ pub extern "C" fn __lp_hash_2(x: u32, y: u32, seed: u32) -> u32 {
 /// Hash value as u32
 #[unsafe(no_mangle)]
 pub extern "C" fn __lp_hash_3(x: u32, y: u32, z: u32, seed: u32) -> u32 {
-    // Combine coordinates non-commutatively (similar to noiz's UVec3::collapse_for_rng)
-    let combined = (x ^ 983742189)
-        .wrapping_add((y ^ 102983473).rotate_left(8))
-        .wrapping_add((z ^ 189203473).rotate_left(16));
-    hash_impl(combined, seed)
+    #[cfg(feature = "test_hash_fixed")]
+    {
+        use crate::builtins::shared::test_hash::hash_3;
+        return hash_3(x, y, z, seed);
+    }
+
+    #[cfg(not(feature = "test_hash_fixed"))]
+    {
+        // Combine coordinates non-commutatively (similar to noiz's UVec3::collapse_for_rng)
+        let combined = (x ^ 983742189)
+            .wrapping_add((y ^ 102983473).rotate_left(8))
+            .wrapping_add((z ^ 189203473).rotate_left(16));
+        hash_impl(combined, seed)
+    }
 }
 
 /// Core hash implementation using the noiz algorithm.

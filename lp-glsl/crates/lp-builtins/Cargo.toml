@@ -13,6 +13,8 @@ crate-type = ["lib"]
 default = []
 std = []
 test = ["std"]
+test_hash_fixed = []
+test_visual = ["std"]
 
 [dev-dependencies]
 noise = "0.9"

@@ -95,12 +95,12 @@ pub extern "C" fn __lp_fixed32_lp_simplex2(x: i32, y: i32, seed: u32) -> i32 {
     };
 
     // Offsets for middle corner in (x,y) unskewed coords
-    let offset2_x = offset1_x - order_x - UNSKEW_FACTOR_2D;
-    let offset2_y = offset1_y - order_y - UNSKEW_FACTOR_2D;
+    let offset2_x = offset1_x - order_x + UNSKEW_FACTOR_2D;
+    let offset2_y = offset1_y - order_y + UNSKEW_FACTOR_2D;
 
     // Offsets for last corner in (x,y) unskewed coords
-    let offset3_x = offset1_x - Q32::ONE - (TWO * UNSKEW_FACTOR_2D);
-    let offset3_y = offset1_y - Q32::ONE - (TWO * UNSKEW_FACTOR_2D);
+    let offset3_x = offset1_x - Q32::ONE + (TWO * UNSKEW_FACTOR_2D);
+    let offset3_y = offset1_y - Q32::ONE + (TWO * UNSKEW_FACTOR_2D);
 
     // Calculate gradient indexes for each corner
     let gi0 = __lp_hash_2(cell_x_int as u32, cell_y_int as u32, seed);
@@ -403,5 +403,246 @@ mod tests {
             "Different seeds should produce different outputs at least at some points. At (0.5, 0.5): seed=0: {}, seed=1: {}, diff: {}",
             n1_float, n2_float, diff
         );
+    }
+
+    #[cfg(all(test, feature = "test_hash_fixed"))]
+    mod fixed_hash_tests {
+        use super::*;
+        use crate::builtins::fixed32::test_helpers::{fixed_to_float, float_to_fixed};
+
+        #[test]
+        fn test_simplex2_boundary_continuity() {
+            // Test continuity across cell boundaries using fixed hash
+            // Points near cell boundaries should have smooth transitions
+            let boundary_points = [
+                (0.0, 0.0),
+                (0.001, 0.001),
+                (0.999, 0.999),
+                (1.0, 1.0),
+                (1.001, 1.001),
+                (2.0, 2.0),
+                (2.001, 2.001),
+            ];
+
+            let mut prev_value: Option<f32> = None;
+            let mut max_jump = 0.0f32;
+
+            for (x, y) in boundary_points {
+                let result = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let result_float = fixed_to_float(result);
+
+                if let Some(prev) = prev_value {
+                    let jump = (result_float - prev).abs();
+                    max_jump = max_jump.max(jump);
+
+                    // Noise should be relatively continuous (small changes for small position changes)
+                    // After fixing the offset bugs, jumps should be reasonable
+                    if jump > 0.5 {
+                        println!(
+                            "Large jump detected at ({}, {}): {} -> {}, jump = {}",
+                            x, y, prev, result_float, jump
+                        );
+                    }
+                }
+                prev_value = Some(result_float);
+            }
+
+            println!("Maximum jump along boundary path: {}", max_jump);
+            // After fixing bugs, max_jump should be reasonable (e.g., < 0.3)
+            // This is a sanity check - exact threshold may need adjustment
+            assert!(
+                max_jump < 1.0,
+                "Discontinuity detected: maximum jump = {}",
+                max_jump
+            );
+        }
+
+        #[test]
+        fn test_simplex2_deterministic_with_fixed_hash() {
+            // Test that fixed hash produces deterministic outputs
+            let test_points = [(0.0, 0.0), (0.5, 0.5), (1.0, 1.0), (2.5, 2.5), (5.0, 5.0)];
+
+            for (x, y) in test_points {
+                let result1 = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let result2 = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                assert_eq!(
+                    result1, result2,
+                    "Simplex2({}, {}) should be deterministic with fixed hash",
+                    x, y
+                );
+            }
+        }
+
+        #[test]
+        fn test_simplex2_no_discontinuities_along_line() {
+            // Sample noise along a line and check for sudden jumps
+            const STEP: f32 = 0.01;
+            const THRESHOLD: f32 = 0.5; // Maximum allowed change per step
+
+            let mut prev_value: Option<f32> = None;
+            let mut max_jump = 0.0f32;
+            let mut jump_count = 0;
+
+            for i in 0..1000 {
+                let x = i as f32 * STEP;
+                let y = x; // Diagonal line
+                let result = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let result_float = fixed_to_float(result);
+
+                if let Some(prev) = prev_value {
+                    let jump = (result_float - prev).abs();
+                    max_jump = max_jump.max(jump);
+
+                    if jump > THRESHOLD {
+                        jump_count += 1;
+                        if jump_count <= 5 {
+                            // Print first few jumps for debugging
+                            println!(
+                                "Large jump detected at ({}, {}): {} -> {}, jump = {}",
+                                x, y, prev, result_float, jump
+                            );
+                        }
+                    }
+                }
+                prev_value = Some(result_float);
+            }
+
+            println!(
+                "Maximum jump along diagonal: {}, jumps > {}: {}",
+                max_jump, THRESHOLD, jump_count
+            );
+            // After fixing bugs, max_jump should be reasonable
+            assert!(
+                max_jump < 1.0,
+                "Discontinuity detected: maximum jump = {}",
+                max_jump
+            );
+        }
+    }
+
+    #[cfg(all(test, feature = "test_visual"))]
+    mod visual_tests {
+        use super::*;
+        use crate::builtins::fixed32::test_helpers::{fixed_to_float, float_to_fixed};
+        use std::fs::File;
+        use std::io::Write;
+
+        #[test]
+        fn test_simplex2_generate_image() {
+            // Generate a 256x256 noise image for visual inspection
+            const WIDTH: usize = 256;
+            const HEIGHT: usize = 256;
+            const SCALE: f32 = 0.1; // Noise frequency
+
+            let mut pixels = Vec::new();
+
+            for y in 0..HEIGHT {
+                for x in 0..WIDTH {
+                    let fx = x as f32 * SCALE;
+                    let fy = y as f32 * SCALE;
+                    let noise = __lp_fixed32_lp_simplex2(float_to_fixed(fx), float_to_fixed(fy), 0);
+                    let noise_float = fixed_to_float(noise);
+
+                    // Normalize from [-1, 1] to [0, 255]
+                    let normalized = ((noise_float + 1.0) * 127.5).clamp(0.0, 255.0) as u8;
+                    pixels.push(normalized);
+                    pixels.push(normalized);
+                    pixels.push(normalized);
+                }
+            }
+
+            // Write PPM format (simple, no dependencies)
+            let mut file = File::create("test_output_simplex2.ppm").unwrap();
+            writeln!(file, "P3").unwrap();
+            writeln!(file, "{} {}", WIDTH, HEIGHT).unwrap();
+            writeln!(file, "255").unwrap();
+
+            for chunk in pixels.chunks(3) {
+                writeln!(file, "{} {} {}", chunk[0], chunk[1], chunk[2]).unwrap();
+            }
+
+            println!("Generated test_output_simplex2.ppm for visual inspection");
+        }
+
+        #[test]
+        fn test_simplex2_no_discontinuities() {
+            // Sample noise along a line and check for sudden jumps
+            const STEP: f32 = 0.01;
+            const THRESHOLD: f32 = 0.3; // Maximum allowed change per step
+
+            let mut prev_value: Option<f32> = None;
+            let mut max_jump = 0.0f32;
+            let mut jump_count = 0;
+            let mut jump_locations = Vec::new();
+
+            for i in 0..1000 {
+                let x = i as f32 * STEP;
+                let y = x; // Diagonal line
+                let result = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let result_float = fixed_to_float(result);
+
+                if let Some(prev) = prev_value {
+                    let jump = (result_float - prev).abs();
+                    max_jump = max_jump.max(jump);
+
+                    if jump > THRESHOLD {
+                        jump_count += 1;
+                        if jump_locations.len() < 10 {
+                            jump_locations.push((x, y, prev, result_float, jump));
+                        }
+                    }
+                }
+                prev_value = Some(result_float);
+            }
+
+            println!(
+                "Maximum jump along diagonal: {}, jumps > {}: {}",
+                max_jump, THRESHOLD, jump_count
+            );
+
+            if !jump_locations.is_empty() {
+                println!("First few jump locations:");
+                for (x, y, prev, curr, jump) in jump_locations.iter().take(5) {
+                    println!(
+                        "  ({:.3}, {:.3}): {} -> {}, jump = {}",
+                        x, y, prev, curr, jump
+                    );
+                }
+            }
+
+            // After fixing all bugs, max_jump should be reasonable
+            assert!(
+                max_jump < 0.5,
+                "Discontinuity detected: maximum jump = {} (threshold: 0.5)",
+                max_jump
+            );
+        }
+
+        #[cfg(feature = "test")]
+        #[test]
+        fn test_simplex2_compare_with_noise_rs() {
+            use noise::{NoiseFn, Simplex};
+
+            let noise_rs_fn = Simplex::new(0);
+            let test_points = [(0.0, 0.0), (0.5, 0.5), (1.0, 1.0), (5.5, 3.2), (10.0, 10.0)];
+
+            println!("\n=== Simplex2 Comparison with noise-rs ===");
+            for (x, y) in test_points {
+                let our_value = __lp_fixed32_lp_simplex2(float_to_fixed(x), float_to_fixed(y), 0);
+                let our_float = fixed_to_float(our_value);
+
+                let noise_rs_value = noise_rs_fn.get([x as f64, y as f64]) as f32;
+
+                let diff = (our_float - noise_rs_value).abs();
+                println!(
+                    "Point ({:4.1}, {:4.1}): ours={:8.5}, noise-rs={:8.5}, diff={:8.5}",
+                    x, y, our_float, noise_rs_value, diff
+                );
+
+                // Verify both are in reasonable range
+                assert!(our_float >= -2.0 && our_float <= 2.0);
+                assert!(noise_rs_value >= -2.0 && noise_rs_value <= 2.0);
+            }
+        }
     }
 }
