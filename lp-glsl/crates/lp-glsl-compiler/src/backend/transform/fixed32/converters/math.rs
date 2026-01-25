@@ -45,9 +45,32 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
         "ldexpf" | "__lp_ldexp" => Some((BuiltinId::Fixed32Ldexp, 2)),
         "logf" | "__lp_log" => Some((BuiltinId::Fixed32Log, 1)),
         "log2f" | "__lp_log2" => Some((BuiltinId::Fixed32Log2, 1)),
-        "__lpfx_simplex1" => Some((BuiltinId::LpSimplex1, 2)),
-        "__lpfx_simplex2" => Some((BuiltinId::LpSimplex2, 3)),
-        "__lpfx_simplex3" => Some((BuiltinId::LpSimplex3, 4)),
+        // LPFX functions - lookup from registry
+        name if name.starts_with("__lpfx_") => {
+            // Try to find function by rust_fn_name in registry
+            use crate::frontend::semantic::lpfx::lpfx_fn_registry::{
+                find_lpfx_fn_by_rust_name, rust_fn_name_to_builtin_id,
+            };
+            if let Some((func, impl_)) = find_lpfx_fn_by_rust_name(name) {
+                if let Some(builtin_id) = rust_fn_name_to_builtin_id(impl_.rust_fn_name) {
+                    // Count parameters (expanding vectors)
+                    let param_count = func
+                        .glsl_sig
+                        .parameters
+                        .iter()
+                        .map(|p| {
+                            if p.ty.is_vector() {
+                                p.ty.component_count().unwrap()
+                            } else {
+                                1
+                            }
+                        })
+                        .sum();
+                    return Some((builtin_id, param_count));
+                }
+            }
+            None
+        }
         "modf" | "__lp_mod" | "fmodf" => Some((BuiltinId::Fixed32Mod, 2)),
         "mulf" | "__lp_mul" => Some((BuiltinId::Fixed32Mul, 2)),
         "powf" | "__lp_pow" => Some((BuiltinId::Fixed32Pow, 2)),
@@ -59,6 +82,7 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
         "subf" | "__lp_sub" => Some((BuiltinId::Fixed32Sub, 2)),
         "tanf" | "__lp_tan" => Some((BuiltinId::Fixed32Tan, 1)),
         "tanhf" | "__lp_tanh" => Some((BuiltinId::Fixed32Tanh, 1)),
+        // Legacy hash function names - also handled by __lpfx_* pattern above
         "1f" | "__lp_1" => Some((BuiltinId::LpHash1, 2)),
         "2f" | "__lp_2" => Some((BuiltinId::LpHash2, 3)),
         "3f" | "__lp_3" => Some((BuiltinId::LpHash3, 4)),

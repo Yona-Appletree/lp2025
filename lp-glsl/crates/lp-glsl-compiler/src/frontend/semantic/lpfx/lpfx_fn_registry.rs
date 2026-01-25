@@ -27,6 +27,29 @@ pub fn find_lpfx_fn(name: &str) -> Option<&'static LpfxFn> {
     functions.iter().find(|f| f.glsl_sig.name == name)
 }
 
+/// Find an LPFX function and implementation by rust function name
+///
+/// Returns `None` if the function is not found in the registry.
+/// Returns `Some((func, impl_))` where `impl_` is the first matching implementation.
+pub fn find_lpfx_fn_by_rust_name(
+    rust_fn_name: &str,
+) -> Option<(&'static LpfxFn, &'static super::lpfx_fn::LpfxFnImpl)> {
+    // Use a static to cache the functions and leak to get 'static references
+    static FUNCTIONS: std::sync::OnceLock<&'static [LpfxFn]> = std::sync::OnceLock::new();
+    let functions = *FUNCTIONS.get_or_init(|| {
+        let vec = super::lpfx_fns::lpfx_fns();
+        Box::leak(vec.into_boxed_slice())
+    });
+    for func in functions.iter() {
+        for impl_ in func.impls.iter() {
+            if impl_.rust_fn_name == rust_fn_name {
+                return Some((func, impl_));
+            }
+        }
+    }
+    None
+}
+
 /// Check if an LPFX function call is valid and return the return type
 ///
 /// Validates that the function exists and that the argument types match the signature.
