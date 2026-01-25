@@ -77,7 +77,10 @@ fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
 }
 
 fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error::Error>> {
-    use lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn_registry::LpfxFnId;
+    use lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn_registry::{
+        find_lpfx_fn_by_rust_name, lpfx_fns, rust_fn_name_to_builtin_id,
+    };
+    use lp_glsl_compiler::backend::builtins::registry::BuiltinId;
 
     // First, discover all functions from files
     let mut discovered_functions = Vec::new();
@@ -121,29 +124,32 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
         }
     }
 
-    // Now match discovered functions to LpLibFn enum variants
-    // Use LpLibFn::all() as single source of truth
+    // Now match discovered functions to LPFX registry
+    // Use registry as single source of truth
     let mut builtins = Vec::new();
 
-    for lp_fn in LpfxFnId::all() {
-        // Determine expected function name
-        let expected_name = lp_fn.fixed32_name().unwrap_or_else(|| lp_fn.symbol_name());
+    for func in lpfx_fns() {
+        // Check each implementation
+        for impl_ in &func.impls {
+            // Find matching discovered function by rust_fn_name
+            if let Some((_, func_name, param_count, file_name)) = discovered_functions
+                .iter()
+                .find(|(name, _, _, _)| *name == impl_.rust_fn_name)
+            {
+                // Get BuiltinId from rust function name
+                if let Some(builtin_id) = rust_fn_name_to_builtin_id(impl_.rust_fn_name) {
+                    // Convert BuiltinId to enum variant name string
+                    let enum_variant = format!("{:?}", builtin_id);
 
-        // Find matching discovered function
-        if let Some((_, func_name, param_count, file_name)) = discovered_functions
-            .iter()
-            .find(|(name, _, _, _)| name == expected_name)
-        {
-            // Get BuiltinId variant name from LpLibFn - single source of truth
-            let enum_variant = lp_fn.builtin_id_name().to_string();
-
-            builtins.push(BuiltinInfo {
-                enum_variant,
-                symbol_name: func_name.clone(),
-                function_name: func_name.clone(),
-                param_count: *param_count,
-                file_name: file_name.clone(),
-            });
+                    builtins.push(BuiltinInfo {
+                        enum_variant,
+                        symbol_name: func_name.clone(),
+                        function_name: func_name.clone(),
+                        param_count: *param_count,
+                        file_name: file_name.clone(),
+                    });
+                }
+            }
         }
     }
 
@@ -739,27 +745,12 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
     if builtins.is_empty() {
         // No builtins, so no mappings
     } else {
-        use lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn_registry::LpfxFnId;
+        use lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn_registry::find_lpfx_fn_by_rust_name;
 
         for builtin in builtins {
-            // Check if this is an LP library function by matching symbol name to enum
-            // Match against both fixed32_name() and symbol_name() to handle both cases
-            let lp_fn_opt = LpfxFnId::all()
-                .iter()
-                .find(|lp_fn| {
-                    let fixed32_name_opt = lp_fn.fixed32_name();
-                    let symbol_name = lp_fn.symbol_name();
-                    // Match against fixed32_name if it exists, otherwise match against symbol_name
-                    if let Some(fixed32_name) = fixed32_name_opt {
-                        builtin.symbol_name == fixed32_name || builtin.symbol_name == symbol_name
-                    } else {
-                        builtin.symbol_name == symbol_name
-                    }
-                })
-                .copied();
-
-            if let Some(lp_fn) = lp_fn_opt {
-                // LP library function - use enum to determine mapping
+            // Check if this is an LPFX function by matching symbol name to registry
+            if let Some((func, impl_)) = find_lpfx_fn_by_rust_name(&builtin.symbol_name) {
+                // LPFX function - use registry to determine mapping
                 if builtin.symbol_name.starts_with("__lpfx_hash_") {
                     // Hash functions: use testcase pattern "1f" | "__lp_1"
                     let base_name = strip_function_prefix(&builtin.symbol_name);
@@ -773,7 +764,7 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                     // Simplex functions: use full symbol name to avoid conflicts
                     new_function.push_str(&format!(
                         "        \"{}\" => Some((BuiltinId::{}, {})),\n",
-                        lp_fn.symbol_name(),
+                        impl_.rust_fn_name,
                         builtin.enum_variant,
                         builtin.param_count
                     ));
