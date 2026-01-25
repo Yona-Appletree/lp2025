@@ -1,6 +1,6 @@
 //! LPFX function registry
 //!
-//! This module contains the const array of all LPFX functions.
+//! This module contains the array of all LPFX functions.
 //! This will be codegen output in the future, but for now is manually maintained.
 
 use super::lpfx_fn::{LpfxFn, LpfxFnImpl};
@@ -9,12 +9,18 @@ use crate::semantic::functions::{FunctionSignature, ParamQualifier, Parameter};
 use crate::semantic::types::Type;
 use alloc::string::String;
 use alloc::vec;
+use alloc::vec::Vec;
 
 /// Registry of all LPFX functions
 ///
 /// This is the single source of truth for all LPFX function definitions.
 /// Functions are looked up by name from this array.
-pub const LPFX_FNS: &[LpfxFn] = &[
+///
+/// Note: Returns a Vec to avoid const limitations with String/Vec.
+/// In the future, this will be codegen'd and can use a more efficient storage.
+pub fn lpfx_fns() -> Vec<LpfxFn> {
+    // This will be codegen output - for now manually maintained
+    vec![
     // Hash functions
     LpfxFn {
         glsl_sig: FunctionSignature {
@@ -170,4 +176,5 @@ pub const LPFX_FNS: &[LpfxFn] = &[
             rust_fn_name: "__lpfx_simplex3_q32",
         }],
     },
-];
+    ]
+}

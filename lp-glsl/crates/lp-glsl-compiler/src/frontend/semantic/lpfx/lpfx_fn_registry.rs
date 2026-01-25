@@ -3,10 +3,9 @@
 //! Provides lookup functions for LPFX functions from the registry.
 
 use super::lpfx_fn::LpfxFn;
-use super::lpfx_fns::LPFX_FNS;
+use super::lpfx_fns::lpfx_fns;
 use crate::semantic::types::Type;
-use alloc::string::String;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Check if a function name is an LPFX function
 ///
@@ -19,7 +18,13 @@ pub fn is_lpfx_fn(name: &str) -> bool {
 ///
 /// Returns `None` if the function is not found in the registry.
 pub fn find_lpfx_fn(name: &str) -> Option<&'static LpfxFn> {
-    LPFX_FNS.iter().find(|f| f.glsl_sig.name == name)
+    // Use a static to cache the functions and leak to get 'static references
+    static FUNCTIONS: std::sync::OnceLock<&'static [LpfxFn]> = std::sync::OnceLock::new();
+    let functions = *FUNCTIONS.get_or_init(|| {
+        let vec = super::lpfx_fns::lpfx_fns();
+        Box::leak(vec.into_boxed_slice())
+    });
+    functions.iter().find(|f| f.glsl_sig.name == name)
 }
 
 /// Check if an LPFX function call is valid and return the return type
