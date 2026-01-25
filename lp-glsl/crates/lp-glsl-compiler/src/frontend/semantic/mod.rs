@@ -7,13 +7,13 @@ use alloc::vec::Vec;
 use alloc::string::String;
 pub mod builtins;
 pub mod functions;
+pub mod lpfx;
 pub mod passes;
 pub mod scope;
 pub mod type_check;
 pub mod type_resolver;
 pub mod types;
 pub mod validator;
-mod lpfx;
 
 /// Name of the main entry point function in GLSL shaders
 pub const MAIN_FUNCTION_NAME: &str = "main";
