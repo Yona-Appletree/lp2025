@@ -8,7 +8,6 @@ use crate::DecimalFormat;
 use crate::semantic::functions::{FunctionSignature, ParamQualifier, Parameter};
 use crate::semantic::types::Type;
 use alloc::string::String;
-use alloc::vec;
 use alloc::vec::Vec;
 
 /// Registry of all LPFX functions
