@@ -89,7 +89,7 @@ pub fn check_lpfx_fn_call(name: &str, arg_types: &[Type]) -> Result<Type, String
 ///
 /// Returns `None` if no implementation exists for the given format.
 pub fn get_impl_for_format(
-    func: &LpfxFn,
+    func: &'static LpfxFn,
     format: crate::DecimalFormat,
 ) -> Option<&'static super::lpfx_fn::LpfxFnImpl> {
     // First try to find format-specific implementation
