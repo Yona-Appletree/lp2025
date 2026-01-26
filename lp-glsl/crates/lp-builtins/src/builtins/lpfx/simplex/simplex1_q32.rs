@@ -38,6 +38,8 @@ use crate::util::q32::Q32;
 ///
 /// # Returns
 /// Noise value in Q32 fixed-point format, approximately in range [-1, 1]
+#[allow(unknown_attributes)]
+#[lpfx_impl(q32, "float lpfx_simplex1(float x, uint seed)")]
 #[unsafe(no_mangle)]
 pub extern "C" fn __lpfx_simplex1_q32(x: i32, seed: u32) -> i32 {
     // Convert input to Q32

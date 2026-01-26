@@ -14,6 +14,8 @@ use crate::util::q32::Q32;
 ///
 /// # Returns
 /// Noise value approximately in range [-1, 1] as f32
+#[allow(unknown_attributes)]
+#[lpfx_impl(f32, "float lpfx_simplex1(float x, uint seed)")]
 #[unsafe(no_mangle)]
 pub extern "C" fn __lpfx_simplex1_f32(x: f32, seed: u32) -> f32 {
     // Stub: convert to fixed32, call q32 version, convert back

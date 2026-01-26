@@ -53,6 +53,8 @@ const UNSKEW_FACTOR_2D: Q32 = Q32(13853);
 ///
 /// # Returns
 /// Noise value in Q32 fixed-point format, approximately in range [-1, 1]
+#[allow(unknown_attributes)]
+#[lpfx_impl(q32, "float lpfx_simplex2(vec2 p, uint seed)")]
 #[unsafe(no_mangle)]
 pub extern "C" fn __lpfx_simplex2_q32(x: i32, y: i32, seed: u32) -> i32 {
     // Convert inputs to Q32
