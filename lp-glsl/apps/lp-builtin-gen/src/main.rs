@@ -20,15 +20,20 @@ struct BuiltinInfo {
     file_name: String,
     /// Rust function signature types as strings (e.g., "extern \"C\" fn(f32, u32) -> f32")
     rust_signature: String,
+    /// Module path relative to builtins/ directory (e.g., "q32", "lpfx::hash", "lpfx::simplex::simplex1_q32")
+    module_path: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workspace_root = find_workspace_root().expect("Failed to find workspace root");
-    let q32_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/q32");
-    let lpfx_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/lpfx");
+    let builtins_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins");
+    let q32_dir = builtins_dir.join("q32");
+    let lpfx_dir = builtins_dir.join("lpfx");
 
-    let mut builtins = discover_builtins(&q32_dir).expect("Failed to discover builtins");
-    let lpfx_builtins = discover_builtins(&lpfx_dir).expect("Failed to discover lpfx builtins");
+    let mut builtins =
+        discover_builtins(&q32_dir, &builtins_dir).expect("Failed to discover builtins");
+    let lpfx_builtins =
+        discover_builtins(&lpfx_dir, &builtins_dir).expect("Failed to discover lpfx builtins");
     builtins.extend(lpfx_builtins);
 
     // Generate registry.rs
@@ -43,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate mod.rs (only q32 functions, not lpfx functions)
     let q32_builtins: Vec<BuiltinInfo> = builtins
         .iter()
-        .filter(|b| !b.function_name.starts_with("__lpfx_"))
+        .filter(|b| b.module_path.starts_with("q32::"))
         .cloned()
         .collect();
     let mod_rs_path = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/q32/mod.rs");
@@ -115,7 +120,10 @@ fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
     }
 }
 
-fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error::Error>> {
+fn discover_builtins(
+    dir: &Path,
+    base_dir: &Path,
+) -> Result<Vec<BuiltinInfo>, Box<dyn std::error::Error>> {
     // Discover all functions from files using extract_builtin
     let mut builtins: Vec<BuiltinInfo> = Vec::new();
 
@@ -137,12 +145,36 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
             continue;
         }
 
+        // Compute module path relative to base_dir (builtins/)
+        // This includes the full directory structure: "q32", "lpfx::hash", "lpfx::simplex::simplex1_q32"
+        let relative_path = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "Failed to compute relative path")?;
+
+        let module_path = if let Some(parent) = relative_path.parent() {
+            let mut components: Vec<&str> = parent.iter().filter_map(|c| c.to_str()).collect();
+
+            // Add file_name as the final component
+            components.push(file_name);
+
+            if components.is_empty() {
+                // File is directly in builtins/ (shouldn't happen, but handle it)
+                file_name.to_string()
+            } else {
+                // Join all components with ::
+                components.join("::")
+            }
+        } else {
+            // No parent (file is directly in base_dir)
+            file_name.to_string()
+        };
+
         let content = fs::read_to_string(path)?;
         let ast = parse_file(&content)?;
 
         for item in ast.items {
             if let Item::Fn(func) = item
-                && let Some(builtin_info) = extract_builtin(&func, file_name)
+                && let Some(builtin_info) = extract_builtin(&func, file_name, &module_path)
             {
                 // Skip if already added
                 if !builtins
@@ -162,7 +194,7 @@ fn discover_builtins(dir: &Path) -> Result<Vec<BuiltinInfo>, Box<dyn std::error:
 }
 
 #[allow(dead_code)]
-fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
+fn extract_builtin(func: &ItemFn, file_name: &str, module_path: &str) -> Option<BuiltinInfo> {
     // Check for #[unsafe(no_mangle)] attribute
     let has_no_mangle = func.attrs.iter().any(|attr| attr.path().is_ident("unsafe"));
 
@@ -213,6 +245,7 @@ fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
         param_count,
         file_name: file_name.to_string(),
         rust_signature,
+        module_path: module_path.to_string(),
     })
 }
 
@@ -433,39 +466,58 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str("///\n");
     output.push_str("/// Returns the function pointer that can be registered with JITModule.\n");
     output.push_str("pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {\n");
-    let has_hash = builtins
-        .iter()
-        .any(|b| b.function_name.starts_with("__lpfx_hash_"));
-    let has_simplex = builtins
-        .iter()
-        .any(|b| b.function_name.contains("lpfx_simplex"));
-    let has_q32 = builtins
-        .iter()
-        .any(|b| !b.function_name.starts_with("__lpfx_"));
+
+    // Collect unique import paths
+    // Import path: what goes in `use lp_builtins::builtins::{...};`
+    use std::collections::HashSet;
+    let mut import_paths: HashSet<String> = HashSet::new();
+
+    for builtin in builtins {
+        let components: Vec<&str> = builtin.module_path.split("::").collect();
+
+        let import_path = if components[0] == "q32" {
+            "q32".to_string()
+        } else if components.len() >= 2 && components[0] == "lpfx" {
+            // lpfx modules: import is "lpfx::{second_component}"
+            format!("lpfx::{}", components[1])
+        } else {
+            // Fallback: use module_path as-is
+            builtin.module_path.clone()
+        };
+
+        import_paths.insert(import_path);
+    }
 
     // Generate imports
-    let mut imports = Vec::new();
-    if has_q32 {
-        imports.push("q32".to_string());
-    }
-    if has_hash || has_simplex {
-        let mut lpfx_imports = Vec::new();
-        if has_hash {
-            lpfx_imports.push("hash");
-        }
-        if has_simplex {
-            lpfx_imports.push("simplex");
-        }
-        if lpfx_imports.len() == 1 {
-            imports.push(format!("lpfx::{}", lpfx_imports[0]));
-        } else {
-            imports.push(format!("lpfx::{{{}}}", lpfx_imports.join(", ")));
-        }
-    }
+    let mut imports: Vec<String> = import_paths.into_iter().collect();
+    imports.sort();
+
     if !imports.is_empty() {
+        // Group lpfx imports together
+        let mut q32_imports = Vec::new();
+        let mut lpfx_imports = Vec::new();
+
+        for import in &imports {
+            if import == "q32" {
+                q32_imports.push(import.clone());
+            } else if import.starts_with("lpfx::") {
+                lpfx_imports.push(import.strip_prefix("lpfx::").unwrap().to_string());
+            }
+        }
+
+        let mut import_list = Vec::new();
+        import_list.extend(q32_imports);
+        if !lpfx_imports.is_empty() {
+            if lpfx_imports.len() == 1 {
+                import_list.push(format!("lpfx::{}", lpfx_imports[0]));
+            } else {
+                import_list.push(format!("lpfx::{{{}}}", lpfx_imports.join(", ")));
+            }
+        }
+
         output.push_str(&format!(
             "    use lp_builtins::builtins::{{{}}};\n",
-            imports.join(", ")
+            import_list.join(", ")
         ));
     }
 
@@ -474,18 +526,24 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         output.push_str("        BuiltinId::_Placeholder => core::ptr::null(),\n");
     } else {
         for builtin in builtins {
-            // Determine module path based on function name
-            let module_path = if builtin.function_name.starts_with("__lpfx_hash_") {
-                "hash"
-            } else if builtin.function_name.contains("lpfx_simplex") {
-                // Simplex functions are in simplex::simplex1_q32::__lpfx_simplex1_q32
-                &format!("simplex::{}", builtin.file_name)
+            // Compute usage path from module_path
+            // Usage path is what comes before `::function_name` in the match
+            // module_path includes file_name: "q32::acos", "lpfx::hash", "lpfx::simplex::simplex1_q32"
+            let components: Vec<&str> = builtin.module_path.split("::").collect();
+            let usage_path = if components[0] == "q32" {
+                // q32 functions are re-exported at q32 level: q32::__lp_q32_acos
+                "q32".to_string()
+            } else if components.len() >= 2 && components[0] == "lpfx" {
+                // lpfx functions: usage is everything after "lpfx"
+                // e.g., "lpfx::simplex::simplex1_q32" -> "simplex::simplex1_q32"
+                components[1..].join("::")
             } else {
-                "q32"
+                builtin.module_path.clone()
             };
+
             output.push_str(&format!(
                 "        BuiltinId::{} => {}::{} as *const u8,\n",
-                builtin.enum_variant, module_path, builtin.function_name
+                builtin.enum_variant, usage_path, builtin.function_name
             ));
         }
     }
@@ -565,54 +623,58 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
     if builtins.is_empty() {
         output.push_str("// No builtins to import\n\n");
     } else {
-        // Split builtins by module (q32 vs lpfx)
-        let q32_builtins: Vec<_> = builtins
-            .iter()
-            .filter(|b| !b.function_name.starts_with("__lpfx_"))
-            .collect();
-        let hash_builtins: Vec<_> = builtins
-            .iter()
-            .filter(|b| b.function_name.starts_with("__lpfx_hash_"))
-            .collect();
-        let simplex_builtins: Vec<_> = builtins
-            .iter()
-            .filter(|b| b.function_name.contains("lpfx_simplex"))
-            .collect();
-
-        // Generate imports for q32 functions
-        if !q32_builtins.is_empty() {
-            output.push_str("use lp_builtins::builtins::q32::{\n");
-            for (i, builtin) in q32_builtins.iter().enumerate() {
-                if i > 0 {
-                    output.push_str(",\n");
-                }
-                output.push_str(&format!("    {}", builtin.function_name));
-            }
-            output.push_str(",\n};\n");
+        // Group builtins by module path
+        use std::collections::HashMap;
+        let mut builtins_by_module: HashMap<String, Vec<&BuiltinInfo>> = HashMap::new();
+        for builtin in builtins {
+            builtins_by_module
+                .entry(builtin.module_path.clone())
+                .or_default()
+                .push(builtin);
         }
 
-        // Generate imports for hash functions (lpfx::hash)
-        if !hash_builtins.is_empty() {
-            output.push_str("use lp_builtins::builtins::lpfx::hash::{\n");
-            for (i, builtin) in hash_builtins.iter().enumerate() {
-                if i > 0 {
-                    output.push_str(",\n");
-                }
-                output.push_str(&format!("    {}", builtin.function_name));
-            }
-            output.push_str(",\n};\n");
-        }
+        // Generate imports for each module
+        // Sort modules for consistent output
+        let mut modules: Vec<_> = builtins_by_module.keys().collect();
+        modules.sort();
 
-        // Generate imports for simplex functions (lpfx::simplex)
-        if !simplex_builtins.is_empty() {
-            output.push_str("use lp_builtins::builtins::lpfx::simplex::{\n");
-            for (i, builtin) in simplex_builtins.iter().enumerate() {
+        for module_path in modules {
+            let module_builtins = &builtins_by_module[module_path];
+
+            // Derive import path from module_path structure
+            // module_path includes file_name: "q32::sqrt", "lpfx::hash", "lpfx::simplex::simplex1_q32"
+            // Import path should stop at parent directory (remove last component)
+            let components: Vec<&str> = module_path.split("::").collect();
+
+            let (import_path, function_prefix) = if components.len() == 1 {
+                // Single component: "q32" (shouldn't happen with file_name, but handle it)
+                (format!("lp_builtins::builtins::{}", components[0]), None)
+            } else if components[0] == "q32" {
+                // q32::file_name -> import from q32, function is directly accessible
+                ("lp_builtins::builtins::q32".to_string(), None)
+            } else {
+                // lpfx::hash or lpfx::simplex::simplex1_q32
+                // Import path is everything except the last component (file_name)
+                let import_components = &components[..components.len() - 1];
+                let import_path_str = import_components.join("::");
+                let import_path = format!("lp_builtins::builtins::{}", import_path_str);
+
+                // Function prefix is the last component (file_name/submodule)
+                let function_prefix = Some(components.last().unwrap());
+                (import_path, function_prefix)
+            };
+
+            output.push_str(&format!("use {}::{{\n", import_path));
+            for (i, builtin) in module_builtins.iter().enumerate() {
                 if i > 0 {
                     output.push_str(",\n");
                 }
-                // Extract module name from file_name (e.g., "simplex1_q32" -> "simplex1_q32")
-                let module_name = &builtin.file_name;
-                output.push_str(&format!("    {}::{}", module_name, builtin.function_name));
+                // Include submodule prefix if needed
+                if let Some(prefix) = function_prefix {
+                    output.push_str(&format!("    {}::{}", prefix, builtin.function_name));
+                } else {
+                    output.push_str(&format!("    {}", builtin.function_name));
+                }
             }
             output.push_str(",\n};\n");
         }
@@ -775,8 +837,8 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
         }
 
         for builtin in builtins {
-            // Check if this is an LPFX function by checking if symbol name starts with __lpfx_
-            if builtin.symbol_name.starts_with("__lpfx_") {
+            // Check if this is an LPFX function by checking if module_path starts with "lpfx::"
+            if builtin.module_path.starts_with("lpfx::") {
                 // For Q32 transform, skip f32 variants - only generate Q32 mappings
                 if builtin.symbol_name.ends_with("_f32") {
                     continue;
@@ -790,7 +852,8 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                 if let Some(builtin_id) = builtin_id_opt
                     && let Some(func) = builtin_to_func.get(builtin_id)
                 {
-                    if builtin.symbol_name.starts_with("__lpfx_hash_") {
+                    // Check module_path to determine function type instead of symbol name
+                    if builtin.module_path.starts_with("lpfx::hash") {
                         // Hash functions: use testcase pattern "1f" | "__lp_1"
                         let base_name = strip_function_prefix(&builtin.symbol_name);
                         let c_name = format!("{}f", base_name);
@@ -800,7 +863,7 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                             c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
                         ));
                     } else {
-                        // Simplex functions: use testcase name (GLSL name with __ prefix)
+                        // Other lpfx functions (simplex, worley, etc.): use testcase name (GLSL name with __ prefix)
                         // Only Q32 variants reach here (f32 filtered above)
                         let testcase_name = format!("__{}", func.glsl_sig.name);
                         new_function.push_str(&format!(

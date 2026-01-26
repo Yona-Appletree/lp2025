@@ -6,19 +6,42 @@
 //! Or use the build script:
 //!     scripts/build-builtins.sh
 
-use lp_builtins::builtins::lpfx::hash::{__lpfx_hash_1, __lpfx_hash_2, __lpfx_hash_3};
-use lp_builtins::builtins::lpfx::simplex::{
-    simplex1_f32::__lpfx_simplex1_f32, simplex1_q32::__lpfx_simplex1_q32,
-    simplex2_f32::__lpfx_simplex2_f32, simplex2_q32::__lpfx_simplex2_q32,
-    simplex3_f32::__lpfx_simplex3_f32, simplex3_q32::__lpfx_simplex3_q32,
-};
-use lp_builtins::builtins::q32::{
-    __lp_q32_acos, __lp_q32_acosh, __lp_q32_add, __lp_q32_asin, __lp_q32_asinh, __lp_q32_atan,
-    __lp_q32_atan2, __lp_q32_atanh, __lp_q32_cos, __lp_q32_cosh, __lp_q32_div, __lp_q32_exp,
-    __lp_q32_exp2, __lp_q32_fma, __lp_q32_inversesqrt, __lp_q32_ldexp, __lp_q32_log, __lp_q32_log2,
-    __lp_q32_mod, __lp_q32_mul, __lp_q32_pow, __lp_q32_round, __lp_q32_roundeven, __lp_q32_sin,
-    __lp_q32_sinh, __lp_q32_sqrt, __lp_q32_sub, __lp_q32_tan, __lp_q32_tanh,
-};
+use lp_builtins::builtins::lpfx::simplex::simplex1_f32::__lpfx_simplex1_f32;
+use lp_builtins::builtins::lpfx::simplex::simplex1_q32::__lpfx_simplex1_q32;
+use lp_builtins::builtins::lpfx::simplex::simplex2_f32::__lpfx_simplex2_f32;
+use lp_builtins::builtins::lpfx::simplex::simplex2_q32::__lpfx_simplex2_q32;
+use lp_builtins::builtins::lpfx::simplex::simplex3_f32::__lpfx_simplex3_f32;
+use lp_builtins::builtins::lpfx::simplex::simplex3_q32::__lpfx_simplex3_q32;
+use lp_builtins::builtins::lpfx::{hash::__lpfx_hash_1, hash::__lpfx_hash_2, hash::__lpfx_hash_3};
+use lp_builtins::builtins::q32::__lp_q32_acos;
+use lp_builtins::builtins::q32::__lp_q32_acosh;
+use lp_builtins::builtins::q32::__lp_q32_add;
+use lp_builtins::builtins::q32::__lp_q32_asin;
+use lp_builtins::builtins::q32::__lp_q32_asinh;
+use lp_builtins::builtins::q32::__lp_q32_atan;
+use lp_builtins::builtins::q32::__lp_q32_atan2;
+use lp_builtins::builtins::q32::__lp_q32_atanh;
+use lp_builtins::builtins::q32::__lp_q32_cos;
+use lp_builtins::builtins::q32::__lp_q32_cosh;
+use lp_builtins::builtins::q32::__lp_q32_div;
+use lp_builtins::builtins::q32::__lp_q32_exp;
+use lp_builtins::builtins::q32::__lp_q32_exp2;
+use lp_builtins::builtins::q32::__lp_q32_fma;
+use lp_builtins::builtins::q32::__lp_q32_inversesqrt;
+use lp_builtins::builtins::q32::__lp_q32_ldexp;
+use lp_builtins::builtins::q32::__lp_q32_log;
+use lp_builtins::builtins::q32::__lp_q32_log2;
+use lp_builtins::builtins::q32::__lp_q32_mod;
+use lp_builtins::builtins::q32::__lp_q32_mul;
+use lp_builtins::builtins::q32::__lp_q32_pow;
+use lp_builtins::builtins::q32::__lp_q32_round;
+use lp_builtins::builtins::q32::__lp_q32_roundeven;
+use lp_builtins::builtins::q32::__lp_q32_sin;
+use lp_builtins::builtins::q32::__lp_q32_sinh;
+use lp_builtins::builtins::q32::__lp_q32_sqrt;
+use lp_builtins::builtins::q32::__lp_q32_sub;
+use lp_builtins::builtins::q32::__lp_q32_tan;
+use lp_builtins::builtins::q32::__lp_q32_tanh;
 
 /// Reference all builtin functions to prevent dead code elimination.
 ///
