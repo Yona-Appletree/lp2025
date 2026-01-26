@@ -4,6 +4,7 @@ use std::fmt;
 
 /// Error type for LPFX codegen operations
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Some variants reserved for future use
 pub enum LpfxCodegenError {
     /// Function is missing the #[lpfx_impl] attribute
     MissingAttribute {
@@ -28,12 +29,6 @@ pub enum LpfxCodegenError {
         function_name: String,
         f32_signature: String,
         q32_signature: String,
-    },
-    /// Invalid BuiltinId reference
-    InvalidBuiltinId {
-        function_name: String,
-        builtin_id: String,
-        file_path: String,
     },
     /// Attribute parsing error
     AttributeParseError {
@@ -109,17 +104,6 @@ impl fmt::Display for LpfxCodegenError {
                     f,
                     "Function '{}' has mismatched signatures:\n  f32: {}\n  q32: {}",
                     function_name, f32_signature, q32_signature
-                )
-            }
-            LpfxCodegenError::InvalidBuiltinId {
-                function_name,
-                builtin_id,
-                file_path,
-            } => {
-                write!(
-                    f,
-                    "Function '{}' in '{}' references invalid BuiltinId: '{}'",
-                    function_name, file_path, builtin_id
                 )
             }
             LpfxCodegenError::AttributeParseError {

@@ -1,7 +1,7 @@
 //! Tests for LPFX attribute parsing
 
 use lp_builtin_gen::lpfx::errors::Variant;
-use lp_builtin_gen::lpfx::parse::{LpfxAttribute, parse_lpfx_attribute};
+use lp_builtin_gen::lpfx::parse::parse_lpfx_attribute;
 use syn::parse_quote;
 
 #[test]

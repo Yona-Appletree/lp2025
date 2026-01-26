@@ -219,7 +219,6 @@ fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
 /// Format a Rust function signature as a type string
 fn format_rust_function_signature(func: &ItemFn) -> String {
     use quote::ToTokens;
-    use syn::Type;
 
     let mut sig = String::from("extern \"C\" fn(");
 
@@ -778,6 +777,11 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
         for builtin in builtins {
             // Check if this is an LPFX function by checking if symbol name starts with __lpfx_
             if builtin.symbol_name.starts_with("__lpfx_") {
+                // For Fixed32 transform, skip f32 variants - only generate Q32 mappings
+                if builtin.symbol_name.ends_with("_f32") {
+                    continue;
+                }
+
                 // Parse BuiltinId from enum variant - try to match it
                 let builtin_id_opt = builtin_to_func
                     .keys()
@@ -797,6 +801,7 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                         ));
                     } else {
                         // Simplex functions: use testcase name (GLSL name with __ prefix)
+                        // Only Q32 variants reach here (f32 filtered above)
                         let testcase_name = format!("__{}", func.glsl_sig.name);
                         new_function.push_str(&format!(
                             "        \"{}\" => Some((BuiltinId::{}, {})),\n",
