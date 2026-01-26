@@ -6,5 +6,3 @@ pub mod glsl_parse;
 pub mod parse;
 pub mod process;
 pub mod validate;
-
-pub use errors::{LpfxCodegenError, Variant};

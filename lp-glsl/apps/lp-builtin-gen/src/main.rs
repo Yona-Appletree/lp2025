@@ -18,6 +18,8 @@ struct BuiltinInfo {
     function_name: String,
     param_count: usize,
     file_name: String,
+    /// Rust function signature types as strings (e.g., "extern \"C\" fn(f32, u32) -> f32")
+    rust_signature: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -201,13 +203,49 @@ fn extract_builtin(func: &ItemFn, file_name: &str) -> Option<BuiltinInfo> {
     // Count parameters (extern "C" functions don't have self)
     let param_count = func.sig.inputs.len();
 
+    // Extract Rust function signature
+    let rust_signature = format_rust_function_signature(func);
+
     Some(BuiltinInfo {
         enum_variant,
         symbol_name,
         function_name: func_name,
         param_count,
         file_name: file_name.to_string(),
+        rust_signature,
     })
+}
+
+/// Format a Rust function signature as a type string
+fn format_rust_function_signature(func: &ItemFn) -> String {
+    use quote::ToTokens;
+    use syn::Type;
+
+    let mut sig = String::from("extern \"C\" fn(");
+
+    // Format parameters
+    let mut params = Vec::new();
+    for input in &func.sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = input {
+            let ty_str = pat_type.ty.to_token_stream().to_string();
+            // Clean up the string (remove extra spaces)
+            let ty_str = ty_str.replace(" ", "");
+            params.push(ty_str);
+        }
+    }
+    sig.push_str(&params.join(", "));
+    sig.push_str(") -> ");
+
+    // Format return type
+    match &func.sig.output {
+        syn::ReturnType::Default => sig.push_str("()"),
+        syn::ReturnType::Type(_, ty) => {
+            let ty_str = ty.to_token_stream().to_string();
+            sig.push_str(&ty_str.replace(" ", ""));
+        }
+    }
+
+    sig
 }
 
 #[allow(dead_code)]
@@ -594,33 +632,8 @@ fn generate_builtin_refs(path: &Path, builtins: &[BuiltinInfo]) {
 
     // Generate function pointer declarations
     for builtin in builtins {
-        // Determine function signature based on function name
-        let fn_type = if builtin.function_name.starts_with("__lpfx_hash_") {
-            // Hash functions use u32 for all parameters and return u32
-            match builtin.param_count {
-                2 => "extern \"C\" fn(u32, u32) -> u32",
-                3 => "extern \"C\" fn(u32, u32, u32) -> u32",
-                4 => "extern \"C\" fn(u32, u32, u32, u32) -> u32",
-                _ => "extern \"C\" fn(u32) -> u32",
-            }
-        } else if builtin.function_name.contains("lpfx_simplex") {
-            // Simplex functions use i32 for coordinates, u32 for seed, return i32
-            match builtin.param_count {
-                2 => "extern \"C\" fn(i32, u32) -> i32",
-                3 => "extern \"C\" fn(i32, i32, u32) -> i32",
-                4 => "extern \"C\" fn(i32, i32, i32, u32) -> i32",
-                _ => "extern \"C\" fn(i32) -> i32",
-            }
-        } else {
-            // Fixed32 functions use i32 for all parameters and return i32
-            match builtin.param_count {
-                1 => "extern \"C\" fn(i32) -> i32",
-                2 => "extern \"C\" fn(i32, i32) -> i32",
-                3 => "extern \"C\" fn(i32, i32, i32) -> i32",
-                4 => "extern \"C\" fn(i32, i32, i32, i32) -> i32",
-                _ => "extern \"C\" fn(i32) -> i32",
-            }
-        };
+        // Use the extracted Rust signature - this should always be available
+        let fn_type = &builtin.rust_signature;
         // Use full function name suffix for unique variable names
         let var_suffix = builtin
             .function_name

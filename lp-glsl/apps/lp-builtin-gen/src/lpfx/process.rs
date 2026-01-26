@@ -3,7 +3,7 @@
 use crate::discovery::LpfxFunctionInfo;
 use crate::lpfx::errors::LpfxCodegenError;
 use crate::lpfx::glsl_parse::parse_glsl_signature;
-use crate::lpfx::parse::{LpfxAttribute, parse_lpfx_attribute};
+use crate::lpfx::parse::parse_lpfx_attribute;
 use crate::lpfx::validate::ParsedLpfxFunction;
 use std::fs;
 use syn::{Item, ItemFn, parse_file};
@@ -85,10 +85,10 @@ pub fn process_lpfx_functions(
 /// Find a function by name in the AST
 fn find_function_in_ast<'a>(ast: &'a syn::File, name: &str) -> Option<&'a ItemFn> {
     for item in &ast.items {
-        if let Item::Fn(func) = item {
-            if func.sig.ident.to_string() == name {
-                return Some(func);
-            }
+        if let Item::Fn(func) = item
+            && func.sig.ident == name
+        {
+            return Some(func);
         }
     }
     None

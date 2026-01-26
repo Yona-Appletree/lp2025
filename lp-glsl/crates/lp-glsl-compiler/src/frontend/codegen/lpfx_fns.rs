@@ -6,11 +6,11 @@
 use crate::DecimalFormat;
 use crate::error::{ErrorCode, GlslError};
 use crate::frontend::codegen::context::CodegenContext;
-use crate::frontend::semantic::lpfx::lpfx_fn_registry::{find_lpfx_fn, get_builtin_id_for_format};
+use crate::frontend::semantic::lpfx::lpfx_fn_registry::find_lpfx_fn;
 use crate::frontend::semantic::lpfx::lpfx_sig::{build_call_signature, expand_vector_args};
 use crate::semantic::types::Type;
 use alloc::{format, vec, vec::Vec};
-use cranelift_codegen::ir::{ExtFuncData, ExternalName, FuncRef, InstBuilder, Value, types};
+use cranelift_codegen::ir::{ExtFuncData, ExternalName, FuncRef, InstBuilder, Value};
 
 impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
     /// Emit code for an LPFX function call.

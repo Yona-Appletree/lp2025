@@ -2,10 +2,8 @@
 //!
 //! Core data structures for representing LPFX functions and their implementations.
 
-use crate::DecimalFormat;
 use crate::backend::builtins::BuiltinId;
 use crate::semantic::functions::FunctionSignature;
-use hashbrown::HashMap;
 
 /// LPFX function definition
 ///

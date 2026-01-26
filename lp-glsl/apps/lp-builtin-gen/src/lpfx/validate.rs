@@ -48,10 +48,7 @@ fn validate_decimal_pairs(parsed_functions: &[ParsedLpfxFunction]) -> Result<(),
 
     for func in parsed_functions {
         let glsl_name = func.glsl_sig.name.clone();
-        by_glsl_name
-            .entry(glsl_name)
-            .or_insert_with(Vec::new)
-            .push(func);
+        by_glsl_name.entry(glsl_name).or_default().push(func);
     }
 
     // Check each group
@@ -105,10 +102,7 @@ fn validate_signature_consistency(
 
     for func in parsed_functions {
         let glsl_name = func.glsl_sig.name.clone();
-        by_glsl_name
-            .entry(glsl_name)
-            .or_insert_with(Vec::new)
-            .push(func);
+        by_glsl_name.entry(glsl_name).or_default().push(func);
     }
 
     // Check each group for signature consistency
@@ -149,14 +143,14 @@ fn validate_signature_consistency(
         }
 
         // If both exist, compare signatures
-        if let (Some(f32), Some(q32)) = (f32_func, q32_func) {
-            if !signatures_match(&f32.glsl_sig, &q32.glsl_sig) {
-                return Err(LpfxCodegenError::SignatureMismatch {
-                    function_name: glsl_name.clone(),
-                    f32_signature: format!("{:?}", f32.glsl_sig),
-                    q32_signature: format!("{:?}", q32.glsl_sig),
-                });
-            }
+        if let (Some(f32), Some(q32)) = (f32_func, q32_func)
+            && !signatures_match(&f32.glsl_sig, &q32.glsl_sig)
+        {
+            return Err(LpfxCodegenError::SignatureMismatch {
+                function_name: glsl_name.clone(),
+                f32_signature: format!("{:?}", f32.glsl_sig),
+                q32_signature: format!("{:?}", q32.glsl_sig),
+            });
         }
     }
 

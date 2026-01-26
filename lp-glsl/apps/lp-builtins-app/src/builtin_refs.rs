@@ -60,11 +60,11 @@ pub fn ensure_builtins_referenced() {
         let __lpfx_hash_1_fn: extern "C" fn(u32, u32) -> u32 = __lpfx_hash_1;
         let __lpfx_hash_2_fn: extern "C" fn(u32, u32, u32) -> u32 = __lpfx_hash_2;
         let __lpfx_hash_3_fn: extern "C" fn(u32, u32, u32, u32) -> u32 = __lpfx_hash_3;
-        let __lpfx_simplex1_f32_fn: extern "C" fn(i32, u32) -> i32 = __lpfx_simplex1_f32;
+        let __lpfx_simplex1_f32_fn: extern "C" fn(f32, u32) -> f32 = __lpfx_simplex1_f32;
         let __lpfx_simplex1_q32_fn: extern "C" fn(i32, u32) -> i32 = __lpfx_simplex1_q32;
-        let __lpfx_simplex2_f32_fn: extern "C" fn(i32, i32, u32) -> i32 = __lpfx_simplex2_f32;
+        let __lpfx_simplex2_f32_fn: extern "C" fn(f32, f32, u32) -> f32 = __lpfx_simplex2_f32;
         let __lpfx_simplex2_q32_fn: extern "C" fn(i32, i32, u32) -> i32 = __lpfx_simplex2_q32;
-        let __lpfx_simplex3_f32_fn: extern "C" fn(i32, i32, i32, u32) -> i32 = __lpfx_simplex3_f32;
+        let __lpfx_simplex3_f32_fn: extern "C" fn(f32, f32, f32, u32) -> f32 = __lpfx_simplex3_f32;
         let __lpfx_simplex3_q32_fn: extern "C" fn(i32, i32, i32, u32) -> i32 = __lpfx_simplex3_q32;
 
         // Force these to be included by using them in a way that can't be optimized away

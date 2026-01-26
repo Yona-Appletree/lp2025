@@ -2,7 +2,7 @@
 
 use crate::lpfx::errors::{LpfxCodegenError, Variant};
 use proc_macro2::TokenStream;
-use syn::{Attribute, LitStr, Meta, MetaList, parse2};
+use syn::{Attribute, LitStr, parse2};
 
 /// Parsed LPFX implementation attribute
 #[derive(Debug, Clone)]

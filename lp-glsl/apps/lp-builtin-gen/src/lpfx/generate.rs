@@ -68,7 +68,7 @@ pub fn generate_lpfx_fns(parsed_functions: &[ParsedLpfxFunction]) -> String {
     let grouped = group_functions_by_name(parsed_functions);
 
     // Generate LpfxFn structures
-    for (_glsl_name, functions) in &grouped {
+    for functions in grouped.values() {
         let func = functions[0]; // Use first function as reference (they should all have same signature)
 
         output.push_str("        LpfxFn {\n");
@@ -96,7 +96,7 @@ fn group_functions_by_name(
 
     for func in parsed_functions {
         let glsl_name = func.glsl_sig.name.clone();
-        grouped.entry(glsl_name).or_insert_with(Vec::new).push(func);
+        grouped.entry(glsl_name).or_default().push(func);
     }
 
     grouped

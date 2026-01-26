@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use syn::{Item, ItemFn, parse_file};
 use walkdir::WalkDir;
 
-use crate::lpfx::errors::{LpfxCodegenError, Variant};
+use crate::lpfx::errors::LpfxCodegenError;
 
 /// Information about a discovered LPFX function
 #[derive(Debug, Clone)]
@@ -64,15 +64,15 @@ pub fn discover_lpfx_functions(dir: &Path) -> Result<Vec<LpfxFunctionInfo>, Lpfx
         })?;
 
         for item in ast.items {
-            if let Item::Fn(func) = item {
-                if let Some(info) = extract_lpfx_function(&func, path) {
-                    // Skip if already added
-                    if !functions
-                        .iter()
-                        .any(|f| f.rust_fn_name == info.rust_fn_name)
-                    {
-                        functions.push(info);
-                    }
+            if let Item::Fn(func) = item
+                && let Some(info) = extract_lpfx_function(&func, path)
+            {
+                // Skip if already added
+                if !functions
+                    .iter()
+                    .any(|f| f.rust_fn_name == info.rust_fn_name)
+                {
+                    functions.push(info);
                 }
             }
         }
