@@ -43,6 +43,9 @@ Should we add a `status_ver: FrameId` field to `NodeEntry` to track the last fra
 **Suggested Answer:**
 Yes. Add `status_ver: FrameId` to `NodeEntry`, similar to `config_ver` and `state_ver`. This will allow `get_changes()` to efficiently determine which nodes have status changes since a given frame.
 
+**Answer:**
+Yes - confirmed.
+
 ### Question 2: Error Message Changes
 
 **Context:**
@@ -53,6 +56,9 @@ Should `status_ver` be updated whenever the status changes, even if it's the sam
 
 **Suggested Answer:**
 Yes. Any change to the status value (including error message changes) should update `status_ver`. This ensures clients see updated error messages when they change.
+
+**Answer:**
+Yes - confirmed.
 
 ### Question 3: Status in GetChanges Response
 
@@ -68,6 +74,9 @@ How should we include status in GetChanges responses?
 **Suggested Answer:**
 Option A + partial B: Include status changes in `node_changes` for all nodes with status changes (this is the efficient incremental approach). Also ensure that when we include `node_details` for watched nodes, we always include status. For unwatched nodes, status will come via `node_changes` as `StatusChanged` events.
 
+**Answer:**
+Separate node details and node status so they are handled separately. For now, always return status updates for all nodes via `node_changes` as `StatusChanged` events. This allows for future opt-in behavior similar to detail tracking.
+
 ### Question 4: Status in NodeDetails
 
 **Context:**
@@ -78,6 +87,9 @@ Should we always include status in `node_details` for all nodes, or is it suffic
 
 **Suggested Answer:**
 It's sufficient to send status changes via `node_changes`. When a node is first created, it will have a `Created` change which the client can use to initialize status. Subsequent status changes will come via `StatusChanged` events. However, we should ensure that when `node_details` is included (for watched nodes), it always includes the current status.
+
+**Answer:**
+Remove status from `node_details` entirely. Status will only come via `node_changes` as `StatusChanged` events.
 
 ### Question 5: Initial Status for New Nodes
 
@@ -90,6 +102,9 @@ Should the initial `Created` status trigger a `StatusChanged` event, or is the `
 **Suggested Answer:**
 The `Created` change notification is sufficient. The client can initialize the status to `Created` when processing the `Created` change. We should ensure `status_ver` is set to the creation frame when the node is created.
 
+**Answer:**
+Created is enough - confirmed.
+
 ### Question 6: Client Status Tracking
 
 **Context:**
@@ -100,3 +115,6 @@ Should the client continue to track all status changes internally, or is it suff
 
 **Suggested Answer:**
 The client should continue to track status internally (it already does via `ClientNodeEntry.status`). The server will now send all status changes, so the client can update its view accordingly. The client's `previous_status` tracking for detecting Ok <-> Error transitions can remain as-is for UI purposes.
+
+**Answer:**
+Update the code to track and log all status updates. We can track the version (status_ver) to know when status changes. We want to log all status updates.
