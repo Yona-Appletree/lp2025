@@ -2,9 +2,9 @@
 
 use crate::debug_ui::nodes::shader;
 use crate::debug_ui::nodes::{fixture, output, texture};
-use eframe::egui::{self};
+use eframe::egui::{self, Color32};
 use lp_engine_client::project::ClientProjectView;
-use lp_model::{NodeHandle, NodeKind, project::FrameId};
+use lp_model::{NodeHandle, NodeKind, project::FrameId, project::api::NodeStatus};
 
 /// Render status panel
 pub fn render_status_panel(
@@ -60,21 +60,41 @@ pub fn render_all_nodes_panel(
         let is_tracked = tracked_nodes.contains(handle);
         let mut checked = is_tracked;
 
-        // Show checkbox with node path
-        let node_path = entry.path.as_str();
-        let checkbox_response = ui.checkbox(&mut checked, node_path);
-        if checkbox_response.changed() {
-            changed = true;
-            if checked {
-                tracked_nodes.insert(*handle);
-            } else {
-                tracked_nodes.remove(handle);
-                // If we uncheck a node, also uncheck "all detail"
-                if *all_detail {
-                    *all_detail = false;
+        // Show status indicator and checkbox with node path
+        ui.horizontal(|ui| {
+            // Status indicator circle
+            let status_color = match &entry.status {
+                NodeStatus::Ok => Color32::from_rgb(0, 255, 0), // Green
+                NodeStatus::Error(_) | NodeStatus::InitError(_) => Color32::from_rgb(255, 0, 0), // Red
+                NodeStatus::Warn(_) => Color32::from_rgb(255, 255, 0), // Yellow
+                NodeStatus::Created => Color32::from_rgb(128, 128, 128), // Gray
+            };
+            
+            // Draw status indicator circle using painter
+            let circle_size = 8.0;
+            let rect = ui.available_rect_before_wrap();
+            let circle_center = egui::pos2(rect.min.x + circle_size / 2.0, rect.center().y);
+            ui.painter().circle_filled(circle_center, circle_size / 2.0, status_color);
+            
+            // Add spacing after circle
+            ui.add_space(circle_size + 4.0);
+            
+            // Show checkbox with node path
+            let node_path = entry.path.as_str();
+            let checkbox_response = ui.checkbox(&mut checked, node_path);
+            if checkbox_response.changed() {
+                changed = true;
+                if checked {
+                    tracked_nodes.insert(*handle);
+                } else {
+                    tracked_nodes.remove(handle);
+                    // If we uncheck a node, also uncheck "all detail"
+                    if *all_detail {
+                        *all_detail = false;
+                    }
                 }
             }
-        }
+        });
 
         // Show detail if node is tracked (has state)
         if checked {

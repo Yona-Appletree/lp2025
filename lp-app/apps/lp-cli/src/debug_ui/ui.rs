@@ -84,7 +84,33 @@ impl DebugUiState {
                         Ok(project_response) => {
                             let mut view = self.project_view.lock().unwrap();
                             match view.apply_changes(&project_response) {
-                                Ok(()) => {
+                                Ok(status_changes) => {
+                                    // Log status changes
+                                    for change in &status_changes {
+                                        match (&change.old_status, &change.new_status) {
+                                            (
+                                                lp_model::project::api::NodeStatus::Ok,
+                                                lp_model::project::api::NodeStatus::Error(msg),
+                                            ) => {
+                                                println!(
+                                                    "[{}] Status changed: Ok -> Error(\"{}\")",
+                                                    change.path.as_str(),
+                                                    msg
+                                                );
+                                            }
+                                            (
+                                                lp_model::project::api::NodeStatus::Error(old_msg),
+                                                lp_model::project::api::NodeStatus::Ok,
+                                            ) => {
+                                                println!(
+                                                    "[{}] Status changed: Error(\"{}\") -> Ok",
+                                                    change.path.as_str(),
+                                                    old_msg
+                                                );
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                     self.sync_in_progress = false;
                                     // Check if tracked_nodes changed while sync was in progress
                                     // If so, we need to sync again immediately

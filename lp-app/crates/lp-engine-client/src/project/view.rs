@@ -8,6 +8,17 @@ use lp_model::{
     project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
 };
 
+/// Status change information
+#[derive(Debug, Clone)]
+pub struct StatusChange {
+    /// Node path
+    pub path: LpPathBuf,
+    /// Previous status
+    pub old_status: NodeStatus,
+    /// New status
+    pub new_status: NodeStatus,
+}
+
 /// Client view of project
 pub struct ClientProjectView {
     /// Current frame ID (last synced)
@@ -16,6 +27,8 @@ pub struct ClientProjectView {
     pub nodes: BTreeMap<NodeHandle, ClientNodeEntry>,
     /// Which nodes we're tracking detail for
     pub detail_tracking: BTreeSet<NodeHandle>,
+    /// Previous status for each node (for detecting status changes)
+    previous_status: BTreeMap<NodeHandle, NodeStatus>,
 }
 
 /// Client node entry
@@ -36,6 +49,7 @@ impl ClientProjectView {
             frame_id: FrameId::default(),
             nodes: BTreeMap::new(),
             detail_tracking: BTreeSet::new(),
+            previous_status: BTreeMap::new(),
         }
     }
 
@@ -63,10 +77,14 @@ impl ClientProjectView {
     }
 
     /// Sync with server (update view from response)
+    ///
+    /// Returns a list of status changes (Ok -> Error or Error -> Ok transitions)
+    /// that the caller can use for logging or other purposes.
     pub fn apply_changes(
         &mut self,
         response: &lp_model::project::api::ProjectResponse,
-    ) -> Result<(), String> {
+    ) -> Result<Vec<StatusChange>, String> {
+        let mut status_changes = Vec::new();
         match response {
             lp_model::project::api::ProjectResponse::GetChanges {
                 current_frame,
@@ -113,6 +131,7 @@ impl ClientProjectView {
                                 }
                             };
 
+                            let initial_status = NodeStatus::Created;
                             self.nodes.insert(
                                 *handle,
                                 ClientNodeEntry {
@@ -122,9 +141,11 @@ impl ClientProjectView {
                                     config_ver: FrameId::default(),
                                     state: None,
                                     state_ver: FrameId::default(),
-                                    status: NodeStatus::Created,
+                                    status: initial_status.clone(),
                                 },
                             );
+                            // Track initial status
+                            self.previous_status.insert(*handle, initial_status);
                         }
                         NodeChange::ConfigUpdated { handle, config_ver } => {
                             if let Some(entry) = self.nodes.get_mut(handle) {
@@ -140,12 +161,36 @@ impl ClientProjectView {
                         }
                         NodeChange::StatusChanged { handle, status } => {
                             if let Some(entry) = self.nodes.get_mut(handle) {
-                                entry.status = status.clone();
+                                let old_status = entry.status.clone();
+                                let new_status = status.clone();
+                                
+                                // Track status changes from Ok -> Error or Error -> Ok
+                                let should_report = matches!(
+                                    (&old_status, &new_status),
+                                    (NodeStatus::Ok, NodeStatus::Error(_))
+                                        | (NodeStatus::Error(_), NodeStatus::Ok)
+                                );
+                                
+                                if should_report {
+                                    status_changes.push(StatusChange {
+                                        path: entry.path.clone(),
+                                        old_status,
+                                        new_status: new_status.clone(),
+                                    });
+                                }
+                                
+                                entry.status = new_status.clone();
+                                // Update previous status for next comparison
+                                self.previous_status.insert(*handle, new_status);
+                            } else {
+                                // Node doesn't exist yet - just track the status
+                                self.previous_status.insert(*handle, status.clone());
                             }
                         }
                         NodeChange::Removed { handle } => {
                             self.nodes.remove(handle);
                             self.detail_tracking.remove(handle);
+                            self.previous_status.remove(handle);
                         }
                     }
                 }
@@ -184,7 +229,26 @@ impl ClientProjectView {
 
                         entry.config = config;
                         entry.state = Some(detail.state.clone());
-                        entry.status = detail.status.clone();
+                        // Check for status change when updating from detail
+                        let old_status = entry.status.clone();
+                        let new_status = detail.status.clone();
+                        let should_report = matches!(
+                            (&old_status, &new_status),
+                            (NodeStatus::Ok, NodeStatus::Error(_))
+                                | (NodeStatus::Error(_), NodeStatus::Ok)
+                        );
+                        
+                        if should_report {
+                            status_changes.push(StatusChange {
+                                path: entry.path.clone(),
+                                old_status,
+                                new_status: new_status.clone(),
+                            });
+                        }
+                        
+                        entry.status = new_status.clone();
+                        // Update previous status
+                        self.previous_status.insert(*handle, new_status);
                     } else {
                         // Create new entry from detail (node exists but wasn't in Created changes)
                         // Note: NodeDetail doesn't have kind field, so we infer from state
@@ -222,6 +286,7 @@ impl ClientProjectView {
                             }
                         };
 
+                        let detail_status = detail.status.clone();
                         self.nodes.insert(
                             *handle,
                             ClientNodeEntry {
@@ -231,13 +296,15 @@ impl ClientProjectView {
                                 config_ver: FrameId::default(),
                                 state: Some(detail.state.clone()),
                                 state_ver: FrameId::default(),
-                                status: detail.status.clone(),
+                                status: detail_status.clone(),
                             },
                         );
+                        // Track status from detail
+                        self.previous_status.insert(*handle, detail_status);
                     }
                 }
 
-                Ok(())
+                Ok(status_changes)
             }
         }
     }

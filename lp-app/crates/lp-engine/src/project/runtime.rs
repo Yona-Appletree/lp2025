@@ -350,11 +350,27 @@ impl ProjectRuntime {
                     runtime.init(&ctx)
                 };
 
+                // Check if this is a shader runtime with compilation error before storing
+                // GLSL compilation errors are runtime state errors, not initialization errors
+                let shader_compilation_error = if node_kind == NodeKind::Shader {
+                    // Try to downcast to ShaderRuntime to check compilation error
+                    runtime.as_any().downcast_ref::<ShaderRuntime>()
+                        .and_then(|sr| sr.compilation_error().map(|s| s.to_string()))
+                } else {
+                    None
+                };
+
                 // Now do mutable operations (context is dropped)
                 if let Some(entry) = self.nodes.get_mut(&handle) {
                     match init_result {
                         Ok(()) => {
-                            entry.status = NodeStatus::Ok;
+                            if let Some(error_msg) = shader_compilation_error {
+                                // Shader initialized but has compilation error - set status to Error
+                                entry.status = NodeStatus::Error(error_msg);
+                            } else {
+                                // Node initialized successfully
+                                entry.status = NodeStatus::Ok;
+                            }
                             entry.runtime = Some(runtime);
                         }
                         Err(e) => {
@@ -372,15 +388,17 @@ impl ProjectRuntime {
     /// Ensure all nodes initialized successfully
     ///
     /// Returns an error if any nodes failed to initialize, with details about
-    /// which nodes failed and why. Warnings are ignored (nodes with warnings
-    /// are considered successfully initialized).
+    /// which nodes failed and why. Warnings and runtime errors are ignored
+    /// (nodes with warnings or runtime errors are considered successfully initialized).
     pub fn ensure_all_nodes_initialized(&self) -> Result<(), Error> {
         let mut failed_nodes = Vec::new();
 
         for (_, entry) in &self.nodes {
             match &entry.status {
-                NodeStatus::Ok | NodeStatus::Warn(_) => {
-                    // Node initialized successfully (warnings are acceptable)
+                NodeStatus::Ok | NodeStatus::Warn(_) | NodeStatus::Error(_) => {
+                    // Node initialized successfully
+                    // Warnings and runtime errors (e.g., GLSL compilation errors) are acceptable
+                    // The node is initialized, just in an error state
                 }
                 NodeStatus::Created => {
                     failed_nodes.push(format!(
@@ -392,14 +410,6 @@ impl ProjectRuntime {
                 NodeStatus::InitError(msg) => {
                     failed_nodes.push(format!(
                         "{} ({:?}): initialization error: {}",
-                        entry.path.as_str(),
-                        entry.kind,
-                        msg
-                    ));
-                }
-                NodeStatus::Error(msg) => {
-                    failed_nodes.push(format!(
-                        "{} ({:?}): error: {}",
                         entry.path.as_str(),
                         entry.kind,
                         msg
@@ -706,13 +716,29 @@ impl ProjectRuntime {
 
                 if let Some(mut runtime) = runtime_opt {
                     let ctx = InitContext::new(self, &path)?;
+                    // handle_fs_change now returns Ok() even on compilation errors
                     runtime.handle_fs_change(&relative_change, &ctx)?;
                     // Drop context before mutating nodes
                     drop(ctx);
 
-                    // Put runtime back
+                    // Check if this is a shader runtime with compilation error
+                    let shader_compilation_error = runtime.as_any().downcast_ref::<ShaderRuntime>()
+                        .and_then(|sr| sr.compilation_error().map(|s| s.to_string()));
+
+                    // Put runtime back and update status
                     if let Some(node_entry) = self.nodes.get_mut(&handle) {
+                        let old_status = node_entry.status.clone();
                         node_entry.runtime = Some(runtime);
+
+                        // Update status based on compilation error state
+                        if let Some(error_msg) = shader_compilation_error {
+                            // Shader has compilation error - update status to Error
+                            node_entry.status = NodeStatus::Error(error_msg);
+                        } else if matches!(old_status, NodeStatus::Error(_)) {
+                            // No compilation error and status was Error - update to Ok
+                            node_entry.status = NodeStatus::Ok;
+                        }
+                        // Status change will be picked up in get_changes() if status changed
                     }
                 }
             }
