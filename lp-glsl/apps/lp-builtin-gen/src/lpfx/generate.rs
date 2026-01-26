@@ -68,7 +68,7 @@ pub fn generate_lpfx_fns(parsed_functions: &[ParsedLpfxFunction]) -> String {
     let grouped = group_functions_by_name(parsed_functions);
 
     // Generate LpfxFn structures
-    for (glsl_name, functions) in &grouped {
+    for (_glsl_name, functions) in &grouped {
         let func = functions[0]; // Use first function as reference (they should all have same signature)
 
         output.push_str("        LpfxFn {\n");

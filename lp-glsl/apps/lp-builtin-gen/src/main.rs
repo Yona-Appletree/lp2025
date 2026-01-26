@@ -6,6 +6,11 @@ use walkdir::WalkDir;
 mod discovery;
 mod lpfx;
 
+use discovery::discover_lpfx_functions;
+use lpfx::generate::generate_lpfx_fns;
+use lpfx::process::process_lpfx_functions;
+use lpfx::validate::validate_lpfx_functions;
+
 #[derive(Debug, Clone)]
 struct BuiltinInfo {
     enum_variant: String,
@@ -15,7 +20,7 @@ struct BuiltinInfo {
     file_name: String,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let workspace_root = find_workspace_root().expect("Failed to find workspace root");
     let fixed32_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/fixed32");
     let lpfx_dir = workspace_root.join("lp-glsl/crates/lp-builtins/src/builtins/lpfx");
@@ -47,6 +52,11 @@ fn main() {
         .join("lp-glsl/crates/lp-glsl-compiler/src/backend/transform/fixed32/converters/math.rs");
     generate_testcase_mapping(&math_rs_path, &builtins);
 
+    // Generate lpfx_fns.rs
+    let lpfx_fns_path = workspace_root
+        .join("lp-glsl/crates/lp-glsl-compiler/src/frontend/semantic/lpfx/lpfx_fns.rs");
+    generate_lpfx_fns_file(&lpfx_fns_path, &lpfx_dir)?;
+
     // Format generated files using cargo fmt
     format_generated_files(
         &workspace_root,
@@ -55,10 +65,35 @@ fn main() {
             &builtin_refs_path,
             &mod_rs_path,
             &math_rs_path,
+            &lpfx_fns_path,
         ],
     );
 
     println!("Generated all builtin boilerplate files");
+    Ok(())
+}
+
+/// Generate lpfx_fns.rs file
+fn generate_lpfx_fns_file(
+    output_path: &Path,
+    lpfx_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Discover LPFX functions
+    let discovered = discover_lpfx_functions(lpfx_dir)?;
+
+    // Process: parse attributes and GLSL signatures
+    let parsed = process_lpfx_functions(&discovered)?;
+
+    // Validate
+    validate_lpfx_functions(&parsed)?;
+
+    // Generate code
+    let code = generate_lpfx_fns(&parsed);
+
+    // Write to file
+    fs::write(output_path, code)?;
+
+    Ok(())
 }
 
 fn find_workspace_root() -> Result<PathBuf, Box<dyn std::error::Error>> {
