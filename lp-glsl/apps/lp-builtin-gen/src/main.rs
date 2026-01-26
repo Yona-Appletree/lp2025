@@ -714,10 +714,12 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                 ) => {
                     builtin_to_func.insert(*builtin_id, func);
                 }
-                lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn::LpfxFnImpl::Decimal(map) => {
-                    for builtin_id in map.values() {
-                        builtin_to_func.insert(*builtin_id, func);
-                    }
+                lp_glsl_compiler::frontend::semantic::lpfx::lpfx_fn::LpfxFnImpl::Decimal {
+                    float_impl,
+                    q32_impl,
+                } => {
+                    builtin_to_func.insert(*float_impl, func);
+                    builtin_to_func.insert(*q32_impl, func);
                 }
             }
         }

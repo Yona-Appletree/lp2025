@@ -16,7 +16,7 @@ use crate::util::q32::Q32;
 /// # Returns
 /// Noise value approximately in range [-1, 1] as f32
 #[unsafe(no_mangle)]
-pub extern "C" fn __lpfx_simplex2_float(x: f32, y: f32, seed: u32) -> f32 {
+pub extern "C" fn __lpfx_simplex2_f32(x: f32, y: f32, seed: u32) -> f32 {
     // Stub: convert to fixed32, call q32 version, convert back
     let x_q32 = Q32::from_f32(x);
     let y_q32 = Q32::from_f32(y);

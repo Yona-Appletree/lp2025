@@ -276,11 +276,11 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::LpfxHash1 => hash::__lpfx_hash_1 as *const u8,
         BuiltinId::LpfxHash2 => hash::__lpfx_hash_2 as *const u8,
         BuiltinId::LpfxHash3 => hash::__lpfx_hash_3 as *const u8,
-        BuiltinId::LpfxSimplex1Float => simplex::simplex1_float::__lpfx_simplex1_float as *const u8,
+        BuiltinId::LpfxSimplex1Float => simplex::simplex1_f32::__lpfx_simplex1_f32 as *const u8,
         BuiltinId::LpfxSimplex1Q32 => simplex::simplex1_q32::__lpfx_simplex1_q32 as *const u8,
-        BuiltinId::LpfxSimplex2Float => simplex::simplex2_float::__lpfx_simplex2_float as *const u8,
+        BuiltinId::LpfxSimplex2Float => simplex::simplex2_f32::__lpfx_simplex2_f32 as *const u8,
         BuiltinId::LpfxSimplex2Q32 => simplex::simplex2_q32::__lpfx_simplex2_q32 as *const u8,
-        BuiltinId::LpfxSimplex3Float => simplex::simplex3_float::__lpfx_simplex3_float as *const u8,
+        BuiltinId::LpfxSimplex3Float => simplex::simplex3_f32::__lpfx_simplex3_f32 as *const u8,
         BuiltinId::LpfxSimplex3Q32 => simplex::simplex3_q32::__lpfx_simplex3_q32 as *const u8,
     }
 }
