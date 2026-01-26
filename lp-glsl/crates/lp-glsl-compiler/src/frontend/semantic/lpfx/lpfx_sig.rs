@@ -88,9 +88,6 @@ pub fn convert_to_cranelift_types(
                         cranelift_types.push(types::F32);
                         cranelift_types.push(types::F32);
                     }
-                    DecimalFormat::Fixed64 => {
-                        panic!("Fixed64 format not yet supported");
-                    }
                 }
             }
             Type::Vec3 | Type::IVec3 | Type::UVec3 => {
@@ -106,15 +103,11 @@ pub fn convert_to_cranelift_types(
                         cranelift_types.push(types::F32);
                         cranelift_types.push(types::F32);
                     }
-                    DecimalFormat::Fixed64 => {
-                        panic!("Fixed64 format not yet supported");
-                    }
                 }
             }
             Type::Float => match format {
                 DecimalFormat::Fixed32 => cranelift_types.push(types::I32),
                 DecimalFormat::Float => cranelift_types.push(types::F32),
-                DecimalFormat::Fixed64 => panic!("Fixed64 format not yet supported"),
             },
             Type::UInt | Type::Int => {
                 // UInt and Int both map to I32 in Cranelift
@@ -159,7 +152,6 @@ pub fn build_call_signature(
         Type::Float => match format {
             DecimalFormat::Fixed32 => sig.returns.push(AbiParam::new(types::I32)),
             DecimalFormat::Float => sig.returns.push(AbiParam::new(types::F32)),
-            DecimalFormat::Fixed64 => panic!("Fixed64 format not yet supported"),
         },
         Type::UInt | Type::Int => {
             sig.returns.push(AbiParam::new(types::I32));

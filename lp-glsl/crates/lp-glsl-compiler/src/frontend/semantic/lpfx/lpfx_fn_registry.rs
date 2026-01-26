@@ -41,8 +41,8 @@ pub fn find_lpfx_fn_by_builtin_id(
             super::lpfx_fn::LpfxFnImpl::NonDecimal(id) if *id == builtin_id => {
                 return Some(func);
             }
-            super::lpfx_fn::LpfxFnImpl::Decimal(map) => {
-                if map.values().any(|id| *id == builtin_id) {
+            super::lpfx_fn::LpfxFnImpl::Decimal { float_impl, q32_impl } => {
+                if *float_impl == builtin_id || *q32_impl == builtin_id {
                     return Some(func);
                 }
             }
@@ -119,6 +119,11 @@ pub fn get_builtin_id_for_format(
 ) -> Option<crate::backend::builtins::registry::BuiltinId> {
     match &func.impls {
         super::lpfx_fn::LpfxFnImpl::NonDecimal(builtin_id) => Some(*builtin_id),
-        super::lpfx_fn::LpfxFnImpl::Decimal(map) => map.get(&format).copied(),
+        super::lpfx_fn::LpfxFnImpl::Decimal { float_impl, q32_impl } => {
+            match format {
+                crate::DecimalFormat::Float => Some(*float_impl),
+                crate::DecimalFormat::Fixed32 => Some(*q32_impl),
+            }
+        }
     }
 }

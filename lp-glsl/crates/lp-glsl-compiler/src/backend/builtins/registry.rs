@@ -54,8 +54,11 @@ pub enum BuiltinId {
     LpfxHash1,
     LpfxHash2,
     LpfxHash3,
+    LpfxSimplex1Float,
     LpfxSimplex1Q32,
+    LpfxSimplex2Float,
     LpfxSimplex2Q32,
+    LpfxSimplex3Float,
     LpfxSimplex3Q32,
 }
 
@@ -95,8 +98,11 @@ impl BuiltinId {
             BuiltinId::LpfxHash1 => "__lpfx_hash_1",
             BuiltinId::LpfxHash2 => "__lpfx_hash_2",
             BuiltinId::LpfxHash3 => "__lpfx_hash_3",
+            BuiltinId::LpfxSimplex1Float => "__lpfx_simplex1_float",
             BuiltinId::LpfxSimplex1Q32 => "__lpfx_simplex1_q32",
+            BuiltinId::LpfxSimplex2Float => "__lpfx_simplex2_float",
             BuiltinId::LpfxSimplex2Q32 => "__lpfx_simplex2_q32",
+            BuiltinId::LpfxSimplex3Float => "__lpfx_simplex3_float",
             BuiltinId::LpfxSimplex3Q32 => "__lpfx_simplex3_q32",
         }
     }
@@ -105,6 +111,14 @@ impl BuiltinId {
     pub fn signature(&self) -> Signature {
         let mut sig = Signature::new(CallConv::SystemV);
         match self {
+            BuiltinId::LpfxSimplex3Float => {
+                // (f32, f32, f32, u32) -> f32 (vec3 expanded to 3 f32s)
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::I32)); // u32 maps to i32 in Cranelift
+                sig.returns.push(AbiParam::new(types::F32));
+            }
             BuiltinId::LpfxHash3 | BuiltinId::LpfxSimplex3Q32 => {
                 // (i32, i32, i32, i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
@@ -113,12 +127,25 @@ impl BuiltinId {
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
             }
+            BuiltinId::LpfxSimplex2Float => {
+                // (f32, f32, u32) -> f32 (vec2 expanded to 2 f32s)
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::I32)); // u32 maps to i32 in Cranelift
+                sig.returns.push(AbiParam::new(types::F32));
+            }
             BuiltinId::LpFixed32Fma | BuiltinId::LpfxHash2 | BuiltinId::LpfxSimplex2Q32 => {
                 // (i32, i32, i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
+            }
+            BuiltinId::LpfxSimplex1Float => {
+                // (f32, u32) -> f32
+                sig.params.push(AbiParam::new(types::F32));
+                sig.params.push(AbiParam::new(types::I32)); // u32 maps to i32 in Cranelift
+                sig.returns.push(AbiParam::new(types::F32));
             }
             BuiltinId::LpFixed32Add
             | BuiltinId::LpFixed32Atan2
@@ -198,8 +225,11 @@ impl BuiltinId {
             BuiltinId::LpfxHash1,
             BuiltinId::LpfxHash2,
             BuiltinId::LpfxHash3,
+            BuiltinId::LpfxSimplex1Float,
             BuiltinId::LpfxSimplex1Q32,
+            BuiltinId::LpfxSimplex2Float,
             BuiltinId::LpfxSimplex2Q32,
+            BuiltinId::LpfxSimplex3Float,
             BuiltinId::LpfxSimplex3Q32,
         ]
     }
@@ -246,8 +276,11 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::LpfxHash1 => hash::__lpfx_hash_1 as *const u8,
         BuiltinId::LpfxHash2 => hash::__lpfx_hash_2 as *const u8,
         BuiltinId::LpfxHash3 => hash::__lpfx_hash_3 as *const u8,
+        BuiltinId::LpfxSimplex1Float => simplex::simplex1_float::__lpfx_simplex1_float as *const u8,
         BuiltinId::LpfxSimplex1Q32 => simplex::simplex1_q32::__lpfx_simplex1_q32 as *const u8,
+        BuiltinId::LpfxSimplex2Float => simplex::simplex2_float::__lpfx_simplex2_float as *const u8,
         BuiltinId::LpfxSimplex2Q32 => simplex::simplex2_q32::__lpfx_simplex2_q32 as *const u8,
+        BuiltinId::LpfxSimplex3Float => simplex::simplex3_float::__lpfx_simplex3_float as *const u8,
         BuiltinId::LpfxSimplex3Q32 => simplex::simplex3_q32::__lpfx_simplex3_q32 as *const u8,
     }
 }

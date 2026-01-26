@@ -133,10 +133,9 @@ fn init_functions() -> &'static [LpfxFn] {
                     },
                 ],
             },
-            impls: {
-                let mut map = HashMap::new();
-                map.insert(DecimalFormat::Fixed32, BuiltinId::LpfxSimplex1Q32);
-                LpfxFnImpl::Decimal(map)
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxSimplex1Float,
+                q32_impl: BuiltinId::LpfxSimplex1Q32,
             },
         },
         LpfxFn {
@@ -156,10 +155,9 @@ fn init_functions() -> &'static [LpfxFn] {
                     },
                 ],
             },
-            impls: {
-                let mut map = HashMap::new();
-                map.insert(DecimalFormat::Fixed32, BuiltinId::LpfxSimplex2Q32);
-                LpfxFnImpl::Decimal(map)
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxSimplex2Float,
+                q32_impl: BuiltinId::LpfxSimplex2Q32,
             },
         },
         LpfxFn {
@@ -179,10 +177,9 @@ fn init_functions() -> &'static [LpfxFn] {
                     },
                 ],
             },
-            impls: {
-                let mut map = HashMap::new();
-                map.insert(DecimalFormat::Fixed32, BuiltinId::LpfxSimplex3Q32);
-                LpfxFnImpl::Decimal(map)
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxSimplex3Float,
+                q32_impl: BuiltinId::LpfxSimplex3Q32,
             },
         },
     ];

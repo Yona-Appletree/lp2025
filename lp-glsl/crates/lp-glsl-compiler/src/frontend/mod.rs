@@ -99,12 +99,6 @@ pub fn compile_glsl_to_gl_module_jit(
                 let transform = Fixed32Transform::new(FixedPointFormat::Fixed16x16);
                 module = module.apply_transform(transform)?;
             }
-            DecimalFormat::Fixed64 => {
-                return Err(GlslError::new(
-                    crate::error::ErrorCode::E0400,
-                    "Fixed64 format is not yet supported. Only Fixed32 format is currently supported.",
-                ));
-            }
             DecimalFormat::Float => {
                 return Err(GlslError::new(
                     crate::error::ErrorCode::E0400,
@@ -168,12 +162,6 @@ pub fn compile_glsl_to_gl_module_object(
             {
                 None
             }
-        }
-        DecimalFormat::Fixed64 => {
-            return Err(GlslError::new(
-                crate::error::ErrorCode::E0400,
-                "Fixed64 not yet supported",
-            ));
         }
         DecimalFormat::Float => {
             // No transformation needed, so transformed_clif is same as original_clif

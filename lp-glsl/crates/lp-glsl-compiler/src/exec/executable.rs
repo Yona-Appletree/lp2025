@@ -146,8 +146,6 @@ pub enum DecimalFormat {
     Float,
     /// Fixed-point 32-bit (Q format)
     Fixed32,
-    /// Fixed-point 64-bit (not yet supported)
-    Fixed64,
 }
 
 /// Compilation options

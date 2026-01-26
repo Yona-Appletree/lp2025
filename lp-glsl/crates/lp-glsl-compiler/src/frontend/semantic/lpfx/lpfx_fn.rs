@@ -20,5 +20,8 @@ pub struct LpfxFn {
 
 pub enum LpfxFnImpl {
     NonDecimal(BuiltinId),
-    Decimal(HashMap<DecimalFormat, BuiltinId>),
+    Decimal {
+        float_impl: BuiltinId,
+        q32_impl: BuiltinId,
+    },
 }
