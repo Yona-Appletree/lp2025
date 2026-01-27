@@ -51,3 +51,70 @@ pub extern "C" fn __lpfx_hue2rgb_q32(hue: i32) -> i32 {
     let result = lpfx_hue2rgb_q32(Q32::from_fixed(hue));
     result.x.to_fixed()
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(test)]
+    extern crate std;
+    use super::*;
+    use crate::util::test_helpers::{fixed_to_float, float_to_fixed};
+
+    #[test]
+    fn test_hue2rgb_red() {
+        // Hue 0.0 should produce red (1, 0, 0)
+        let result = lpfx_hue2rgb_q32(Q32::ZERO);
+        let r = fixed_to_float(result.x.to_fixed());
+        let g = fixed_to_float(result.y.to_fixed());
+        let b = fixed_to_float(result.z.to_fixed());
+        assert!((r - 1.0).abs() < 0.01, "Red component should be ~1.0, got {}", r);
+        assert!(g < 0.01, "Green component should be ~0.0, got {}", g);
+        assert!(b < 0.01, "Blue component should be ~0.0, got {}", b);
+    }
+
+    #[test]
+    fn test_hue2rgb_green() {
+        // Hue ~0.333 should produce green (0, 1, 0)
+        let hue = Q32::from_f32(0.333);
+        let result = lpfx_hue2rgb_q32(hue);
+        let r = fixed_to_float(result.x.to_fixed());
+        let g = fixed_to_float(result.y.to_fixed());
+        let b = fixed_to_float(result.z.to_fixed());
+        assert!(r < 0.01, "Red component should be ~0.0, got {}", r);
+        assert!((g - 1.0).abs() < 0.01, "Green component should be ~1.0, got {}", g);
+        assert!(b < 0.01, "Blue component should be ~0.0, got {}", b);
+    }
+
+    #[test]
+    fn test_hue2rgb_blue() {
+        // Hue ~0.666 should produce blue (0, 0, 1)
+        let hue = Q32::from_f32(0.666);
+        let result = lpfx_hue2rgb_q32(hue);
+        let r = fixed_to_float(result.x.to_fixed());
+        let g = fixed_to_float(result.y.to_fixed());
+        let b = fixed_to_float(result.z.to_fixed());
+        assert!(r < 0.01, "Red component should be ~0.0, got {}", r);
+        assert!(g < 0.01, "Green component should be ~0.0, got {}", g);
+        assert!((b - 1.0).abs() < 0.01, "Blue component should be ~1.0, got {}", b);
+    }
+
+    #[test]
+    fn test_hue2rgb_range() {
+        // All components should be in [0, 1] range
+        for i in 0..100 {
+            let hue = Q32::from_f32(i as f32 / 100.0);
+            let result = lpfx_hue2rgb_q32(hue);
+            assert!(
+                result.x >= Q32::ZERO && result.x <= Q32::ONE,
+                "R component should be in [0, 1]"
+            );
+            assert!(
+                result.y >= Q32::ZERO && result.y <= Q32::ONE,
+                "G component should be in [0, 1]"
+            );
+            assert!(
+                result.z >= Q32::ZERO && result.z <= Q32::ONE,
+                "B component should be in [0, 1]"
+            );
+        }
+    }
+}

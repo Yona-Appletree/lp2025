@@ -104,3 +104,67 @@ pub extern "C" fn __lpfx_saturate_vec4_q32(x: i32, y: i32, z: i32, w: i32) -> i3
     let result = lpfx_saturate_vec4_q32(v);
     result.x.to_fixed()
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(test)]
+    extern crate std;
+    use super::*;
+    use crate::util::test_helpers::{fixed_to_float, float_to_fixed};
+
+    #[test]
+    fn test_saturate_q32_below_zero() {
+        let result = lpfx_saturate_q32(Q32::from_f32(-0.5));
+        assert_eq!(result, Q32::ZERO, "Negative values should clamp to 0");
+    }
+
+    #[test]
+    fn test_saturate_q32_above_one() {
+        let result = lpfx_saturate_q32(Q32::from_f32(1.5));
+        assert_eq!(result, Q32::ONE, "Values above 1 should clamp to 1");
+    }
+
+    #[test]
+    fn test_saturate_q32_in_range() {
+        let result = lpfx_saturate_q32(Q32::from_f32(0.5));
+        let result_float = fixed_to_float(result.to_fixed());
+        assert!(
+            (result_float - 0.5).abs() < 0.0001,
+            "Values in range should remain unchanged"
+        );
+    }
+
+    #[test]
+    fn test_saturate_q32_zero() {
+        let result = lpfx_saturate_q32(Q32::ZERO);
+        assert_eq!(result, Q32::ZERO, "Zero should remain zero");
+    }
+
+    #[test]
+    fn test_saturate_q32_one() {
+        let result = lpfx_saturate_q32(Q32::ONE);
+        assert_eq!(result, Q32::ONE, "One should remain one");
+    }
+
+    #[test]
+    fn test_saturate_vec3_q32() {
+        let v = Vec3Q32::from_f32(-0.5, 0.5, 1.5);
+        let result = lpfx_saturate_vec3_q32(v);
+        assert_eq!(result.x, Q32::ZERO, "X component should clamp to 0");
+        let y_float = fixed_to_float(result.y.to_fixed());
+        assert!((y_float - 0.5).abs() < 0.0001, "Y component should remain 0.5");
+        assert_eq!(result.z, Q32::ONE, "Z component should clamp to 1");
+    }
+
+    #[test]
+    fn test_saturate_vec4_q32() {
+        let v = Vec4Q32::from_f32(-0.5, 0.5, 1.5, 0.25);
+        let result = lpfx_saturate_vec4_q32(v);
+        assert_eq!(result.x, Q32::ZERO, "X component should clamp to 0");
+        let y_float = fixed_to_float(result.y.to_fixed());
+        assert!((y_float - 0.5).abs() < 0.0001, "Y component should remain 0.5");
+        assert_eq!(result.z, Q32::ONE, "Z component should clamp to 1");
+        let w_float = fixed_to_float(result.w.to_fixed());
+        assert!((w_float - 0.25).abs() < 0.0001, "W component should remain 0.25");
+    }
+}
