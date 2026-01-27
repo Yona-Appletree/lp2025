@@ -67,34 +67,38 @@ pub extern "C" fn __lpfx_saturate_q32(value: i32) -> i32 {
 
 /// Saturate function for vec3 (extern C wrapper for compiler).
 ///
+/// Uses StructReturn to return vec3: writes all components to memory.
+///
 /// # Arguments
+/// * `result_ptr` - Pointer to memory where vec3 result will be written (StructReturn)
 /// * `x` - X component as i32 (Q32 fixed-point)
 /// * `y` - Y component as i32 (Q32 fixed-point)
 /// * `z` - Z component as i32 (Q32 fixed-point)
-///
-/// # Returns
-/// X component as i32 (Q32 fixed-point)
 #[lpfx_impl_macro::lpfx_impl(q32, "vec3 lpfx_saturate(vec3 v)")]
 #[unsafe(no_mangle)]
-pub extern "C" fn __lpfx_saturate_vec3_q32(x: i32, y: i32, z: i32) -> i32 {
+pub extern "C" fn __lpfx_saturate_vec3_q32(result_ptr: *mut i32, x: i32, y: i32, z: i32) {
     let v = Vec3Q32::new(Q32::from_fixed(x), Q32::from_fixed(y), Q32::from_fixed(z));
     let result = lpfx_saturate_vec3_q32(v);
-    result.x.to_fixed()
+    unsafe {
+        *result_ptr.offset(0) = result.x.to_fixed();
+        *result_ptr.offset(1) = result.y.to_fixed();
+        *result_ptr.offset(2) = result.z.to_fixed();
+    }
 }
 
 /// Saturate function for vec4 (extern C wrapper for compiler).
 ///
+/// Uses StructReturn to return vec4: writes all components to memory.
+///
 /// # Arguments
+/// * `result_ptr` - Pointer to memory where vec4 result will be written (StructReturn)
 /// * `x` - X component as i32 (Q32 fixed-point)
 /// * `y` - Y component as i32 (Q32 fixed-point)
 /// * `z` - Z component as i32 (Q32 fixed-point)
 /// * `w` - W component as i32 (Q32 fixed-point)
-///
-/// # Returns
-/// X component as i32 (Q32 fixed-point)
 #[lpfx_impl_macro::lpfx_impl(q32, "vec4 lpfx_saturate(vec4 v)")]
 #[unsafe(no_mangle)]
-pub extern "C" fn __lpfx_saturate_vec4_q32(x: i32, y: i32, z: i32, w: i32) -> i32 {
+pub extern "C" fn __lpfx_saturate_vec4_q32(result_ptr: *mut i32, x: i32, y: i32, z: i32, w: i32) {
     let v = Vec4Q32::new(
         Q32::from_fixed(x),
         Q32::from_fixed(y),
@@ -102,7 +106,12 @@ pub extern "C" fn __lpfx_saturate_vec4_q32(x: i32, y: i32, z: i32, w: i32) -> i3
         Q32::from_fixed(w),
     );
     let result = lpfx_saturate_vec4_q32(v);
-    result.x.to_fixed()
+    unsafe {
+        *result_ptr.offset(0) = result.x.to_fixed();
+        *result_ptr.offset(1) = result.y.to_fixed();
+        *result_ptr.offset(2) = result.z.to_fixed();
+        *result_ptr.offset(3) = result.w.to_fixed();
+    }
 }
 
 #[cfg(test)]

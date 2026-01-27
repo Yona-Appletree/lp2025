@@ -40,16 +40,20 @@ pub fn lpfx_hue2rgb_q32(hue: Q32) -> Vec3Q32 {
 
 /// Convert hue value to RGB color (extern C wrapper for compiler).
 ///
-/// # Arguments
-/// * `hue` - Hue value as i32 (Q32 fixed-point)
+/// Uses StructReturn to return vec3: writes all components to memory.
 ///
-/// # Returns
-/// R component as i32 (Q32 fixed-point)
+/// # Arguments
+/// * `result_ptr` - Pointer to memory where vec3 result will be written (StructReturn)
+/// * `hue` - Hue value as i32 (Q32 fixed-point)
 #[lpfx_impl_macro::lpfx_impl(q32, "vec3 lpfx_hue2rgb(float hue)")]
 #[unsafe(no_mangle)]
-pub extern "C" fn __lpfx_hue2rgb_q32(hue: i32) -> i32 {
+pub extern "C" fn __lpfx_hue2rgb_q32(result_ptr: *mut i32, hue: i32) {
     let result = lpfx_hue2rgb_q32(Q32::from_fixed(hue));
-    result.x.to_fixed()
+    unsafe {
+        *result_ptr.offset(0) = result.x.to_fixed();
+        *result_ptr.offset(1) = result.y.to_fixed();
+        *result_ptr.offset(2) = result.z.to_fixed();
+    }
 }
 
 #[cfg(test)]

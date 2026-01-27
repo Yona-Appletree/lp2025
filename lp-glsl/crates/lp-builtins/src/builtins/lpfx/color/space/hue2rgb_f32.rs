@@ -8,16 +8,21 @@ use crate::util::q32::Q32;
 
 /// Convert hue value to RGB color (extern C wrapper for compiler).
 ///
-/// # Arguments
-/// * `hue` - Hue value as f32
+/// Uses StructReturn to return vec3: writes all components to memory.
 ///
-/// # Returns
-/// R component as f32
+/// # Arguments
+/// * `result_ptr` - Pointer to memory where vec3 result will be written (StructReturn)
+/// * `hue` - Hue value as f32
 #[lpfx_impl_macro::lpfx_impl(f32, "vec3 lpfx_hue2rgb(float hue)")]
 #[unsafe(no_mangle)]
-pub extern "C" fn __lpfx_hue2rgb_f32(hue: f32) -> f32 {
+pub extern "C" fn __lpfx_hue2rgb_f32(result_ptr: *mut f32, hue: f32) {
     // Stub: convert to q32, call q32 version, convert back
     let hue_q32 = Q32::from_f32(hue);
-    let result_fixed = __lpfx_hue2rgb_q32(hue_q32.to_fixed());
-    Q32::from_fixed(result_fixed).to_f32()
+    let mut result_q32 = [0i32; 3];
+    __lpfx_hue2rgb_q32(result_q32.as_mut_ptr(), hue_q32.to_fixed());
+    unsafe {
+        *result_ptr.offset(0) = Q32::from_fixed(result_q32[0]).to_f32();
+        *result_ptr.offset(1) = Q32::from_fixed(result_q32[1]).to_f32();
+        *result_ptr.offset(2) = Q32::from_fixed(result_q32[2]).to_f32();
+    }
 }
