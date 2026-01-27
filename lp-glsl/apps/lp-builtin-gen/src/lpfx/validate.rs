@@ -43,16 +43,17 @@ pub fn validate_lpfx_functions(
 
 /// Validate that all decimal functions have both f32 and q32 variants
 fn validate_decimal_pairs(parsed_functions: &[ParsedLpfxFunction]) -> Result<(), LpfxCodegenError> {
-    // Group functions by GLSL function name
-    let mut by_glsl_name: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
+    // Group functions by full signature (name + types), not just name
+    // This allows overloaded functions (e.g., vec3 and vec4 variants)
+    let mut by_signature: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
 
     for func in parsed_functions {
-        let glsl_name = func.glsl_sig.name.clone();
-        by_glsl_name.entry(glsl_name).or_default().push(func);
+        let key = signature_key(&func.glsl_sig);
+        by_signature.entry(key).or_default().push(func);
     }
 
     // Check each group
-    for (glsl_name, functions) in &by_glsl_name {
+    for (_sig_key, functions) in &by_signature {
         // Check if any function has a variant (decimal function)
         let has_variant = functions.iter().any(|f| f.attribute.variant.is_some());
 
@@ -73,16 +74,18 @@ fn validate_decimal_pairs(parsed_functions: &[ParsedLpfxFunction]) -> Result<(),
             }
 
             if !has_f32 {
+                let glsl_name = functions[0].glsl_sig.name.clone();
                 return Err(LpfxCodegenError::MissingPair {
-                    function_name: glsl_name.clone(),
+                    function_name: glsl_name,
                     missing_variant: Variant::F32,
                     found_variants,
                 });
             }
 
             if !has_q32 {
+                let glsl_name = functions[0].glsl_sig.name.clone();
                 return Err(LpfxCodegenError::MissingPair {
-                    function_name: glsl_name.clone(),
+                    function_name: glsl_name,
                     missing_variant: Variant::Q32,
                     found_variants,
                 });
@@ -93,20 +96,32 @@ fn validate_decimal_pairs(parsed_functions: &[ParsedLpfxFunction]) -> Result<(),
     Ok(())
 }
 
+/// Create a signature key for grouping functions (name + signature, ignoring variant)
+fn signature_key(sig: &FunctionSignature) -> String {
+    // Create a key from function name + return type + parameter types
+    let mut key = format!("{}:", sig.name);
+    key.push_str(&format!("{:?}", sig.return_type));
+    for param in &sig.parameters {
+        key.push_str(&format!("{:?}{:?}", param.ty, param.qualifier));
+    }
+    key
+}
+
 /// Validate that f32 and q32 variants have matching signatures
 fn validate_signature_consistency(
     parsed_functions: &[ParsedLpfxFunction],
 ) -> Result<(), LpfxCodegenError> {
-    // Group functions by GLSL function name
-    let mut by_glsl_name: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
+    // Group functions by full signature (name + types), not just name
+    // This allows overloaded functions (e.g., vec3 and vec4 variants)
+    let mut by_signature: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
 
     for func in parsed_functions {
-        let glsl_name = func.glsl_sig.name.clone();
-        by_glsl_name.entry(glsl_name).or_default().push(func);
+        let key = signature_key(&func.glsl_sig);
+        by_signature.entry(key).or_default().push(func);
     }
 
     // Check each group for signature consistency
-    for (glsl_name, functions) in &by_glsl_name {
+    for (_sig_key, functions) in &by_signature {
         // Find f32 and q32 variants
         let mut f32_func: Option<&ParsedLpfxFunction> = None;
         let mut q32_func: Option<&ParsedLpfxFunction> = None;
@@ -117,7 +132,7 @@ fn validate_signature_consistency(
                     Variant::F32 => {
                         if f32_func.is_some() {
                             return Err(LpfxCodegenError::DuplicateFunctionName {
-                                function_name: glsl_name.clone(),
+                                function_name: func.glsl_sig.name.clone(),
                                 conflicting_files: vec![
                                     f32_func.unwrap().info.file_path.display().to_string(),
                                     func.info.file_path.display().to_string(),
@@ -129,7 +144,7 @@ fn validate_signature_consistency(
                     Variant::Q32 => {
                         if q32_func.is_some() {
                             return Err(LpfxCodegenError::DuplicateFunctionName {
-                                function_name: glsl_name.clone(),
+                                function_name: func.glsl_sig.name.clone(),
                                 conflicting_files: vec![
                                     q32_func.unwrap().info.file_path.display().to_string(),
                                     func.info.file_path.display().to_string(),
@@ -142,12 +157,12 @@ fn validate_signature_consistency(
             }
         }
 
-        // If both exist, compare signatures
+        // If both exist, compare signatures (should already match since we grouped by signature)
         if let (Some(f32), Some(q32)) = (f32_func, q32_func)
             && !signatures_match(&f32.glsl_sig, &q32.glsl_sig)
         {
             return Err(LpfxCodegenError::SignatureMismatch {
-                function_name: glsl_name.clone(),
+                function_name: f32.glsl_sig.name.clone(),
                 f32_signature: format!("{:?}", f32.glsl_sig),
                 q32_signature: format!("{:?}", q32.glsl_sig),
             });

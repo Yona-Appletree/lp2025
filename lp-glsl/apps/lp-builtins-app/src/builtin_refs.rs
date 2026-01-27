@@ -6,6 +6,20 @@
 //! Or use the build script:
 //!     scripts/build-builtins.sh
 
+use lp_builtins::builtins::lpfx::color::space::hue2rgb_f32::__lpfx_hue2rgb_f32;
+use lp_builtins::builtins::lpfx::color::space::hue2rgb_q32::__lpfx_hue2rgb_q32;
+use lp_builtins::builtins::lpfx::color::space::{
+    hsv2rgb_f32::__lpfx_hsv2rgb_f32, hsv2rgb_f32::__lpfx_hsv2rgb_vec4_f32,
+};
+use lp_builtins::builtins::lpfx::color::space::{
+    hsv2rgb_q32::__lpfx_hsv2rgb_q32, hsv2rgb_q32::__lpfx_hsv2rgb_vec4_q32,
+};
+use lp_builtins::builtins::lpfx::color::space::{
+    rgb2hsv_f32::__lpfx_rgb2hsv_f32, rgb2hsv_f32::__lpfx_rgb2hsv_vec4_f32,
+};
+use lp_builtins::builtins::lpfx::color::space::{
+    rgb2hsv_q32::__lpfx_rgb2hsv_q32, rgb2hsv_q32::__lpfx_rgb2hsv_vec4_q32,
+};
 use lp_builtins::builtins::lpfx::generative::snoise::snoise1_f32::__lpfx_snoise1_f32;
 use lp_builtins::builtins::lpfx::generative::snoise::snoise1_q32::__lpfx_snoise1_q32;
 use lp_builtins::builtins::lpfx::generative::snoise::snoise2_f32::__lpfx_snoise2_f32;
@@ -20,6 +34,14 @@ use lp_builtins::builtins::lpfx::generative::worley::worley3_f32::__lpfx_worley3
 use lp_builtins::builtins::lpfx::generative::worley::worley3_q32::__lpfx_worley3_q32;
 use lp_builtins::builtins::lpfx::generative::worley::worley3_value_f32::__lpfx_worley3_value_f32;
 use lp_builtins::builtins::lpfx::generative::worley::worley3_value_q32::__lpfx_worley3_value_q32;
+use lp_builtins::builtins::lpfx::math::{
+    saturate_f32::__lpfx_saturate_f32, saturate_f32::__lpfx_saturate_vec3_f32,
+    saturate_f32::__lpfx_saturate_vec4_f32,
+};
+use lp_builtins::builtins::lpfx::math::{
+    saturate_q32::__lpfx_saturate_q32, saturate_q32::__lpfx_saturate_vec3_q32,
+    saturate_q32::__lpfx_saturate_vec4_q32,
+};
 use lp_builtins::builtins::lpfx::{hash::__lpfx_hash_1, hash::__lpfx_hash_2, hash::__lpfx_hash_3};
 use lp_builtins::builtins::q32::__lp_q32_acos;
 use lp_builtins::builtins::q32::__lp_q32_acosh;
@@ -89,6 +111,30 @@ pub fn ensure_builtins_referenced() {
         let __lpfx_hash_1_fn: extern "C" fn(u32, u32) -> u32 = __lpfx_hash_1;
         let __lpfx_hash_2_fn: extern "C" fn(u32, u32, u32) -> u32 = __lpfx_hash_2;
         let __lpfx_hash_3_fn: extern "C" fn(u32, u32, u32, u32) -> u32 = __lpfx_hash_3;
+        let __lpfx_hsv2rgb_f32_fn: extern "C" fn(f32, f32, f32) -> f32 = __lpfx_hsv2rgb_f32;
+        let __lpfx_hsv2rgb_q32_fn: extern "C" fn(i32, i32, i32) -> i32 = __lpfx_hsv2rgb_q32;
+        let __lpfx_hsv2rgb_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+            __lpfx_hsv2rgb_vec4_f32;
+        let __lpfx_hsv2rgb_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+            __lpfx_hsv2rgb_vec4_q32;
+        let __lpfx_hue2rgb_f32_fn: extern "C" fn(f32) -> f32 = __lpfx_hue2rgb_f32;
+        let __lpfx_hue2rgb_q32_fn: extern "C" fn(i32) -> i32 = __lpfx_hue2rgb_q32;
+        let __lpfx_rgb2hsv_f32_fn: extern "C" fn(f32, f32, f32) -> f32 = __lpfx_rgb2hsv_f32;
+        let __lpfx_rgb2hsv_q32_fn: extern "C" fn(i32, i32, i32) -> i32 = __lpfx_rgb2hsv_q32;
+        let __lpfx_rgb2hsv_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+            __lpfx_rgb2hsv_vec4_f32;
+        let __lpfx_rgb2hsv_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+            __lpfx_rgb2hsv_vec4_q32;
+        let __lpfx_saturate_f32_fn: extern "C" fn(f32) -> f32 = __lpfx_saturate_f32;
+        let __lpfx_saturate_q32_fn: extern "C" fn(i32) -> i32 = __lpfx_saturate_q32;
+        let __lpfx_saturate_vec3_f32_fn: extern "C" fn(f32, f32, f32) -> f32 =
+            __lpfx_saturate_vec3_f32;
+        let __lpfx_saturate_vec3_q32_fn: extern "C" fn(i32, i32, i32) -> i32 =
+            __lpfx_saturate_vec3_q32;
+        let __lpfx_saturate_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+            __lpfx_saturate_vec4_f32;
+        let __lpfx_saturate_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+            __lpfx_saturate_vec4_q32;
         let __lpfx_snoise1_f32_fn: extern "C" fn(f32, u32) -> f32 = __lpfx_snoise1_f32;
         let __lpfx_snoise1_q32_fn: extern "C" fn(i32, u32) -> i32 = __lpfx_snoise1_q32;
         let __lpfx_snoise2_f32_fn: extern "C" fn(f32, f32, u32) -> f32 = __lpfx_snoise2_f32;
@@ -142,6 +188,22 @@ pub fn ensure_builtins_referenced() {
         let _ = core::ptr::read_volatile(&__lpfx_hash_1_fn as *const _);
         let _ = core::ptr::read_volatile(&__lpfx_hash_2_fn as *const _);
         let _ = core::ptr::read_volatile(&__lpfx_hash_3_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hsv2rgb_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hsv2rgb_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hsv2rgb_vec4_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hsv2rgb_vec4_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hue2rgb_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_hue2rgb_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_rgb2hsv_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_rgb2hsv_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_rgb2hsv_vec4_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_rgb2hsv_vec4_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_vec3_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_vec3_q32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_vec4_f32_fn as *const _);
+        let _ = core::ptr::read_volatile(&__lpfx_saturate_vec4_q32_fn as *const _);
         let _ = core::ptr::read_volatile(&__lpfx_snoise1_f32_fn as *const _);
         let _ = core::ptr::read_volatile(&__lpfx_snoise1_q32_fn as *const _);
         let _ = core::ptr::read_volatile(&__lpfx_snoise2_f32_fn as *const _);

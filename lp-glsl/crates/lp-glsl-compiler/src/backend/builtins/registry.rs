@@ -54,6 +54,22 @@ pub enum BuiltinId {
     LpfxHash1,
     LpfxHash2,
     LpfxHash3,
+    LpfxHsv2rgbF32,
+    LpfxHsv2rgbQ32,
+    LpfxHsv2rgbVec4F32,
+    LpfxHsv2rgbVec4Q32,
+    LpfxHue2rgbF32,
+    LpfxHue2rgbQ32,
+    LpfxRgb2hsvF32,
+    LpfxRgb2hsvQ32,
+    LpfxRgb2hsvVec4F32,
+    LpfxRgb2hsvVec4Q32,
+    LpfxSaturateF32,
+    LpfxSaturateQ32,
+    LpfxSaturateVec3F32,
+    LpfxSaturateVec3Q32,
+    LpfxSaturateVec4F32,
+    LpfxSaturateVec4Q32,
     LpfxSnoise1F32,
     LpfxSnoise1Q32,
     LpfxSnoise2F32,
@@ -106,6 +122,22 @@ impl BuiltinId {
             BuiltinId::LpfxHash1 => "__lpfx_hash_1",
             BuiltinId::LpfxHash2 => "__lpfx_hash_2",
             BuiltinId::LpfxHash3 => "__lpfx_hash_3",
+            BuiltinId::LpfxHsv2rgbF32 => "__lpfx_hsv2rgb_f32",
+            BuiltinId::LpfxHsv2rgbQ32 => "__lpfx_hsv2rgb_q32",
+            BuiltinId::LpfxHsv2rgbVec4F32 => "__lpfx_hsv2rgb_vec4_f32",
+            BuiltinId::LpfxHsv2rgbVec4Q32 => "__lpfx_hsv2rgb_vec4_q32",
+            BuiltinId::LpfxHue2rgbF32 => "__lpfx_hue2rgb_f32",
+            BuiltinId::LpfxHue2rgbQ32 => "__lpfx_hue2rgb_q32",
+            BuiltinId::LpfxRgb2hsvF32 => "__lpfx_rgb2hsv_f32",
+            BuiltinId::LpfxRgb2hsvQ32 => "__lpfx_rgb2hsv_q32",
+            BuiltinId::LpfxRgb2hsvVec4F32 => "__lpfx_rgb2hsv_vec4_f32",
+            BuiltinId::LpfxRgb2hsvVec4Q32 => "__lpfx_rgb2hsv_vec4_q32",
+            BuiltinId::LpfxSaturateF32 => "__lpfx_saturate_f32",
+            BuiltinId::LpfxSaturateQ32 => "__lpfx_saturate_q32",
+            BuiltinId::LpfxSaturateVec3F32 => "__lpfx_saturate_vec3_f32",
+            BuiltinId::LpfxSaturateVec3Q32 => "__lpfx_saturate_vec3_q32",
+            BuiltinId::LpfxSaturateVec4F32 => "__lpfx_saturate_vec4_f32",
+            BuiltinId::LpfxSaturateVec4Q32 => "__lpfx_saturate_vec4_q32",
             BuiltinId::LpfxSnoise1F32 => "__lpfx_snoise1_f32",
             BuiltinId::LpfxSnoise1Q32 => "__lpfx_snoise1_q32",
             BuiltinId::LpfxSnoise2F32 => "__lpfx_snoise2_f32",
@@ -128,6 +160,12 @@ impl BuiltinId {
         let mut sig = Signature::new(CallConv::SystemV);
         match self {
             BuiltinId::LpfxHash3
+            | BuiltinId::LpfxHsv2rgbVec4F32
+            | BuiltinId::LpfxHsv2rgbVec4Q32
+            | BuiltinId::LpfxRgb2hsvVec4F32
+            | BuiltinId::LpfxRgb2hsvVec4Q32
+            | BuiltinId::LpfxSaturateVec4F32
+            | BuiltinId::LpfxSaturateVec4Q32
             | BuiltinId::LpfxSnoise3F32
             | BuiltinId::LpfxSnoise3Q32
             | BuiltinId::LpfxWorley3F32
@@ -143,6 +181,12 @@ impl BuiltinId {
             }
             BuiltinId::LpQ32Fma
             | BuiltinId::LpfxHash2
+            | BuiltinId::LpfxHsv2rgbF32
+            | BuiltinId::LpfxHsv2rgbQ32
+            | BuiltinId::LpfxRgb2hsvF32
+            | BuiltinId::LpfxRgb2hsvQ32
+            | BuiltinId::LpfxSaturateVec3F32
+            | BuiltinId::LpfxSaturateVec3Q32
             | BuiltinId::LpfxSnoise2F32
             | BuiltinId::LpfxSnoise2Q32
             | BuiltinId::LpfxWorley2F32
@@ -190,7 +234,11 @@ impl BuiltinId {
             | BuiltinId::LpQ32Sinh
             | BuiltinId::LpQ32Sqrt
             | BuiltinId::LpQ32Tan
-            | BuiltinId::LpQ32Tanh => {
+            | BuiltinId::LpQ32Tanh
+            | BuiltinId::LpfxHue2rgbF32
+            | BuiltinId::LpfxHue2rgbQ32
+            | BuiltinId::LpfxSaturateF32
+            | BuiltinId::LpfxSaturateQ32 => {
                 // (i32) -> i32
                 sig.params.push(AbiParam::new(types::I32));
                 sig.returns.push(AbiParam::new(types::I32));
@@ -234,6 +282,22 @@ impl BuiltinId {
             BuiltinId::LpfxHash1,
             BuiltinId::LpfxHash2,
             BuiltinId::LpfxHash3,
+            BuiltinId::LpfxHsv2rgbF32,
+            BuiltinId::LpfxHsv2rgbQ32,
+            BuiltinId::LpfxHsv2rgbVec4F32,
+            BuiltinId::LpfxHsv2rgbVec4Q32,
+            BuiltinId::LpfxHue2rgbF32,
+            BuiltinId::LpfxHue2rgbQ32,
+            BuiltinId::LpfxRgb2hsvF32,
+            BuiltinId::LpfxRgb2hsvQ32,
+            BuiltinId::LpfxRgb2hsvVec4F32,
+            BuiltinId::LpfxRgb2hsvVec4Q32,
+            BuiltinId::LpfxSaturateF32,
+            BuiltinId::LpfxSaturateQ32,
+            BuiltinId::LpfxSaturateVec3F32,
+            BuiltinId::LpfxSaturateVec3Q32,
+            BuiltinId::LpfxSaturateVec4F32,
+            BuiltinId::LpfxSaturateVec4Q32,
             BuiltinId::LpfxSnoise1F32,
             BuiltinId::LpfxSnoise1Q32,
             BuiltinId::LpfxSnoise2F32,
@@ -256,7 +320,7 @@ impl BuiltinId {
 ///
 /// Returns the function pointer that can be registered with JITModule.
 pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
-    use lp_builtins::builtins::{lpfx::generative, lpfx::hash, q32};
+    use lp_builtins::builtins::{lpfx::color, lpfx::generative, lpfx::hash, lpfx::math, q32};
     match builtin {
         BuiltinId::LpQ32Acos => q32::__lp_q32_acos as *const u8,
         BuiltinId::LpQ32Acosh => q32::__lp_q32_acosh as *const u8,
@@ -290,6 +354,30 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
         BuiltinId::LpfxHash1 => hash::__lpfx_hash_1 as *const u8,
         BuiltinId::LpfxHash2 => hash::__lpfx_hash_2 as *const u8,
         BuiltinId::LpfxHash3 => hash::__lpfx_hash_3 as *const u8,
+        BuiltinId::LpfxHsv2rgbF32 => color::space::hsv2rgb_f32::__lpfx_hsv2rgb_f32 as *const u8,
+        BuiltinId::LpfxHsv2rgbQ32 => color::space::hsv2rgb_q32::__lpfx_hsv2rgb_q32 as *const u8,
+        BuiltinId::LpfxHsv2rgbVec4F32 => {
+            color::space::hsv2rgb_f32::__lpfx_hsv2rgb_vec4_f32 as *const u8
+        }
+        BuiltinId::LpfxHsv2rgbVec4Q32 => {
+            color::space::hsv2rgb_q32::__lpfx_hsv2rgb_vec4_q32 as *const u8
+        }
+        BuiltinId::LpfxHue2rgbF32 => color::space::hue2rgb_f32::__lpfx_hue2rgb_f32 as *const u8,
+        BuiltinId::LpfxHue2rgbQ32 => color::space::hue2rgb_q32::__lpfx_hue2rgb_q32 as *const u8,
+        BuiltinId::LpfxRgb2hsvF32 => color::space::rgb2hsv_f32::__lpfx_rgb2hsv_f32 as *const u8,
+        BuiltinId::LpfxRgb2hsvQ32 => color::space::rgb2hsv_q32::__lpfx_rgb2hsv_q32 as *const u8,
+        BuiltinId::LpfxRgb2hsvVec4F32 => {
+            color::space::rgb2hsv_f32::__lpfx_rgb2hsv_vec4_f32 as *const u8
+        }
+        BuiltinId::LpfxRgb2hsvVec4Q32 => {
+            color::space::rgb2hsv_q32::__lpfx_rgb2hsv_vec4_q32 as *const u8
+        }
+        BuiltinId::LpfxSaturateF32 => math::saturate_f32::__lpfx_saturate_f32 as *const u8,
+        BuiltinId::LpfxSaturateQ32 => math::saturate_q32::__lpfx_saturate_q32 as *const u8,
+        BuiltinId::LpfxSaturateVec3F32 => math::saturate_f32::__lpfx_saturate_vec3_f32 as *const u8,
+        BuiltinId::LpfxSaturateVec3Q32 => math::saturate_q32::__lpfx_saturate_vec3_q32 as *const u8,
+        BuiltinId::LpfxSaturateVec4F32 => math::saturate_f32::__lpfx_saturate_vec4_f32 as *const u8,
+        BuiltinId::LpfxSaturateVec4Q32 => math::saturate_q32::__lpfx_saturate_vec4_q32 as *const u8,
         BuiltinId::LpfxSnoise1F32 => {
             generative::snoise::snoise1_f32::__lpfx_snoise1_f32 as *const u8
         }
