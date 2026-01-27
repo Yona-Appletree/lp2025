@@ -5,12 +5,13 @@
 
 use crate::DecimalFormat;
 use crate::error::{ErrorCode, GlslError};
+use crate::frontend::codegen::constants::{F32_ALIGN_SHIFT, F32_SIZE_BYTES};
 use crate::frontend::codegen::context::CodegenContext;
 use crate::frontend::semantic::lpfx::lpfx_fn_registry::find_lpfx_fn;
 use crate::frontend::semantic::lpfx::lpfx_sig::{build_call_signature, expand_vector_args};
 use crate::semantic::types::Type;
 use alloc::{format, vec, vec::Vec};
-use cranelift_codegen::ir::{ExtFuncData, ExternalName, FuncRef, InstBuilder, Value};
+use cranelift_codegen::ir::{ExtFuncData, ExternalName, FuncRef, InstBuilder, MemFlags, Value};
 
 impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
     /// Emit code for an LPFX function call.
@@ -50,6 +51,37 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         }
         let flat_args = expand_vector_args(&param_types, &flat_values);
 
+        // Check if function uses StructReturn (vector return type)
+        let return_type = &func.glsl_sig.return_type;
+        let uses_struct_return = return_type.is_vector();
+
+        // Setup StructReturn buffer if needed
+        let return_buffer_ptr = if uses_struct_return {
+            let element_count = return_type.component_count().unwrap();
+                    let buffer_size = (element_count * F32_SIZE_BYTES) as u32;
+            let pointer_type = self.gl_module.module_internal().isa().pointer_type();
+
+            let slot = self
+                .builder
+                .func
+                .create_sized_stack_slot(cranelift_codegen::ir::StackSlotData::new(
+                    cranelift_codegen::ir::StackSlotKind::ExplicitSlot,
+                    buffer_size,
+                    F32_ALIGN_SHIFT,
+                ));
+
+            Some(self.builder.ins().stack_addr(pointer_type, slot, 0))
+        } else {
+            None
+        };
+
+        // Prepare call arguments: StructReturn pointer first (if present), then regular args
+        let mut call_args = Vec::new();
+        if let Some(buffer_ptr) = return_buffer_ptr {
+            call_args.push(buffer_ptr);
+        }
+        call_args.extend(flat_args);
+
         // Handle Decimal vs NonDecimal implementations
         match &func.impls {
             crate::frontend::semantic::lpfx::lpfx_fn::LpfxFnImpl::Decimal {
@@ -59,23 +91,51 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
                 // Generate TestCase call with float signature (f32 args, f32 return)
                 let func_ref = self.get_lpfx_testcase_call(func, *float_impl, &param_types)?;
 
-                // Emit call instruction with float arguments (no conversion needed)
-                let call_inst = self.builder.ins().call(func_ref, &flat_args);
+                // Emit call instruction
+                self.ensure_block()?;
+                let call_inst = self.builder.ins().call(func_ref, &call_args);
 
-                // Extract return value(s)
-                let results = self.builder.inst_results(call_inst);
-                if results.len() != 1 {
-                    return Err(GlslError::new(
-                        ErrorCode::E0400,
-                        format!(
-                            "Expected 1 return value from LPFX function, got {}",
-                            results.len()
-                        ),
-                    ));
+                // Handle return values
+                if let Some(buffer_ptr) = return_buffer_ptr {
+                    // StructReturn: load values from buffer
+                    let element_count = return_type.component_count().unwrap();
+                    let base_type = return_type.vector_base_type().unwrap();
+                    let cranelift_ty = base_type.to_cranelift_type().map_err(|e| {
+                        GlslError::new(
+                            ErrorCode::E0400,
+                            format!(
+                                "Failed to convert return type to Cranelift type: {}",
+                                e.message
+                            ),
+                        )
+                    })?;
+
+                    let mut loaded_vals = Vec::new();
+                    for i in 0..element_count {
+                        let offset = (i * F32_SIZE_BYTES) as i32;
+                        let val = self.builder.ins().load(
+                            cranelift_ty,
+                            MemFlags::trusted(),
+                            buffer_ptr,
+                            offset,
+                        );
+                        loaded_vals.push(val);
+                    }
+                    Ok((loaded_vals, return_type.clone()))
+                } else {
+                    // Scalar return: extract from call results
+                    let results = self.builder.inst_results(call_inst);
+                    if results.len() != 1 {
+                        return Err(GlslError::new(
+                            ErrorCode::E0400,
+                            format!(
+                                "Expected 1 return value from LPFX function, got {}",
+                                results.len()
+                            ),
+                        ));
+                    }
+                    Ok((vec![results[0]], return_type.clone()))
                 }
-
-                // Return float result directly (no conversion needed)
-                Ok((vec![results[0]], func.glsl_sig.return_type.clone()))
             }
             crate::frontend::semantic::lpfx::lpfx_fn::LpfxFnImpl::NonDecimal(builtin_id) => {
                 // Direct builtin call (hash functions don't need conversion)
@@ -84,21 +144,50 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
                     .get_builtin_func_ref(*builtin_id, self.builder.func)?;
 
                 // Emit call instruction
-                let call_inst = self.builder.ins().call(func_ref, &flat_args);
+                self.ensure_block()?;
+                let call_inst = self.builder.ins().call(func_ref, &call_args);
 
-                // Extract return value(s)
-                let results = self.builder.inst_results(call_inst);
-                if results.len() != 1 {
-                    return Err(GlslError::new(
-                        ErrorCode::E0400,
-                        format!(
-                            "Expected 1 return value from LPFX function, got {}",
-                            results.len()
-                        ),
-                    ));
+                // Handle return values
+                if let Some(buffer_ptr) = return_buffer_ptr {
+                    // StructReturn: load values from buffer
+                    let element_count = return_type.component_count().unwrap();
+                    let base_type = return_type.vector_base_type().unwrap();
+                    let cranelift_ty = base_type.to_cranelift_type().map_err(|e| {
+                        GlslError::new(
+                            ErrorCode::E0400,
+                            format!(
+                                "Failed to convert return type to Cranelift type: {}",
+                                e.message
+                            ),
+                        )
+                    })?;
+
+                    let mut loaded_vals = Vec::new();
+                    for i in 0..element_count {
+                        let offset = (i * F32_SIZE_BYTES) as i32;
+                        let val = self.builder.ins().load(
+                            cranelift_ty,
+                            MemFlags::trusted(),
+                            buffer_ptr,
+                            offset,
+                        );
+                        loaded_vals.push(val);
+                    }
+                    Ok((loaded_vals, return_type.clone()))
+                } else {
+                    // Scalar return: extract from call results
+                    let results = self.builder.inst_results(call_inst);
+                    if results.len() != 1 {
+                        return Err(GlslError::new(
+                            ErrorCode::E0400,
+                            format!(
+                                "Expected 1 return value from LPFX function, got {}",
+                                results.len()
+                            ),
+                        ));
+                    }
+                    Ok((vec![results[0]], return_type.clone()))
                 }
-
-                Ok((vec![results[0]], func.glsl_sig.return_type.clone()))
             }
         }
     }
