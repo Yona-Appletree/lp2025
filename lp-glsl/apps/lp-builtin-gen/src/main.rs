@@ -260,8 +260,12 @@ fn format_rust_function_signature(func: &ItemFn) -> String {
     for input in &func.sig.inputs {
         if let syn::FnArg::Typed(pat_type) = input {
             let ty_str = pat_type.ty.to_token_stream().to_string();
-            // Clean up the string (remove extra spaces)
+            // Clean up the string (remove extra spaces, but preserve spaces in pointer types)
+            // Fix pointer types: *mut T and *const T need space between mut/const and T
             let ty_str = ty_str.replace(" ", "");
+            // Fix *mutT -> *mut T and *constT -> *const T
+            let ty_str = ty_str.replace("*mut", "*mut ");
+            let ty_str = ty_str.replace("*const", "*const ");
             params.push(ty_str);
         }
     }
@@ -273,7 +277,11 @@ fn format_rust_function_signature(func: &ItemFn) -> String {
         syn::ReturnType::Default => sig.push_str("()"),
         syn::ReturnType::Type(_, ty) => {
             let ty_str = ty.to_token_stream().to_string();
-            sig.push_str(&ty_str.replace(" ", ""));
+            let ty_str = ty_str.replace(" ", "");
+            // Fix pointer types in return type too
+            let ty_str = ty_str.replace("*mut", "*mut ");
+            let ty_str = ty_str.replace("*const", "*const ");
+            sig.push_str(&ty_str);
         }
     }
 
@@ -316,7 +324,7 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push('\n');
 
     output.push_str("use crate::error::{ErrorCode, GlslError};\n");
-    output.push_str("use cranelift_codegen::ir::{AbiParam, Signature, types};\n");
+    output.push_str("use cranelift_codegen::ir::{AbiParam, ArgumentPurpose, Signature, types};\n");
     output.push_str("use cranelift_codegen::isa::CallConv;\n");
     output.push_str("use cranelift_module::{Linkage, Module};\n\n");
     output.push_str("#[cfg(not(feature = \"std\"))]\n");
@@ -366,11 +374,127 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         output.push_str("                // Placeholder - no builtins defined\n");
         output.push_str("            }\n");
     } else {
-        // Group by parameter count
-        let quaternary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 4).collect();
-        let ternary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 3).collect();
-        let binary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 2).collect();
-        let unary_ops: Vec<_> = builtins.iter().filter(|b| b.param_count == 1).collect();
+        // Detect StructReturn functions (void return + pointer first param)
+        let uses_struct_return = |b: &&BuiltinInfo| -> bool {
+            b.rust_signature.contains("-> ()") && b.rust_signature.contains("*mut ")
+        };
+
+        // Separate StructReturn functions from regular functions
+        let (struct_return_builtins, regular_builtins): (Vec<_>, Vec<_>) =
+            builtins.iter().partition(|b| uses_struct_return(b));
+
+        // Group StructReturn functions by parameter count
+        let struct_return_5_params: Vec<_> = struct_return_builtins
+            .iter()
+            .filter(|b| b.param_count == 5)
+            .collect();
+        let struct_return_4_params: Vec<_> = struct_return_builtins
+            .iter()
+            .filter(|b| b.param_count == 4)
+            .collect();
+        let struct_return_3_params: Vec<_> = struct_return_builtins
+            .iter()
+            .filter(|b| b.param_count == 3)
+            .collect();
+        let struct_return_2_params: Vec<_> = struct_return_builtins
+            .iter()
+            .filter(|b| b.param_count == 2)
+            .collect();
+
+        // Generate StructReturn signatures
+        if !struct_return_5_params.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in struct_return_5_params.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str(
+                "                // StructReturn: (*mut i32, i32, i32, i32, i32) -> ()\n",
+            );
+            output.push_str("                let pointer_type = types::I32;\n");
+            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("            }\n");
+        }
+
+        if !struct_return_4_params.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in struct_return_4_params.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str("                // StructReturn: (*mut i32, i32, i32, i32) -> ()\n");
+            output.push_str("                let pointer_type = types::I32;\n");
+            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("            }\n");
+        }
+
+        if !struct_return_3_params.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in struct_return_3_params.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str("                // StructReturn: (*mut i32, i32, i32) -> ()\n");
+            output.push_str("                let pointer_type = types::I32;\n");
+            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("            }\n");
+        }
+
+        if !struct_return_2_params.is_empty() {
+            output.push_str("            ");
+            for (i, builtin) in struct_return_2_params.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str("                // StructReturn: (*mut i32, i32) -> ()\n");
+            output.push_str("                let pointer_type = types::I32;\n");
+            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("            }\n");
+        }
+
+        // Group regular functions by parameter count
+        let quaternary_ops: Vec<_> = regular_builtins
+            .iter()
+            .filter(|b| b.param_count == 4)
+            .collect();
+        let ternary_ops: Vec<_> = regular_builtins
+            .iter()
+            .filter(|b| b.param_count == 3)
+            .collect();
+        let binary_ops: Vec<_> = regular_builtins
+            .iter()
+            .filter(|b| b.param_count == 2)
+            .collect();
+        let unary_ops: Vec<_> = regular_builtins
+            .iter()
+            .filter(|b| b.param_count == 1)
+            .collect();
 
         if !quaternary_ops.is_empty() {
             output.push_str("            ");

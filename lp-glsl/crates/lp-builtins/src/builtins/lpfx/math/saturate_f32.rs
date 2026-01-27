@@ -40,7 +40,12 @@ pub extern "C" fn __lpfx_saturate_vec3_f32(result_ptr: *mut f32, x: f32, y: f32,
     let y_q32 = Q32::from_f32(y);
     let z_q32 = Q32::from_f32(z);
     let mut result_q32 = [0i32; 3];
-    __lpfx_saturate_vec3_q32(result_q32.as_mut_ptr(), x_q32.to_fixed(), y_q32.to_fixed(), z_q32.to_fixed());
+    __lpfx_saturate_vec3_q32(
+        result_q32.as_mut_ptr(),
+        x_q32.to_fixed(),
+        y_q32.to_fixed(),
+        z_q32.to_fixed(),
+    );
     unsafe {
         *result_ptr.offset(0) = Q32::from_fixed(result_q32[0]).to_f32();
         *result_ptr.offset(1) = Q32::from_fixed(result_q32[1]).to_f32();

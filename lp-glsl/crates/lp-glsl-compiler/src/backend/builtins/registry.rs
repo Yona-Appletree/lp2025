@@ -12,7 +12,7 @@
 //! JIT (function pointer) and emulator (ELF symbol) linking.
 
 use crate::error::{ErrorCode, GlslError};
-use cranelift_codegen::ir::{AbiParam, Signature, types};
+use cranelift_codegen::ir::{AbiParam, ArgumentPurpose, Signature, types};
 use cranelift_codegen::isa::CallConv;
 use cranelift_module::{Linkage, Module};
 
@@ -159,13 +159,52 @@ impl BuiltinId {
     pub fn signature(&self) -> Signature {
         let mut sig = Signature::new(CallConv::SystemV);
         match self {
-            BuiltinId::LpfxHash3
-            | BuiltinId::LpfxHsv2rgbVec4F32
+            BuiltinId::LpfxHsv2rgbVec4F32
             | BuiltinId::LpfxHsv2rgbVec4Q32
             | BuiltinId::LpfxRgb2hsvVec4F32
             | BuiltinId::LpfxRgb2hsvVec4Q32
             | BuiltinId::LpfxSaturateVec4F32
-            | BuiltinId::LpfxSaturateVec4Q32
+            | BuiltinId::LpfxSaturateVec4Q32 => {
+                // StructReturn: (*mut i32, i32, i32, i32, i32) -> ()
+                let pointer_type = types::I32;
+                sig.params.insert(
+                    0,
+                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
+                );
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                // StructReturn functions return void
+            }
+            BuiltinId::LpfxHsv2rgbF32
+            | BuiltinId::LpfxHsv2rgbQ32
+            | BuiltinId::LpfxRgb2hsvF32
+            | BuiltinId::LpfxRgb2hsvQ32
+            | BuiltinId::LpfxSaturateVec3F32
+            | BuiltinId::LpfxSaturateVec3Q32 => {
+                // StructReturn: (*mut i32, i32, i32, i32) -> ()
+                let pointer_type = types::I32;
+                sig.params.insert(
+                    0,
+                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
+                );
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                sig.params.push(AbiParam::new(types::I32));
+                // StructReturn functions return void
+            }
+            BuiltinId::LpfxHue2rgbF32 | BuiltinId::LpfxHue2rgbQ32 => {
+                // StructReturn: (*mut i32, i32) -> ()
+                let pointer_type = types::I32;
+                sig.params.insert(
+                    0,
+                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
+                );
+                sig.params.push(AbiParam::new(types::I32));
+                // StructReturn functions return void
+            }
+            BuiltinId::LpfxHash3
             | BuiltinId::LpfxSnoise3F32
             | BuiltinId::LpfxSnoise3Q32
             | BuiltinId::LpfxWorley3F32
@@ -181,12 +220,6 @@ impl BuiltinId {
             }
             BuiltinId::LpQ32Fma
             | BuiltinId::LpfxHash2
-            | BuiltinId::LpfxHsv2rgbF32
-            | BuiltinId::LpfxHsv2rgbQ32
-            | BuiltinId::LpfxRgb2hsvF32
-            | BuiltinId::LpfxRgb2hsvQ32
-            | BuiltinId::LpfxSaturateVec3F32
-            | BuiltinId::LpfxSaturateVec3Q32
             | BuiltinId::LpfxSnoise2F32
             | BuiltinId::LpfxSnoise2Q32
             | BuiltinId::LpfxWorley2F32
@@ -235,8 +268,6 @@ impl BuiltinId {
             | BuiltinId::LpQ32Sqrt
             | BuiltinId::LpQ32Tan
             | BuiltinId::LpQ32Tanh
-            | BuiltinId::LpfxHue2rgbF32
-            | BuiltinId::LpfxHue2rgbQ32
             | BuiltinId::LpfxSaturateF32
             | BuiltinId::LpfxSaturateQ32 => {
                 // (i32) -> i32

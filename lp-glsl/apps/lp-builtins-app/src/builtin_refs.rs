@@ -111,29 +111,33 @@ pub fn ensure_builtins_referenced() {
         let __lpfx_hash_1_fn: extern "C" fn(u32, u32) -> u32 = __lpfx_hash_1;
         let __lpfx_hash_2_fn: extern "C" fn(u32, u32, u32) -> u32 = __lpfx_hash_2;
         let __lpfx_hash_3_fn: extern "C" fn(u32, u32, u32, u32) -> u32 = __lpfx_hash_3;
-        let __lpfx_hsv2rgb_f32_fn: extern "C" fn(f32, f32, f32) -> f32 = __lpfx_hsv2rgb_f32;
-        let __lpfx_hsv2rgb_q32_fn: extern "C" fn(i32, i32, i32) -> i32 = __lpfx_hsv2rgb_q32;
-        let __lpfx_hsv2rgb_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+        let __lpfx_hsv2rgb_f32_fn: extern "C" fn(*mut f32, f32, f32, f32) -> () =
+            __lpfx_hsv2rgb_f32;
+        let __lpfx_hsv2rgb_q32_fn: extern "C" fn(*mut i32, i32, i32, i32) -> () =
+            __lpfx_hsv2rgb_q32;
+        let __lpfx_hsv2rgb_vec4_f32_fn: extern "C" fn(*mut f32, f32, f32, f32, f32) -> () =
             __lpfx_hsv2rgb_vec4_f32;
-        let __lpfx_hsv2rgb_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+        let __lpfx_hsv2rgb_vec4_q32_fn: extern "C" fn(*mut i32, i32, i32, i32, i32) -> () =
             __lpfx_hsv2rgb_vec4_q32;
-        let __lpfx_hue2rgb_f32_fn: extern "C" fn(f32) -> f32 = __lpfx_hue2rgb_f32;
-        let __lpfx_hue2rgb_q32_fn: extern "C" fn(i32) -> i32 = __lpfx_hue2rgb_q32;
-        let __lpfx_rgb2hsv_f32_fn: extern "C" fn(f32, f32, f32) -> f32 = __lpfx_rgb2hsv_f32;
-        let __lpfx_rgb2hsv_q32_fn: extern "C" fn(i32, i32, i32) -> i32 = __lpfx_rgb2hsv_q32;
-        let __lpfx_rgb2hsv_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+        let __lpfx_hue2rgb_f32_fn: extern "C" fn(*mut f32, f32) -> () = __lpfx_hue2rgb_f32;
+        let __lpfx_hue2rgb_q32_fn: extern "C" fn(*mut i32, i32) -> () = __lpfx_hue2rgb_q32;
+        let __lpfx_rgb2hsv_f32_fn: extern "C" fn(*mut f32, f32, f32, f32) -> () =
+            __lpfx_rgb2hsv_f32;
+        let __lpfx_rgb2hsv_q32_fn: extern "C" fn(*mut i32, i32, i32, i32) -> () =
+            __lpfx_rgb2hsv_q32;
+        let __lpfx_rgb2hsv_vec4_f32_fn: extern "C" fn(*mut f32, f32, f32, f32, f32) -> () =
             __lpfx_rgb2hsv_vec4_f32;
-        let __lpfx_rgb2hsv_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+        let __lpfx_rgb2hsv_vec4_q32_fn: extern "C" fn(*mut i32, i32, i32, i32, i32) -> () =
             __lpfx_rgb2hsv_vec4_q32;
         let __lpfx_saturate_f32_fn: extern "C" fn(f32) -> f32 = __lpfx_saturate_f32;
         let __lpfx_saturate_q32_fn: extern "C" fn(i32) -> i32 = __lpfx_saturate_q32;
-        let __lpfx_saturate_vec3_f32_fn: extern "C" fn(f32, f32, f32) -> f32 =
+        let __lpfx_saturate_vec3_f32_fn: extern "C" fn(*mut f32, f32, f32, f32) -> () =
             __lpfx_saturate_vec3_f32;
-        let __lpfx_saturate_vec3_q32_fn: extern "C" fn(i32, i32, i32) -> i32 =
+        let __lpfx_saturate_vec3_q32_fn: extern "C" fn(*mut i32, i32, i32, i32) -> () =
             __lpfx_saturate_vec3_q32;
-        let __lpfx_saturate_vec4_f32_fn: extern "C" fn(f32, f32, f32, f32) -> f32 =
+        let __lpfx_saturate_vec4_f32_fn: extern "C" fn(*mut f32, f32, f32, f32, f32) -> () =
             __lpfx_saturate_vec4_f32;
-        let __lpfx_saturate_vec4_q32_fn: extern "C" fn(i32, i32, i32, i32) -> i32 =
+        let __lpfx_saturate_vec4_q32_fn: extern "C" fn(*mut i32, i32, i32, i32, i32) -> () =
             __lpfx_saturate_vec4_q32;
         let __lpfx_snoise1_f32_fn: extern "C" fn(f32, u32) -> f32 = __lpfx_snoise1_f32;
         let __lpfx_snoise1_q32_fn: extern "C" fn(i32, u32) -> i32 = __lpfx_snoise1_q32;

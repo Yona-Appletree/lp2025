@@ -58,17 +58,16 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         // Setup StructReturn buffer if needed
         let return_buffer_ptr = if uses_struct_return {
             let element_count = return_type.component_count().unwrap();
-                    let buffer_size = (element_count * F32_SIZE_BYTES) as u32;
+            let buffer_size = (element_count * F32_SIZE_BYTES) as u32;
             let pointer_type = self.gl_module.module_internal().isa().pointer_type();
 
-            let slot = self
-                .builder
-                .func
-                .create_sized_stack_slot(cranelift_codegen::ir::StackSlotData::new(
+            let slot = self.builder.func.create_sized_stack_slot(
+                cranelift_codegen::ir::StackSlotData::new(
                     cranelift_codegen::ir::StackSlotKind::ExplicitSlot,
                     buffer_size,
                     F32_ALIGN_SHIFT,
-                ));
+                ),
+            );
 
             Some(self.builder.ins().stack_addr(pointer_type, slot, 0))
         } else {
