@@ -5,3 +5,4 @@
 
 pub mod hsv2rgb_q32;
 pub mod hue2rgb_q32;
+pub mod rgb2hsv_q32;
