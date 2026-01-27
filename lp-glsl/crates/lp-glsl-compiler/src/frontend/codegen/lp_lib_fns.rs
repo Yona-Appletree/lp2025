@@ -117,9 +117,12 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         // TestCase name is the GLSL function name with __ prefix
         let testcase_name = format!("__{}", func.glsl_sig.name);
 
+        // Get pointer type for StructReturn (if needed)
+        let pointer_type = self.gl_module.module_internal().isa().pointer_type();
+
         // Build signature with Float format (f32 args, f32 return)
         // The transform will convert this to q32 when processing the call
-        let sig = build_call_signature(func, builtin_id, DecimalFormat::Float);
+        let sig = build_call_signature(func, builtin_id, DecimalFormat::Float, pointer_type);
 
         // Create TestCase name for external function call
         let sig_ref = self.builder.func.import_signature(sig);
