@@ -48,6 +48,8 @@ pub struct NodeEntry {
     pub config_ver: FrameId,
     /// Node status
     pub status: NodeStatus,
+    /// Frame when status was last changed
+    pub status_ver: FrameId,
     /// Node runtime (None until initialized)
     pub runtime: Option<Box<dyn NodeRuntime>>,
     /// Last frame state updates occurred
@@ -125,6 +127,7 @@ impl ProjectRuntime {
                         config,
                         config_ver: self.frame_id,
                         status: NodeStatus::Created,
+                        status_ver: self.frame_id,
                         runtime: None,
                         state_ver: FrameId::default(),
                     };
@@ -171,6 +174,7 @@ impl ProjectRuntime {
                         config,
                         config_ver: self.frame_id,
                         status: NodeStatus::InitError(format!("Failed to load: {e}")),
+                        status_ver: self.frame_id,
                         runtime: None,
                         state_ver: FrameId::default(),
                     };
@@ -369,14 +373,17 @@ impl ProjectRuntime {
                             if let Some(error_msg) = shader_compilation_error {
                                 // Shader initialized but has compilation error - set status to Error
                                 entry.status = NodeStatus::Error(error_msg);
+                                entry.status_ver = self.frame_id;
                             } else {
                                 // Node initialized successfully
                                 entry.status = NodeStatus::Ok;
+                                entry.status_ver = self.frame_id;
                             }
                             entry.runtime = Some(runtime);
                         }
                         Err(e) => {
                             entry.status = NodeStatus::InitError(format!("{e}"));
+                            entry.status_ver = self.frame_id;
                             entry.runtime = None;
                         }
                     }
@@ -499,6 +506,7 @@ impl ProjectRuntime {
             if let Some(entry) = self.nodes.get_mut(&handle) {
                 if let Err(e) = render_result {
                     entry.status = NodeStatus::Error(format!("{e}"));
+                    entry.status_ver = self.frame_id;
                 }
             }
         }
@@ -540,6 +548,7 @@ impl ProjectRuntime {
             if let Err(e) = render_result {
                 if let Some(entry) = self.nodes.get_mut(&handle) {
                     entry.status = NodeStatus::Error(format!("{e}"));
+                    entry.status_ver = self.frame_id;
                 }
             }
         }
@@ -738,9 +747,11 @@ impl ProjectRuntime {
                         if let Some(error_msg) = shader_compilation_error {
                             // Shader has compilation error - update status to Error
                             node_entry.status = NodeStatus::Error(error_msg);
+                            node_entry.status_ver = self.frame_id;
                         } else if matches!(old_status, NodeStatus::Error(_)) {
                             // No compilation error and status was Error - update to Ok
                             node_entry.status = NodeStatus::Ok;
+                            node_entry.status_ver = self.frame_id;
                         }
                         // Status change will be picked up in get_changes() if status changed
                     }
@@ -786,6 +797,7 @@ impl ProjectRuntime {
                     config,
                     config_ver: self.frame_id,
                     status: NodeStatus::Created,
+                    status_ver: self.frame_id,
                     runtime: None,
                     state_ver: FrameId::default(),
                 };
@@ -851,6 +863,28 @@ impl ProjectRuntime {
                 node_changes.push(NodeChange::StateUpdated {
                     handle: *handle,
                     state_ver: entry.state_ver,
+                });
+            }
+
+            // Always send current status for all nodes (requirement: always send status even for unwatched nodes)
+            // If status changed since since_frame, send StatusChanged
+            // Otherwise, still send current status so client has it
+            let api_status = match &entry.status {
+                NodeStatus::Created => ApiNodeStatus::Created,
+                NodeStatus::InitError(msg) => ApiNodeStatus::InitError(msg.clone()),
+                NodeStatus::Ok => ApiNodeStatus::Ok,
+                NodeStatus::Warn(msg) => ApiNodeStatus::Warn(msg.clone()),
+                NodeStatus::Error(msg) => ApiNodeStatus::Error(msg.clone()),
+            };
+
+            // Always include status - if it changed since since_frame, or if this is the first sync (since_frame is default)
+            // For first sync (since_frame == 0), we want to send status for all nodes
+            // For subsequent syncs, we only send if status changed
+            if entry.status_ver.as_i64() > since_frame.as_i64() || since_frame == FrameId::default()
+            {
+                node_changes.push(NodeChange::StatusChanged {
+                    handle: *handle,
+                    status: api_status,
                 });
             }
 
@@ -1003,14 +1037,6 @@ impl ProjectRuntime {
                     }
                 };
 
-                let api_status = match &entry.status {
-                    NodeStatus::Created => ApiNodeStatus::Created,
-                    NodeStatus::InitError(msg) => ApiNodeStatus::InitError(msg.clone()),
-                    NodeStatus::Ok => ApiNodeStatus::Ok,
-                    NodeStatus::Warn(msg) => ApiNodeStatus::Warn(msg.clone()),
-                    NodeStatus::Error(msg) => ApiNodeStatus::Error(msg.clone()),
-                };
-
                 // Clone config based on kind - extract from runtime if available
                 let config: Box<dyn NodeConfig> = match entry.kind {
                     NodeKind::Texture => {
@@ -1123,7 +1149,6 @@ impl ProjectRuntime {
                         path: entry.path.clone(),
                         config,
                         state,
-                        status: api_status,
                     },
                 );
             }
@@ -1507,11 +1532,30 @@ impl<'a> RenderContextImpl<'a> {
                 }
             };
 
-            render_result?;
-
-            // Update shader state_ver after render
-            if let Some(entry) = ctx.nodes.get_mut(&shader_handle) {
-                entry.state_ver = frame_id;
+            // Handle render errors - if shader execution fails, update shader status
+            match render_result {
+                Ok(()) => {
+                    // Update shader state_ver after successful render
+                    if let Some(entry) = nodes.get_mut(&shader_handle) {
+                        entry.state_ver = frame_id;
+                    }
+                }
+                Err(e) => {
+                    // Check if this is a shader execution error
+                    let error_msg = format!("{e}");
+                    if error_msg.contains("Shader execution failed") {
+                        // Update shader status to Error
+                        if let Some(entry) = nodes.get_mut(&shader_handle) {
+                            entry.status = NodeStatus::Error(error_msg.clone());
+                            entry.status_ver = frame_id;
+                        }
+                        // Don't propagate error - shader already has error status
+                        // This prevents fixture/texture from getting the error
+                    } else {
+                        // Other errors (e.g., texture not found) should propagate
+                        return Err(e);
+                    }
+                }
             }
         }
 

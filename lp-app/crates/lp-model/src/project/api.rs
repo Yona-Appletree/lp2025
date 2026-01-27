@@ -100,7 +100,7 @@ pub enum NodeStatus {
     Error(String),
 }
 
-/// Node detail - full config + state + status
+/// Node detail - full config + state
 ///
 /// Note: Cannot implement Clone/PartialEq/Eq because config is a trait object.
 ///
@@ -119,7 +119,6 @@ pub struct NodeDetail {
     pub path: LpPathBuf,
     pub config: Box<dyn NodeConfig>, // TODO: Needs serialization support (see struct docs)
     pub state: NodeState,            // External state only
-    pub status: NodeStatus,
 }
 
 /// Node state - external state (shared with clients)
@@ -142,28 +141,24 @@ pub enum SerializableNodeDetail {
         path: LpPathBuf,
         config: TextureConfig,
         state: NodeState,
-        status: NodeStatus,
     },
     /// Shader node detail
     Shader {
         path: LpPathBuf,
         config: ShaderConfig,
         state: NodeState,
-        status: NodeStatus,
     },
     /// Output node detail
     Output {
         path: LpPathBuf,
         config: OutputConfig,
         state: NodeState,
-        status: NodeStatus,
     },
     /// Fixture node detail
     Fixture {
         path: LpPathBuf,
         config: FixtureConfig,
         state: NodeState,
-        status: NodeStatus,
     },
 }
 
@@ -207,7 +202,6 @@ impl NodeDetail {
                     path: self.path.clone(),
                     config: config.clone(),
                     state: self.state.clone(),
-                    status: self.status.clone(),
                 })
             }
             NodeKind::Shader => {
@@ -220,7 +214,6 @@ impl NodeDetail {
                     path: self.path.clone(),
                     config: config.clone(),
                     state: self.state.clone(),
-                    status: self.status.clone(),
                 })
             }
             NodeKind::Output => {
@@ -233,7 +226,6 @@ impl NodeDetail {
                     path: self.path.clone(),
                     config: config.clone(),
                     state: self.state.clone(),
-                    status: self.status.clone(),
                 })
             }
             NodeKind::Fixture => {
@@ -246,7 +238,6 @@ impl NodeDetail {
                     path: self.path.clone(),
                     config: config.clone(),
                     state: self.state.clone(),
-                    status: self.status.clone(),
                 })
             }
         }
@@ -363,7 +354,6 @@ mod tests {
                 height: 2,
                 format: "RGBA8".to_string(),
             }),
-            status: NodeStatus::Ok,
         };
         let serializable = detail.to_serializable().unwrap();
         match serializable {
@@ -371,13 +361,11 @@ mod tests {
                 path,
                 config,
                 state,
-                status,
             } => {
                 assert_eq!(path.as_str(), "/src/texture.texture");
                 assert_eq!(config.width, 100);
                 assert_eq!(config.height, 200);
                 assert!(matches!(state, NodeState::Texture(_)));
-                assert_eq!(status, NodeStatus::Ok);
             }
             _ => panic!("Expected Texture variant"),
         }
@@ -393,7 +381,6 @@ mod tests {
                 glsl_code: String::new(),
                 error: None,
             }),
-            status: NodeStatus::Ok,
         };
         let serializable = detail.to_serializable().unwrap();
         match serializable {
@@ -401,11 +388,9 @@ mod tests {
                 path,
                 config: _,
                 state,
-                status,
             } => {
                 assert_eq!(path.as_str(), "/src/shader.shader");
                 assert!(matches!(state, NodeState::Shader(_)));
-                assert_eq!(status, NodeStatus::Ok);
             }
             _ => panic!("Expected Shader variant"),
         }
@@ -429,7 +414,6 @@ mod tests {
                     height: 2,
                     format: "RGBA8".to_string(),
                 }),
-                status: NodeStatus::Ok,
             },
         );
 
@@ -476,7 +460,6 @@ mod tests {
                 height: 2,
                 format: "RGBA8".to_string(),
             }),
-            status: NodeStatus::Ok,
         };
         let json = serde_json::to_string(&detail).unwrap();
         let deserialized: SerializableNodeDetail = serde_json::from_str(&json).unwrap();
@@ -485,12 +468,10 @@ mod tests {
                 path,
                 config,
                 state: _,
-                status,
             } => {
                 assert_eq!(path.as_str(), "/src/texture.texture");
                 assert_eq!(config.width, 100);
                 assert_eq!(config.height, 200);
-                assert_eq!(status, NodeStatus::Ok);
             }
             _ => panic!("Expected Texture variant"),
         }
@@ -514,7 +495,6 @@ mod tests {
                     height: 2,
                     format: "RGBA8".to_string(),
                 }),
-                status: NodeStatus::Ok,
             },
         ));
 

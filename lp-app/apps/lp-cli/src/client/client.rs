@@ -370,45 +370,37 @@ pub fn serializable_response_to_project_response(
                         path,
                         config,
                         state,
-                        status,
                     } => NodeDetail {
                         path,
                         config: Box::new(config),
                         state,
-                        status,
                     },
                     lp_model::project::api::SerializableNodeDetail::Shader {
                         path,
                         config,
                         state,
-                        status,
                     } => NodeDetail {
                         path,
                         config: Box::new(config),
                         state,
-                        status,
                     },
                     lp_model::project::api::SerializableNodeDetail::Output {
                         path,
                         config,
                         state,
-                        status,
                     } => NodeDetail {
                         path,
                         config: Box::new(config),
                         state,
-                        status,
                     },
                     lp_model::project::api::SerializableNodeDetail::Fixture {
                         path,
                         config,
                         state,
-                        status,
                     } => NodeDetail {
                         path,
                         config: Box::new(config),
                         state,
-                        status,
                     },
                 };
                 node_details_map.insert(handle, detail);
