@@ -12,11 +12,11 @@ use hashbrown::HashMap;
 
 use alloc::format;
 
-/// Map TestCase function name to BuiltinId and argument count.
+/// Map TestCase function name and argument count to BuiltinId.
 ///
 /// Returns None if the function name is not a math function that should be converted.
 /// Handles both standard C math function names (sinf, cosf) and intrinsic names (__lp_sin, __lp_cos).
-/// Returns (BuiltinId, argument_count) where argument_count is 1 or 2.
+/// Supports overloaded functions by matching on both name and argument count.
 ///
 /// This function is AUTO-GENERATED. Do not edit manually.
 ///
@@ -25,61 +25,59 @@ use alloc::format;
 ///
 /// Or use the build script:
 ///     scripts/build-builtins.sh
-pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)> {
-    match testcase_name {
-        "lp_q32_acosf" | "__lp_q32_acos" | "acosf" => Some((BuiltinId::LpQ32Acos, 1)),
-        "lp_q32_acoshf" | "__lp_q32_acosh" | "acoshf" => Some((BuiltinId::LpQ32Acosh, 1)),
-        "lp_q32_addf" | "__lp_q32_add" | "addf" => Some((BuiltinId::LpQ32Add, 2)),
-        "lp_q32_asinf" | "__lp_q32_asin" | "asinf" => Some((BuiltinId::LpQ32Asin, 1)),
-        "lp_q32_asinhf" | "__lp_q32_asinh" | "asinhf" => Some((BuiltinId::LpQ32Asinh, 1)),
-        "lp_q32_atanf" | "__lp_q32_atan" | "atanf" => Some((BuiltinId::LpQ32Atan, 1)),
-        "lp_q32_atan2f" | "__lp_q32_atan2" | "atan2f" => Some((BuiltinId::LpQ32Atan2, 2)),
-        "lp_q32_atanhf" | "__lp_q32_atanh" | "atanhf" => Some((BuiltinId::LpQ32Atanh, 1)),
-        "lp_q32_cosf" | "__lp_q32_cos" | "cosf" => Some((BuiltinId::LpQ32Cos, 1)),
-        "lp_q32_coshf" | "__lp_q32_cosh" | "coshf" => Some((BuiltinId::LpQ32Cosh, 1)),
-        "lp_q32_divf" | "__lp_q32_div" | "divf" => Some((BuiltinId::LpQ32Div, 2)),
-        "lp_q32_expf" | "__lp_q32_exp" | "expf" => Some((BuiltinId::LpQ32Exp, 1)),
-        "lp_q32_exp2f" | "__lp_q32_exp2" | "exp2f" => Some((BuiltinId::LpQ32Exp2, 1)),
-        "lp_q32_fmaf" | "__lp_q32_fma" | "fmaf" => Some((BuiltinId::LpQ32Fma, 3)),
-        "lp_q32_inversesqrtf" | "__lp_q32_inversesqrt" | "inversesqrtf" => {
-            Some((BuiltinId::LpQ32Inversesqrt, 1))
+pub fn map_testcase_to_builtin(testcase_name: &str, arg_count: usize) -> Option<BuiltinId> {
+    match (testcase_name, arg_count) {
+        ("lp_q32_acosf" | "__lp_q32_acos" | "acosf", 1) => Some(BuiltinId::LpQ32Acos),
+        ("lp_q32_acoshf" | "__lp_q32_acosh" | "acoshf", 1) => Some(BuiltinId::LpQ32Acosh),
+        ("lp_q32_addf" | "__lp_q32_add" | "addf", 2) => Some(BuiltinId::LpQ32Add),
+        ("lp_q32_asinf" | "__lp_q32_asin" | "asinf", 1) => Some(BuiltinId::LpQ32Asin),
+        ("lp_q32_asinhf" | "__lp_q32_asinh" | "asinhf", 1) => Some(BuiltinId::LpQ32Asinh),
+        ("lp_q32_atanf" | "__lp_q32_atan" | "atanf", 1) => Some(BuiltinId::LpQ32Atan),
+        ("lp_q32_atan2f" | "__lp_q32_atan2" | "atan2f", 2) => Some(BuiltinId::LpQ32Atan2),
+        ("lp_q32_atanhf" | "__lp_q32_atanh" | "atanhf", 1) => Some(BuiltinId::LpQ32Atanh),
+        ("lp_q32_cosf" | "__lp_q32_cos" | "cosf", 1) => Some(BuiltinId::LpQ32Cos),
+        ("lp_q32_coshf" | "__lp_q32_cosh" | "coshf", 1) => Some(BuiltinId::LpQ32Cosh),
+        ("lp_q32_divf" | "__lp_q32_div" | "divf", 2) => Some(BuiltinId::LpQ32Div),
+        ("lp_q32_expf" | "__lp_q32_exp" | "expf", 1) => Some(BuiltinId::LpQ32Exp),
+        ("lp_q32_exp2f" | "__lp_q32_exp2" | "exp2f", 1) => Some(BuiltinId::LpQ32Exp2),
+        ("lp_q32_fmaf" | "__lp_q32_fma" | "fmaf", 3) => Some(BuiltinId::LpQ32Fma),
+        ("lp_q32_inversesqrtf" | "__lp_q32_inversesqrt" | "inversesqrtf", 1) => {
+            Some(BuiltinId::LpQ32Inversesqrt)
         }
-        "lp_q32_ldexpf" | "__lp_q32_ldexp" | "ldexpf" => Some((BuiltinId::LpQ32Ldexp, 2)),
-        "lp_q32_logf" | "__lp_q32_log" | "logf" => Some((BuiltinId::LpQ32Log, 1)),
-        "lp_q32_log2f" | "__lp_q32_log2" | "log2f" => Some((BuiltinId::LpQ32Log2, 1)),
-        "lp_q32_modf" | "__lp_q32_mod" | "fmodf" => Some((BuiltinId::LpQ32Mod, 2)),
-        "lp_q32_mulf" | "__lp_q32_mul" | "mulf" => Some((BuiltinId::LpQ32Mul, 2)),
-        "lp_q32_powf" | "__lp_q32_pow" | "powf" => Some((BuiltinId::LpQ32Pow, 2)),
-        "lp_q32_roundf" | "__lp_q32_round" | "roundf" => Some((BuiltinId::LpQ32Round, 1)),
-        "lp_q32_roundevenf" | "__lp_q32_roundeven" | "roundevenf" => {
-            Some((BuiltinId::LpQ32Roundeven, 1))
+        ("lp_q32_ldexpf" | "__lp_q32_ldexp" | "ldexpf", 2) => Some(BuiltinId::LpQ32Ldexp),
+        ("lp_q32_logf" | "__lp_q32_log" | "logf", 1) => Some(BuiltinId::LpQ32Log),
+        ("lp_q32_log2f" | "__lp_q32_log2" | "log2f", 1) => Some(BuiltinId::LpQ32Log2),
+        ("lp_q32_modf" | "__lp_q32_mod" | "fmodf", 2) => Some(BuiltinId::LpQ32Mod),
+        ("lp_q32_mulf" | "__lp_q32_mul" | "mulf", 2) => Some(BuiltinId::LpQ32Mul),
+        ("lp_q32_powf" | "__lp_q32_pow" | "powf", 2) => Some(BuiltinId::LpQ32Pow),
+        ("lp_q32_roundf" | "__lp_q32_round" | "roundf", 1) => Some(BuiltinId::LpQ32Round),
+        ("lp_q32_roundevenf" | "__lp_q32_roundeven" | "roundevenf", 1) => {
+            Some(BuiltinId::LpQ32Roundeven)
         }
-        "lp_q32_sinf" | "__lp_q32_sin" | "sinf" => Some((BuiltinId::LpQ32Sin, 1)),
-        "lp_q32_sinhf" | "__lp_q32_sinh" | "sinhf" => Some((BuiltinId::LpQ32Sinh, 1)),
-        "lp_q32_sqrtf" | "__lp_q32_sqrt" | "sqrtf" => Some((BuiltinId::LpQ32Sqrt, 1)),
-        "lp_q32_subf" | "__lp_q32_sub" | "subf" => Some((BuiltinId::LpQ32Sub, 2)),
-        "lp_q32_tanf" | "__lp_q32_tan" | "tanf" => Some((BuiltinId::LpQ32Tan, 1)),
-        "lp_q32_tanhf" | "__lp_q32_tanh" | "tanhf" => Some((BuiltinId::LpQ32Tanh, 1)),
-        "lpfx_hash_1f" | "__lp_lpfx_hash_1" => Some((BuiltinId::LpfxHash1, 2)),
-        "lpfx_hash_2f" | "__lp_lpfx_hash_2" => Some((BuiltinId::LpfxHash2, 3)),
-        "lpfx_hash_3f" | "__lp_lpfx_hash_3" => Some((BuiltinId::LpfxHash3, 4)),
-        "lpfx_hsv2rgb_q32f" | "__lpfx_hsv2rgb_q32" => Some((BuiltinId::LpfxHsv2rgbQ32, 4)),
-        "__lpfx_hsv2rgb" => Some((BuiltinId::LpfxHsv2rgbVec4Q32, 5)),
-        "__lpfx_hue2rgb" => Some((BuiltinId::LpfxHue2rgbQ32, 2)),
-        "lpfx_rgb2hsv_q32f" | "__lpfx_rgb2hsv_q32" => Some((BuiltinId::LpfxRgb2hsvQ32, 4)),
-        "__lpfx_rgb2hsv" => Some((BuiltinId::LpfxRgb2hsvVec4Q32, 5)),
-        "lpfx_saturate_q32f" | "__lpfx_saturate_q32" => Some((BuiltinId::LpfxSaturateQ32, 1)),
-        "lpfx_saturate_vec3_q32f" | "__lpfx_saturate_vec3_q32" => {
-            Some((BuiltinId::LpfxSaturateVec3Q32, 4))
-        }
-        "__lpfx_saturate" => Some((BuiltinId::LpfxSaturateVec4Q32, 5)),
-        "__lpfx_snoise1" => Some((BuiltinId::LpfxSnoise1Q32, 2)),
-        "__lpfx_snoise2" => Some((BuiltinId::LpfxSnoise2Q32, 3)),
-        "__lpfx_snoise3" => Some((BuiltinId::LpfxSnoise3Q32, 4)),
-        "__lpfx_worley2" => Some((BuiltinId::LpfxWorley2Q32, 3)),
-        "__lpfx_worley2_value" => Some((BuiltinId::LpfxWorley2ValueQ32, 3)),
-        "__lpfx_worley3" => Some((BuiltinId::LpfxWorley3Q32, 4)),
-        "__lpfx_worley3_value" => Some((BuiltinId::LpfxWorley3ValueQ32, 4)),
+        ("lp_q32_sinf" | "__lp_q32_sin" | "sinf", 1) => Some(BuiltinId::LpQ32Sin),
+        ("lp_q32_sinhf" | "__lp_q32_sinh" | "sinhf", 1) => Some(BuiltinId::LpQ32Sinh),
+        ("lp_q32_sqrtf" | "__lp_q32_sqrt" | "sqrtf", 1) => Some(BuiltinId::LpQ32Sqrt),
+        ("lp_q32_subf" | "__lp_q32_sub" | "subf", 2) => Some(BuiltinId::LpQ32Sub),
+        ("lp_q32_tanf" | "__lp_q32_tan" | "tanf", 1) => Some(BuiltinId::LpQ32Tan),
+        ("lp_q32_tanhf" | "__lp_q32_tanh" | "tanhf", 1) => Some(BuiltinId::LpQ32Tanh),
+        ("lpfx_hash_1f" | "__lp_lpfx_hash_1", 2) => Some(BuiltinId::LpfxHash1),
+        ("lpfx_hash_2f" | "__lp_lpfx_hash_2", 3) => Some(BuiltinId::LpfxHash2),
+        ("lpfx_hash_3f" | "__lp_lpfx_hash_3", 4) => Some(BuiltinId::LpfxHash3),
+        ("__lpfx_hsv2rgb", 4) => Some(BuiltinId::LpfxHsv2rgbQ32),
+        ("__lpfx_hsv2rgb", 5) => Some(BuiltinId::LpfxHsv2rgbVec4Q32),
+        ("__lpfx_hue2rgb", 2) => Some(BuiltinId::LpfxHue2rgbQ32),
+        ("__lpfx_rgb2hsv", 4) => Some(BuiltinId::LpfxRgb2hsvQ32),
+        ("__lpfx_rgb2hsv", 5) => Some(BuiltinId::LpfxRgb2hsvVec4Q32),
+        ("__lpfx_saturate", 1) => Some(BuiltinId::LpfxSaturateQ32),
+        ("__lpfx_saturate", 4) => Some(BuiltinId::LpfxSaturateVec3Q32),
+        ("__lpfx_saturate", 5) => Some(BuiltinId::LpfxSaturateVec4Q32),
+        ("__lpfx_snoise1", 2) => Some(BuiltinId::LpfxSnoise1Q32),
+        ("__lpfx_snoise2", 3) => Some(BuiltinId::LpfxSnoise2Q32),
+        ("__lpfx_snoise3", 4) => Some(BuiltinId::LpfxSnoise3Q32),
+        ("__lpfx_worley2", 3) => Some(BuiltinId::LpfxWorley2Q32),
+        ("__lpfx_worley2_value", 3) => Some(BuiltinId::LpfxWorley2ValueQ32),
+        ("__lpfx_worley3", 4) => Some(BuiltinId::LpfxWorley3Q32),
+        ("__lpfx_worley3_value", 4) => Some(BuiltinId::LpfxWorley3ValueQ32),
         _ => None,
     }
 }
@@ -312,16 +310,16 @@ block0:
     fn test_map_testcase_to_builtin_simplex() {
         // Test simplex function mappings
         assert_eq!(
-            map_testcase_to_builtin("__lpfx_snoise1"),
-            Some((BuiltinId::LpfxSnoise1Q32, 2))
+            map_testcase_to_builtin("__lpfx_snoise1", 2),
+            Some(BuiltinId::LpfxSnoise1Q32)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lpfx_snoise2"),
-            Some((BuiltinId::LpfxSnoise2Q32, 3))
+            map_testcase_to_builtin("__lpfx_snoise2", 3),
+            Some(BuiltinId::LpfxSnoise2Q32)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lpfx_snoise3"),
-            Some((BuiltinId::LpfxSnoise3Q32, 4))
+            map_testcase_to_builtin("__lpfx_snoise3", 4),
+            Some(BuiltinId::LpfxSnoise3Q32)
         );
     }
 
@@ -329,28 +327,28 @@ block0:
     fn test_map_testcase_to_builtin_hash() {
         // Test hash function mappings
         assert_eq!(
-            map_testcase_to_builtin("lpfx_hash_1f"),
-            Some((BuiltinId::LpfxHash1, 2))
+            map_testcase_to_builtin("lpfx_hash_1f", 2),
+            Some(BuiltinId::LpfxHash1)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_lpfx_hash_1"),
-            Some((BuiltinId::LpfxHash1, 2))
+            map_testcase_to_builtin("__lp_lpfx_hash_1", 2),
+            Some(BuiltinId::LpfxHash1)
         );
         assert_eq!(
-            map_testcase_to_builtin("lpfx_hash_2f"),
-            Some((BuiltinId::LpfxHash2, 3))
+            map_testcase_to_builtin("lpfx_hash_2f", 3),
+            Some(BuiltinId::LpfxHash2)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_lpfx_hash_2"),
-            Some((BuiltinId::LpfxHash2, 3))
+            map_testcase_to_builtin("__lp_lpfx_hash_2", 3),
+            Some(BuiltinId::LpfxHash2)
         );
         assert_eq!(
-            map_testcase_to_builtin("lpfx_hash_3f"),
-            Some((BuiltinId::LpfxHash3, 4))
+            map_testcase_to_builtin("lpfx_hash_3f", 4),
+            Some(BuiltinId::LpfxHash3)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_lpfx_hash_3"),
-            Some((BuiltinId::LpfxHash3, 4))
+            map_testcase_to_builtin("__lp_lpfx_hash_3", 4),
+            Some(BuiltinId::LpfxHash3)
         );
     }
 
@@ -358,36 +356,52 @@ block0:
     fn test_map_testcase_to_builtin_standard_math() {
         // Test a few standard math function mappings
         assert_eq!(
-            map_testcase_to_builtin("lp_q32_sinf"),
-            Some((BuiltinId::LpQ32Sin, 1))
+            map_testcase_to_builtin("lp_q32_sinf", 1),
+            Some(BuiltinId::LpQ32Sin)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_q32_sin"),
-            Some((BuiltinId::LpQ32Sin, 1))
+            map_testcase_to_builtin("__lp_q32_sin", 1),
+            Some(BuiltinId::LpQ32Sin)
         );
         assert_eq!(
-            map_testcase_to_builtin("lp_q32_addf"),
-            Some((BuiltinId::LpQ32Add, 2))
+            map_testcase_to_builtin("lp_q32_addf", 2),
+            Some(BuiltinId::LpQ32Add)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_q32_add"),
-            Some((BuiltinId::LpQ32Add, 2))
+            map_testcase_to_builtin("__lp_q32_add", 2),
+            Some(BuiltinId::LpQ32Add)
         );
         assert_eq!(
-            map_testcase_to_builtin("lp_q32_fmaf"),
-            Some((BuiltinId::LpQ32Fma, 3))
+            map_testcase_to_builtin("lp_q32_fmaf", 3),
+            Some(BuiltinId::LpQ32Fma)
         );
         assert_eq!(
-            map_testcase_to_builtin("__lp_q32_fma"),
-            Some((BuiltinId::LpQ32Fma, 3))
+            map_testcase_to_builtin("__lp_q32_fma", 3),
+            Some(BuiltinId::LpQ32Fma)
         );
+    }
+
+    #[test]
+    fn test_map_testcase_to_builtin_overloads() {
+        // Test overloaded functions - hsv2rgb has vec3 and vec4 versions
+        assert_eq!(
+            map_testcase_to_builtin("__lpfx_hsv2rgb", 4),
+            Some(BuiltinId::LpfxHsv2rgbQ32)
+        );
+        assert_eq!(
+            map_testcase_to_builtin("__lpfx_hsv2rgb", 5),
+            Some(BuiltinId::LpfxHsv2rgbVec4Q32)
+        );
+        // Wrong argument count should return None
+        assert_eq!(map_testcase_to_builtin("__lpfx_hsv2rgb", 3), None);
+        assert_eq!(map_testcase_to_builtin("__lpfx_hsv2rgb", 6), None);
     }
 
     #[test]
     fn test_map_testcase_to_builtin_unknown() {
         // Test that unknown functions return None
-        assert_eq!(map_testcase_to_builtin("unknown_function"), None);
-        assert_eq!(map_testcase_to_builtin("__lp_unknown"), None);
-        assert_eq!(map_testcase_to_builtin(""), None);
+        assert_eq!(map_testcase_to_builtin("unknown_function", 0), None);
+        assert_eq!(map_testcase_to_builtin("__lp_unknown", 0), None);
+        assert_eq!(map_testcase_to_builtin("", 0), None);
     }
 }

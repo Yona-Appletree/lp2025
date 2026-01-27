@@ -878,7 +878,7 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
     let content = fs::read_to_string(path).expect("Failed to read math.rs");
 
     // Find the map_testcase_to_builtin function and replace it
-    let start_marker = "/// Map TestCase function name to BuiltinId and argument count.";
+    let start_marker = "/// Map TestCase function name and argument count to BuiltinId.";
 
     let start_idx = content
         .find(start_marker)
@@ -905,13 +905,13 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
     let before = &content[..start_idx];
     let after = &content[end_idx..];
 
-    let header = "/// Map TestCase function name to BuiltinId and argument count.\n///\n/// Returns None if the function name is not a math function that should be converted.\n/// Handles both standard C math function names (sinf, cosf) and intrinsic names (__lp_sin, __lp_cos).\n/// Returns (BuiltinId, argument_count) where argument_count is 1 or 2.\n///\n/// This function is AUTO-GENERATED. Do not edit manually.\n///\n/// To regenerate this function, run:\n///     cargo run --bin lp-builtin-gen --manifest-path lp-glsl/apps/lp-builtin-gen/Cargo.toml\n///\n/// Or use the build script:\n///     scripts/build-builtins.sh\n";
+    let header = "/// Map TestCase function name and argument count to BuiltinId.\n///\n/// Returns None if the function name is not a math function that should be converted.\n/// Handles both standard C math function names (sinf, cosf) and intrinsic names (__lp_sin, __lp_cos).\n/// Supports overloaded functions by matching on both name and argument count.\n///\n/// This function is AUTO-GENERATED. Do not edit manually.\n///\n/// To regenerate this function, run:\n///     cargo run --bin lp-builtin-gen --manifest-path lp-glsl/apps/lp-builtin-gen/Cargo.toml\n///\n/// Or use the build script:\n///     scripts/build-builtins.sh\n";
 
     let mut new_function = String::from(header);
     new_function.push_str(
-        "pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)> {\n",
+        "pub fn map_testcase_to_builtin(testcase_name: &str, arg_count: usize) -> Option<BuiltinId> {\n",
     );
-    new_function.push_str("    match testcase_name {\n");
+    new_function.push_str("    match (testcase_name, arg_count) {\n");
 
     // Generate mappings
     if builtins.is_empty() {
@@ -962,16 +962,16 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
                         let c_name = format!("{}f", base_name);
                         let intrinsic_name = format!("__lp_{}", base_name);
                         new_function.push_str(&format!(
-                            "        \"{}\" | \"{}\" => Some((BuiltinId::{}, {})),\n",
-                            c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
+                            "        (\"{}\" | \"{}\", {}) => Some(BuiltinId::{}),\n",
+                            c_name, intrinsic_name, builtin.param_count, builtin.enum_variant
                         ));
                     } else {
                         // Other lpfx functions (simplex, worley, etc.): use testcase name (GLSL name with __ prefix)
                         // Only Q32 variants reach here (f32 filtered above)
                         let testcase_name = format!("__{}", func.glsl_sig.name);
                         new_function.push_str(&format!(
-                            "        \"{}\" => Some((BuiltinId::{}, {})),\n",
-                            testcase_name, builtin.enum_variant, builtin.param_count
+                            "        (\"{}\", {}) => Some(BuiltinId::{}),\n",
+                            testcase_name, builtin.param_count, builtin.enum_variant
                         ));
                     }
                     continue;
@@ -1011,8 +1011,8 @@ fn generate_testcase_mapping(path: &Path, builtins: &[BuiltinInfo]) {
             };
 
             new_function.push_str(&format!(
-                "        \"{}\" | \"{}\"{additional_names} => Some((BuiltinId::{}, {})),\n",
-                c_name, intrinsic_name, builtin.enum_variant, builtin.param_count
+                "        (\"{}\" | \"{}\"{}, {}) => Some(BuiltinId::{}),\n",
+                c_name, intrinsic_name, additional_names, builtin.param_count, builtin.enum_variant
             ));
         }
     }

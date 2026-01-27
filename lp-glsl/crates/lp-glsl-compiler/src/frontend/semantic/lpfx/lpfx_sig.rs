@@ -193,10 +193,7 @@ pub fn build_call_signature(
                 // Void return - no return value
             }
             _ => {
-                panic!(
-                    "Unsupported return type for LPFX function: {:?}",
-                    return_type
-                );
+                panic!("Unsupported return type for LPFX function: {return_type:?}");
             }
         }
     }

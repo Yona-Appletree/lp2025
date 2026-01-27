@@ -27,13 +27,18 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         name: &str,
         args: Vec<(Vec<Value>, Type)>,
     ) -> Result<(Vec<Value>, Type), GlslError> {
-        // Look up function in registry
-        let func = find_lpfx_fn(name).ok_or_else(|| {
-            GlslError::new(ErrorCode::E0400, format!("Unknown LPFX function: {name}"))
-        })?;
-
-        // Collect parameter types before flattening (needed for signature)
+        // Collect parameter types before flattening (needed for signature and overload resolution)
         let param_types: Vec<Type> = args.iter().map(|(_, ty)| ty.clone()).collect();
+
+        // Look up function in registry with overload resolution
+        let func = find_lpfx_fn(name, &param_types).ok_or_else(|| {
+            GlslError::new(
+                ErrorCode::E0400,
+                format!(
+                    "Unknown or ambiguous LPFX function: {name} with argument types {param_types:?}"
+                ),
+            )
+        })?;
 
         // Flatten vector arguments to individual components
         let mut flat_values = Vec::new();
@@ -193,7 +198,8 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
 
     /// Helper to declare and get FuncRef for LPFX function TestCase call.
     ///
-    /// Creates external function calls using TestCase names (e.g., "__lpfx_snoise3").
+    /// Creates external function calls using TestCase names based on builtin ID name
+    /// (e.g., "__lpfx_hsv2rgb_f32" or "__lpfx_hsv2rgb_vec4_f32").
     /// These are converted to q32 builtins by the transform.
     ///
     /// Always uses float signature (f32 args, f32 return) - the transform will handle
@@ -204,8 +210,8 @@ impl<'a, M: cranelift_module::Module> CodegenContext<'a, M> {
         builtin_id: crate::backend::builtins::registry::BuiltinId,
         _param_types: &[Type],
     ) -> Result<FuncRef, GlslError> {
-        // TestCase name is the GLSL function name with __ prefix
-        let testcase_name = format!("__{}", func.glsl_sig.name);
+        // TestCase name is the builtin ID name (includes variant info for overloads)
+        let testcase_name = builtin_id.name();
 
         // Get pointer type for StructReturn (if needed)
         let pointer_type = self.gl_module.module_internal().isa().pointer_type();

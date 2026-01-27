@@ -64,21 +64,25 @@ pub fn generate_lpfx_fns(parsed_functions: &[ParsedLpfxFunction]) -> String {
     output.push_str("fn init_functions() -> &'static [LpfxFn] {\n");
     output.push_str("    let vec: Vec<LpfxFn> = vec![\n");
 
-    // Group functions by GLSL name for pairing
+    // Group functions by GLSL name for overload support
     let grouped = group_functions_by_name(parsed_functions);
 
-    // Generate LpfxFn structures
+    // Generate LpfxFn structures - one per unique signature
     for functions in grouped.values() {
-        let func = functions[0]; // Use first function as reference (they should all have same signature)
+        // Group by unique signature (name + return type + parameters)
+        let signatures = group_by_signature(functions);
 
-        output.push_str("        LpfxFn {\n");
-        output.push_str("            glsl_sig: ");
-        output.push_str(&format_function_signature(&func.glsl_sig));
-        output.push_str(",\n");
-        output.push_str("            impls: ");
-        output.push_str(&format_lpfx_fn_impl(func, functions));
-        output.push_str(",\n");
-        output.push_str("        },\n");
+        // Generate one LpfxFn entry per unique signature
+        for (signature_funcs, sig) in signatures {
+            output.push_str("        LpfxFn {\n");
+            output.push_str("            glsl_sig: ");
+            output.push_str(&format_function_signature(sig));
+            output.push_str(",\n");
+            output.push_str("            impls: ");
+            output.push_str(&format_lpfx_fn_impl_for_signature(&signature_funcs));
+            output.push_str(",\n");
+            output.push_str("        },\n");
+        }
     }
 
     output.push_str("    ];\n");
@@ -176,9 +180,46 @@ fn format_param_qualifier(qualifier: &ParamQualifier) -> String {
     }
 }
 
-/// Format an LpfxFnImpl as Rust code
-fn format_lpfx_fn_impl(func: &ParsedLpfxFunction, functions: &[&ParsedLpfxFunction]) -> String {
-    if let Some(_variant) = func.attribute.variant {
+/// Group functions by unique signature (name + return type + parameters)
+fn group_by_signature<'a>(
+    functions: &'a [&'a ParsedLpfxFunction],
+) -> Vec<(Vec<&'a ParsedLpfxFunction>, &'a FunctionSignature)> {
+    use std::collections::HashMap;
+
+    let mut by_sig: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
+
+    for func in functions {
+        let key = signature_key(&func.glsl_sig);
+        by_sig.entry(key).or_default().push(func);
+    }
+
+    // Convert to vec of (functions, signature) pairs
+    by_sig
+        .into_values()
+        .map(|funcs| {
+            let sig = &funcs[0].glsl_sig;
+            (funcs, sig)
+        })
+        .collect()
+}
+
+/// Create a signature key for grouping functions (name + return type + parameters)
+fn signature_key(sig: &FunctionSignature) -> String {
+    // Create a key from function name + return type + parameter types
+    let mut key = format!("{}:", sig.name);
+    key.push_str(&format!("{:?}", sig.return_type));
+    for param in &sig.parameters {
+        key.push_str(&format!("{:?}{:?}", param.ty, param.qualifier));
+    }
+    key
+}
+
+/// Format an LpfxFnImpl as Rust code for a specific signature
+fn format_lpfx_fn_impl_for_signature(functions: &[&ParsedLpfxFunction]) -> String {
+    // Check if any function has a variant (decimal function)
+    let has_variant = functions.iter().any(|f| f.attribute.variant.is_some());
+
+    if has_variant {
         // Decimal function - find f32 and q32 variants
         let mut f32_builtin = None;
         let mut q32_builtin = None;
@@ -202,10 +243,13 @@ fn format_lpfx_fn_impl(func: &ParsedLpfxFunction, functions: &[&ParsedLpfxFuncti
             q32_builtin.expect("q32 variant not found")
         )
     } else {
-        // Non-decimal function
+        // Non-decimal function - should have exactly one
+        if functions.len() != 1 {
+            panic!("Non-decimal function should have exactly one implementation");
+        }
         format!(
             "LpfxFnImpl::NonDecimal(BuiltinId::{})",
-            func.info.builtin_id_variant
+            functions[0].info.builtin_id_variant
         )
     }
 }

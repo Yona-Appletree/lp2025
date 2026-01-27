@@ -38,6 +38,9 @@ pub fn validate_lpfx_functions(
     // Validate signature consistency
     validate_signature_consistency(parsed_functions)?;
 
+    // Validate overloads have distinct parameter signatures
+    validate_overload_distinct_signatures(parsed_functions)?;
+
     Ok(())
 }
 
@@ -53,7 +56,7 @@ fn validate_decimal_pairs(parsed_functions: &[ParsedLpfxFunction]) -> Result<(),
     }
 
     // Check each group
-    for (_sig_key, functions) in &by_signature {
+    for functions in by_signature.values() {
         // Check if any function has a variant (decimal function)
         let has_variant = functions.iter().any(|f| f.attribute.variant.is_some());
 
@@ -121,7 +124,7 @@ fn validate_signature_consistency(
     }
 
     // Check each group for signature consistency
-    for (_sig_key, functions) in &by_signature {
+    for functions in by_signature.values() {
         // Find f32 and q32 variants
         let mut f32_func: Option<&ParsedLpfxFunction> = None;
         let mut q32_func: Option<&ParsedLpfxFunction> = None;
@@ -192,4 +195,67 @@ fn signatures_match(sig1: &FunctionSignature, sig2: &FunctionSignature) -> bool 
     }
 
     true
+}
+
+/// Validate that overloaded functions have distinct parameter signatures
+///
+/// For functions with the same GLSL name, ensures that parameter signatures are distinct.
+/// Note: f32 and q32 variants of the same signature are allowed (they're implementations, not overloads).
+/// This validation checks that we don't have multiple functions with the same parameter signature
+/// and the same variant (e.g., two f32 implementations of the same signature).
+fn validate_overload_distinct_signatures(
+    parsed_functions: &[ParsedLpfxFunction],
+) -> Result<(), LpfxCodegenError> {
+    // Group functions by GLSL name
+    let mut by_name: HashMap<String, Vec<&ParsedLpfxFunction>> = HashMap::new();
+
+    for func in parsed_functions {
+        let glsl_name = func.glsl_sig.name.clone();
+        by_name.entry(glsl_name).or_default().push(func);
+    }
+
+    // Check each group for distinct parameter signatures
+    for (name, functions) in &by_name {
+        if functions.len() <= 1 {
+            continue; // No overloads
+        }
+
+        // Group by (parameter signature, variant) to check for duplicates
+        // f32 and q32 variants of the same signature are allowed
+        let mut by_sig_and_variant: HashMap<
+            (String, Option<crate::lpfx::errors::Variant>),
+            Vec<&ParsedLpfxFunction>,
+        > = HashMap::new();
+
+        for func in functions {
+            let param_key = parameter_signature_key(&func.glsl_sig);
+            let key = (param_key, func.attribute.variant);
+            by_sig_and_variant.entry(key).or_default().push(func);
+        }
+
+        // Check for duplicate (parameter signature, variant) combinations
+        for funcs in by_sig_and_variant.values() {
+            if funcs.len() > 1 {
+                let conflicting_files: Vec<String> = funcs
+                    .iter()
+                    .map(|f| f.info.file_path.display().to_string())
+                    .collect();
+                return Err(LpfxCodegenError::DuplicateFunctionName {
+                    function_name: name.clone(),
+                    conflicting_files,
+                });
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Create a key from parameter signature (name + parameters, ignoring return type)
+fn parameter_signature_key(sig: &FunctionSignature) -> String {
+    let mut key = format!("{}:", sig.name);
+    for param in &sig.parameters {
+        key.push_str(&format!("{:?}{:?}", param.ty, param.qualifier));
+    }
+    key
 }

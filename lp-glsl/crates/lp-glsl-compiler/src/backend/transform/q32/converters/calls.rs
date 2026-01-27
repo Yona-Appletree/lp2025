@@ -250,20 +250,9 @@ pub(crate) fn convert_call(
             }
 
             // Check if this is a math function that should be converted to a builtin
-            if let Some((builtin_id, expected_arg_count)) = map_testcase_to_builtin(func_name) {
+            let old_args = args.as_slice(&old_func.dfg.value_lists);
+            if let Some(builtin_id) = map_testcase_to_builtin(func_name, old_args.len()) {
                 // Convert to builtin call (similar to convert_sqrt)
-                let old_args = args.as_slice(&old_func.dfg.value_lists);
-                if old_args.len() != expected_arg_count {
-                    return Err(GlslError::new(
-                        ErrorCode::E0400,
-                        format!(
-                            "Expected {} argument(s) for math function '{}', got {}",
-                            expected_arg_count,
-                            func_name,
-                            old_args.len()
-                        ),
-                    ));
-                }
 
                 // Map all arguments
                 let mapped_args: Vec<Value> = old_args
@@ -282,7 +271,7 @@ pub(crate) fn convert_call(
 
                 // Create signature for the builtin based on argument count
                 let mut sig = Signature::new(CallConv::SystemV);
-                for _ in 0..expected_arg_count {
+                for _ in 0..old_args.len() {
                     sig.params.push(AbiParam::new(types::I32));
                 }
                 sig.returns.push(AbiParam::new(types::I32));
@@ -344,8 +333,10 @@ pub(crate) fn convert_call(
                             })?;
                         // Convert TestCase name to builtin name if it's a math function
                         // func_id_map contains builtin names (e.g., "__lp_q32_atan2"), not TestCase names (e.g., "atan2f")
+                        // Note: We can't determine arg_count here, so we try to match without it
+                        // This is a fallback for non-overloaded functions
                         let lookup_name =
-                            if let Some((builtin_id, _)) = map_testcase_to_builtin(func_name_str) {
+                            if let Some(builtin_id) = map_testcase_to_builtin(func_name_str, 0) {
                                 builtin_id.name()
                             } else {
                                 func_name_str

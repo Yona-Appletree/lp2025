@@ -44,7 +44,7 @@ pub enum LpfxCodegenError {
 }
 
 /// Decimal format variant
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Variant {
     F32,
     Q32,

@@ -4,7 +4,7 @@
 
 use super::lpfx_fn::LpfxFn;
 use crate::semantic::types::Type;
-use alloc::{format, string::String};
+use alloc::{format, string::String, vec::Vec};
 
 /// Check if a function name is an LPFX function
 ///
@@ -21,13 +21,71 @@ fn get_cached_functions() -> &'static [LpfxFn] {
     super::lpfx_fns::lpfx_fns()
 }
 
-/// Find an LPFX function by its GLSL name
+/// Find an LPFX function by its GLSL name and argument types (overload resolution)
 ///
-/// Returns `None` if the function is not found in the registry.
-pub fn find_lpfx_fn(name: &str) -> Option<&'static LpfxFn> {
-    get_cached_functions()
+/// Performs overload resolution by finding all functions with matching name,
+/// then selecting the one with exact parameter type match.
+///
+/// # Arguments
+/// * `name` - GLSL function name (e.g., "lpfx_hsv2rgb")
+/// * `arg_types` - Argument types for overload resolution
+///
+/// # Returns
+/// * `Some(function)` if exactly one matching overload is found
+/// * `None` if no match or ambiguous (multiple exact matches)
+pub fn find_lpfx_fn(name: &str, arg_types: &[Type]) -> Option<&'static LpfxFn> {
+    // Find all functions with matching name
+    let candidates: Vec<&LpfxFn> = get_cached_functions()
         .iter()
-        .find(|f| f.glsl_sig.name == name)
+        .filter(|f| f.glsl_sig.name == name)
+        .collect();
+
+    if candidates.is_empty() {
+        return None;
+    }
+
+    // Filter to functions with matching parameter count
+    let matching_count: Vec<&LpfxFn> = candidates
+        .into_iter()
+        .filter(|f| f.glsl_sig.parameters.len() == arg_types.len())
+        .collect();
+
+    if matching_count.is_empty() {
+        return None;
+    }
+
+    // Find exact type matches
+    let exact_matches: Vec<&LpfxFn> = matching_count
+        .into_iter()
+        .filter(|f| matches_signature(f, arg_types))
+        .collect();
+
+    // Return first match, or None if ambiguous (multiple matches) or no match
+    if exact_matches.len() == 1 {
+        Some(exact_matches[0])
+    } else {
+        None
+    }
+}
+
+/// Check if a function signature matches the given argument types
+///
+/// Performs exact type matching:
+/// - Scalar types: exact match required
+/// - Vector types: exact match required (including component count)
+fn matches_signature(func: &LpfxFn, arg_types: &[Type]) -> bool {
+    if func.glsl_sig.parameters.len() != arg_types.len() {
+        return false;
+    }
+
+    for (param, arg_ty) in func.glsl_sig.parameters.iter().zip(arg_types) {
+        // Exact type match required
+        if param.ty != *arg_ty {
+            return false;
+        }
+    }
+
+    true
 }
 
 /// Find an LPFX function by BuiltinId
@@ -57,58 +115,15 @@ pub fn find_lpfx_fn_by_builtin_id(
 
 /// Check if an LPFX function call is valid and return the return type
 ///
-/// Validates that the function exists and that the argument types match the signature.
-/// Handles vector types by comparing component counts.
+/// Uses overload resolution to find the matching function, then returns its return type.
 ///
 /// # Returns
 /// - `Ok(return_type)` if the call is valid
 /// - `Err(error_message)` if the call is invalid
 pub fn check_lpfx_fn_call(name: &str, arg_types: &[Type]) -> Result<Type, String> {
-    let func = find_lpfx_fn(name).ok_or_else(|| format!("unknown LPFX function: {name}"))?;
-
-    // Check parameter count matches
-    if func.glsl_sig.parameters.len() != arg_types.len() {
-        return Err(format!(
-            "function `{}` expects {} arguments, got {}",
-            name,
-            func.glsl_sig.parameters.len(),
-            arg_types.len()
-        ));
-    }
-
-    // Check each parameter type matches
-    for (param, arg_ty) in func.glsl_sig.parameters.iter().zip(arg_types) {
-        // For vectors, check if the base type matches and component count matches
-        if param.ty.is_vector() && arg_ty.is_vector() {
-            // Both are vectors - check they're the same type
-            if param.ty != *arg_ty {
-                return Err(format!(
-                    "function `{}` parameter `{}` expects type `{:?}`, got `{:?}`",
-                    name, param.name, param.ty, arg_ty
-                ));
-            }
-        } else if param.ty.is_vector() {
-            // Parameter is vector but argument is not
-            return Err(format!(
-                "function `{}` parameter `{}` expects vector type `{:?}`, got scalar `{:?}`",
-                name, param.name, param.ty, arg_ty
-            ));
-        } else if arg_ty.is_vector() {
-            // Argument is vector but parameter is not
-            return Err(format!(
-                "function `{}` parameter `{}` expects scalar type `{:?}`, got vector `{:?}`",
-                name, param.name, param.ty, arg_ty
-            ));
-        } else {
-            // Both are scalars - check exact match
-            if param.ty != *arg_ty {
-                return Err(format!(
-                    "function `{}` parameter `{}` expects type `{:?}`, got `{:?}`",
-                    name, param.name, param.ty, arg_ty
-                ));
-            }
-        }
-    }
+    let func = find_lpfx_fn(name, arg_types).ok_or_else(|| {
+        format!("no matching overload for LPFX function `{name}` with argument types {arg_types:?}")
+    })?;
 
     Ok(func.glsl_sig.return_type.clone())
 }
@@ -129,5 +144,145 @@ pub fn get_builtin_id_for_format(
             crate::DecimalFormat::Float => Some(*float_impl),
             crate::DecimalFormat::Q32 => Some(*q32_impl),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_non_overloaded_function() {
+        // Test finding a non-overloaded function
+        let func = find_lpfx_fn("lpfx_hash1", &[Type::UInt, Type::UInt]);
+        assert!(func.is_some());
+        let func = func.unwrap();
+        assert_eq!(func.glsl_sig.name, "lpfx_hash1");
+        assert_eq!(func.glsl_sig.parameters.len(), 2);
+    }
+
+    #[test]
+    fn test_find_overloaded_function_vec3() {
+        // Test finding vec3 overload of hsv2rgb
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3]);
+        assert!(func.is_some());
+        let func = func.unwrap();
+        assert_eq!(func.glsl_sig.name, "lpfx_hsv2rgb");
+        assert_eq!(func.glsl_sig.parameters.len(), 1);
+        assert_eq!(func.glsl_sig.parameters[0].ty, Type::Vec3);
+        assert_eq!(func.glsl_sig.return_type, Type::Vec3);
+    }
+
+    #[test]
+    fn test_find_overloaded_function_vec4() {
+        // Test finding vec4 overload of hsv2rgb
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec4]);
+        assert!(func.is_some());
+        let func = func.unwrap();
+        assert_eq!(func.glsl_sig.name, "lpfx_hsv2rgb");
+        assert_eq!(func.glsl_sig.parameters.len(), 1);
+        assert_eq!(func.glsl_sig.parameters[0].ty, Type::Vec4);
+        assert_eq!(func.glsl_sig.return_type, Type::Vec4);
+    }
+
+    #[test]
+    fn test_find_function_wrong_parameter_count() {
+        // Test with wrong parameter count
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3, Type::Float]);
+        assert!(func.is_none());
+    }
+
+    #[test]
+    fn test_find_function_wrong_type() {
+        // Test with wrong type (vec2 instead of vec3)
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec2]);
+        assert!(func.is_none());
+    }
+
+    #[test]
+    fn test_find_function_scalar_vs_vector() {
+        // Test that scalar and vector types don't match
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Float]);
+        assert!(func.is_none());
+    }
+
+    #[test]
+    fn test_find_unknown_function() {
+        // Test with unknown function name
+        let func = find_lpfx_fn("lpfx_unknown", &[Type::Float]);
+        assert!(func.is_none());
+    }
+
+    #[test]
+    fn test_check_lpfx_fn_call_vec3() {
+        // Test check_lpfx_fn_call with vec3 overload
+        let result = check_lpfx_fn_call("lpfx_hsv2rgb", &[Type::Vec3]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Type::Vec3);
+    }
+
+    #[test]
+    fn test_check_lpfx_fn_call_vec4() {
+        // Test check_lpfx_fn_call with vec4 overload
+        let result = check_lpfx_fn_call("lpfx_hsv2rgb", &[Type::Vec4]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Type::Vec4);
+    }
+
+    #[test]
+    fn test_check_lpfx_fn_call_no_match() {
+        // Test check_lpfx_fn_call with no matching overload
+        let result = check_lpfx_fn_call("lpfx_hsv2rgb", &[Type::Vec2]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("no matching overload"));
+    }
+
+    #[test]
+    fn test_matches_signature_exact_match() {
+        // Test matches_signature with exact match
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3]).unwrap();
+        assert!(matches_signature(func, &[Type::Vec3]));
+    }
+
+    #[test]
+    fn test_matches_signature_type_mismatch() {
+        // Test matches_signature with type mismatch
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3]).unwrap();
+        assert!(!matches_signature(func, &[Type::Vec4]));
+        assert!(!matches_signature(func, &[Type::Vec2]));
+        assert!(!matches_signature(func, &[Type::Float]));
+    }
+
+    #[test]
+    fn test_matches_signature_count_mismatch() {
+        // Test matches_signature with parameter count mismatch
+        let func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3]).unwrap();
+        assert!(!matches_signature(func, &[]));
+        assert!(!matches_signature(func, &[Type::Vec3, Type::Float]));
+    }
+
+    #[test]
+    fn test_overload_resolution_distinguishes_types() {
+        // Test that overload resolution correctly distinguishes vec3 from vec4
+        let vec3_func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec3]).unwrap();
+        let vec4_func = find_lpfx_fn("lpfx_hsv2rgb", &[Type::Vec4]).unwrap();
+
+        // They should be different functions (different return types)
+        assert_ne!(
+            vec3_func.glsl_sig.return_type,
+            vec4_func.glsl_sig.return_type
+        );
+        assert_eq!(vec3_func.glsl_sig.return_type, Type::Vec3);
+        assert_eq!(vec4_func.glsl_sig.return_type, Type::Vec4);
+    }
+
+    #[test]
+    fn test_is_lpfx_fn() {
+        // Test is_lpfx_fn helper
+        assert!(is_lpfx_fn("lpfx_hsv2rgb"));
+        assert!(is_lpfx_fn("lpfx_hash1"));
+        assert!(!is_lpfx_fn("hsv2rgb"));
+        assert!(!is_lpfx_fn("lpfx"));
+        assert!(!is_lpfx_fn(""));
     }
 }
