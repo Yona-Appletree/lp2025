@@ -64,21 +64,15 @@ pub fn map_testcase_to_builtin(testcase_name: &str) -> Option<(BuiltinId, usize)
         "lpfx_hash_2f" | "__lp_lpfx_hash_2" => Some((BuiltinId::LpfxHash2, 3)),
         "lpfx_hash_3f" | "__lp_lpfx_hash_3" => Some((BuiltinId::LpfxHash3, 4)),
         "lpfx_hsv2rgb_q32f" | "__lpfx_hsv2rgb_q32" => Some((BuiltinId::LpfxHsv2rgbQ32, 3)),
-        "lpfx_hsv2rgb_vec4_q32f" | "__lpfx_hsv2rgb_vec4_q32" => {
-            Some((BuiltinId::LpfxHsv2rgbVec4Q32, 4))
-        }
-        "lpfx_hue2rgb_q32f" | "__lpfx_hue2rgb_q32" => Some((BuiltinId::LpfxHue2rgbQ32, 1)),
+        "__lpfx_hsv2rgb" => Some((BuiltinId::LpfxHsv2rgbVec4Q32, 4)),
+        "__lpfx_hue2rgb" => Some((BuiltinId::LpfxHue2rgbQ32, 1)),
         "lpfx_rgb2hsv_q32f" | "__lpfx_rgb2hsv_q32" => Some((BuiltinId::LpfxRgb2hsvQ32, 3)),
-        "lpfx_rgb2hsv_vec4_q32f" | "__lpfx_rgb2hsv_vec4_q32" => {
-            Some((BuiltinId::LpfxRgb2hsvVec4Q32, 4))
-        }
+        "__lpfx_rgb2hsv" => Some((BuiltinId::LpfxRgb2hsvVec4Q32, 4)),
         "lpfx_saturate_q32f" | "__lpfx_saturate_q32" => Some((BuiltinId::LpfxSaturateQ32, 1)),
         "lpfx_saturate_vec3_q32f" | "__lpfx_saturate_vec3_q32" => {
             Some((BuiltinId::LpfxSaturateVec3Q32, 3))
         }
-        "lpfx_saturate_vec4_q32f" | "__lpfx_saturate_vec4_q32" => {
-            Some((BuiltinId::LpfxSaturateVec4Q32, 4))
-        }
+        "__lpfx_saturate" => Some((BuiltinId::LpfxSaturateVec4Q32, 4)),
         "__lpfx_snoise1" => Some((BuiltinId::LpfxSnoise1Q32, 2)),
         "__lpfx_snoise2" => Some((BuiltinId::LpfxSnoise2Q32, 3)),
         "__lpfx_snoise3" => Some((BuiltinId::LpfxSnoise3Q32, 4)),
