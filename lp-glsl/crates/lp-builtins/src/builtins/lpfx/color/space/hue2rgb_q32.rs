@@ -66,7 +66,11 @@ mod tests {
         let r = fixed_to_float(result.x.to_fixed());
         let g = fixed_to_float(result.y.to_fixed());
         let b = fixed_to_float(result.z.to_fixed());
-        assert!((r - 1.0).abs() < 0.01, "Red component should be ~1.0, got {}", r);
+        assert!(
+            (r - 1.0).abs() < 0.01,
+            "Red component should be ~1.0, got {}",
+            r
+        );
         assert!(g < 0.01, "Green component should be ~0.0, got {}", g);
         assert!(b < 0.01, "Blue component should be ~0.0, got {}", b);
     }
@@ -80,7 +84,11 @@ mod tests {
         let g = fixed_to_float(result.y.to_fixed());
         let b = fixed_to_float(result.z.to_fixed());
         assert!(r < 0.01, "Red component should be ~0.0, got {}", r);
-        assert!((g - 1.0).abs() < 0.01, "Green component should be ~1.0, got {}", g);
+        assert!(
+            (g - 1.0).abs() < 0.01,
+            "Green component should be ~1.0, got {}",
+            g
+        );
         assert!(b < 0.01, "Blue component should be ~0.0, got {}", b);
     }
 
@@ -94,7 +102,11 @@ mod tests {
         let b = fixed_to_float(result.z.to_fixed());
         assert!(r < 0.01, "Red component should be ~0.0, got {}", r);
         assert!(g < 0.01, "Green component should be ~0.0, got {}", g);
-        assert!((b - 1.0).abs() < 0.01, "Blue component should be ~1.0, got {}", b);
+        assert!(
+            (b - 1.0).abs() < 0.01,
+            "Blue component should be ~1.0, got {}",
+            b
+        );
     }
 
     #[test]

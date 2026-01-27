@@ -152,7 +152,10 @@ mod tests {
         let result = lpfx_saturate_vec3_q32(v);
         assert_eq!(result.x, Q32::ZERO, "X component should clamp to 0");
         let y_float = fixed_to_float(result.y.to_fixed());
-        assert!((y_float - 0.5).abs() < 0.0001, "Y component should remain 0.5");
+        assert!(
+            (y_float - 0.5).abs() < 0.0001,
+            "Y component should remain 0.5"
+        );
         assert_eq!(result.z, Q32::ONE, "Z component should clamp to 1");
     }
 
@@ -162,9 +165,15 @@ mod tests {
         let result = lpfx_saturate_vec4_q32(v);
         assert_eq!(result.x, Q32::ZERO, "X component should clamp to 0");
         let y_float = fixed_to_float(result.y.to_fixed());
-        assert!((y_float - 0.5).abs() < 0.0001, "Y component should remain 0.5");
+        assert!(
+            (y_float - 0.5).abs() < 0.0001,
+            "Y component should remain 0.5"
+        );
         assert_eq!(result.z, Q32::ONE, "Z component should clamp to 1");
         let w_float = fixed_to_float(result.w.to_fixed());
-        assert!((w_float - 0.25).abs() < 0.0001, "W component should remain 0.25");
+        assert!(
+            (w_float - 0.25).abs() < 0.0001,
+            "W component should remain 0.25"
+        );
     }
 }

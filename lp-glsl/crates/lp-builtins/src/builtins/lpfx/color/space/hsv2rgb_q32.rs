@@ -82,3 +82,82 @@ pub extern "C" fn __lpfx_hsv2rgb_vec4_q32(x: i32, y: i32, z: i32, w: i32) -> i32
     let result = lpfx_hsv2rgb_vec4_q32(hsv);
     result.x.to_fixed()
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(test)]
+    extern crate std;
+    use super::*;
+    use crate::builtins::lpfx::color::space::rgb2hsv_q32::lpfx_rgb2hsv_q32;
+    use crate::util::test_helpers::fixed_to_float;
+    use std::vec;
+
+    #[test]
+    fn test_hsv2rgb_pure_red() {
+        // HSV(0, 1, 1) -> RGB(1, 0, 0)
+        let hsv = Vec3Q32::new(Q32::ZERO, Q32::ONE, Q32::ONE);
+        let rgb = lpfx_hsv2rgb_q32(hsv);
+        let r = fixed_to_float(rgb.x.to_fixed());
+        let g = fixed_to_float(rgb.y.to_fixed());
+        let b = fixed_to_float(rgb.z.to_fixed());
+        assert!((r - 1.0).abs() < 0.01, "R should be ~1.0, got {}", r);
+        assert!(g < 0.01, "G should be ~0.0, got {}", g);
+        assert!(b < 0.01, "B should be ~0.0, got {}", b);
+    }
+
+    #[test]
+    fn test_hsv2rgb_black() {
+        // HSV(0, 0, 0) -> RGB(0, 0, 0)
+        let hsv = Vec3Q32::zero();
+        let rgb = lpfx_hsv2rgb_q32(hsv);
+        assert_eq!(rgb.x, Q32::ZERO);
+        assert_eq!(rgb.y, Q32::ZERO);
+        assert_eq!(rgb.z, Q32::ZERO);
+    }
+
+    #[test]
+    fn test_hsv2rgb_white() {
+        // HSV(0, 0, 1) -> RGB(1, 1, 1)
+        let hsv = Vec3Q32::new(Q32::ZERO, Q32::ZERO, Q32::ONE);
+        let rgb = lpfx_hsv2rgb_q32(hsv);
+        assert_eq!(rgb.x, Q32::ONE);
+        assert_eq!(rgb.y, Q32::ONE);
+        assert_eq!(rgb.z, Q32::ONE);
+    }
+
+    #[test]
+    fn test_hsv2rgb_round_trip() {
+        // RGB -> HSV -> RGB should be approximately equal
+        let test_colors = vec![
+            Vec3Q32::new(Q32::ONE, Q32::ZERO, Q32::ZERO), // Red
+            Vec3Q32::new(Q32::ZERO, Q32::ONE, Q32::ZERO), // Green
+            Vec3Q32::new(Q32::ZERO, Q32::ZERO, Q32::ONE), // Blue
+            Vec3Q32::from_f32(0.5, 0.3, 0.8),
+            Vec3Q32::from_f32(0.2, 0.7, 0.4),
+        ];
+
+        for rgb_original in test_colors {
+            let hsv = lpfx_rgb2hsv_q32(rgb_original);
+            let rgb_roundtrip = lpfx_hsv2rgb_q32(hsv);
+
+            let r_diff = fixed_to_float((rgb_original.x - rgb_roundtrip.x).to_fixed()).abs();
+            let g_diff = fixed_to_float((rgb_original.y - rgb_roundtrip.y).to_fixed()).abs();
+            let b_diff = fixed_to_float((rgb_original.z - rgb_roundtrip.z).to_fixed()).abs();
+
+            assert!(
+                r_diff < 0.05 && g_diff < 0.05 && b_diff < 0.05,
+                "Round-trip error too large: original {:?}, roundtrip {:?}",
+                rgb_original,
+                rgb_roundtrip
+            );
+        }
+    }
+
+    #[test]
+    fn test_hsv2rgb_vec4_preserves_alpha() {
+        let hsv = Vec4Q32::new(Q32::ZERO, Q32::ONE, Q32::ONE, Q32::from_f32(0.5));
+        let rgb = lpfx_hsv2rgb_vec4_q32(hsv);
+        let alpha = fixed_to_float(rgb.w.to_fixed());
+        assert!((alpha - 0.5).abs() < 0.01, "Alpha should be preserved");
+    }
+}
