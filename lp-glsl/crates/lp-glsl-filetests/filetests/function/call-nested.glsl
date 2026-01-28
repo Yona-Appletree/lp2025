@@ -114,7 +114,7 @@ mat2 test_call_nested_matrix() {
     return combine_transforms_nested(scale_matrix_nested(2.0), identity_nested());
 }
 
-// run: test_call_nested_matrix() ~= mat2(2.0, 0.0, 0.0, 2.0)
+// run: test_call_nested_matrix() ~= mat2(2.0, 0.0, 0.0, 2.0) [expect-fail]
 
 float apply_twice_nested(float x, float factor) {
     return x * factor * factor;

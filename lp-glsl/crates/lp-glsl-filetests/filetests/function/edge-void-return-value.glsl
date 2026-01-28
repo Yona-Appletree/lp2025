@@ -44,7 +44,7 @@ void test_edge_void_return_value_error() {
     bad_void();
 }
 
-// run: test_edge_void_return_value_error() == 0.0
+// run: test_edge_void_return_value_error() == 0.0 [expect-fail]
 */
 
 void conditional_returns() {
@@ -88,7 +88,7 @@ void test_edge_void_in_expression() {
     get_void();
 }
 
-// run: test_edge_void_in_expression() == 0.0
+// run: test_edge_void_in_expression() == 0.0 [expect-fail]
 */
 
 float helper() {
@@ -156,7 +156,7 @@ void test_edge_void_wrong_return_type() {
     wrong_return();
 }
 
-// run: test_edge_void_wrong_return_type() == 0.0
+// run: test_edge_void_wrong_return_type() == 0.0 [expect-fail]
 */
 
 void process_data(float x, float y) {

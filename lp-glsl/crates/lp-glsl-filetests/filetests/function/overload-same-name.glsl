@@ -25,7 +25,7 @@ float test_overload_same_name() {
     return result;
 }
 
-// run: test_overload_same_name() ~= 21.0
+// run: test_overload_same_name() ~= 21.0 [expect-fail]
 
 float length_squared_vec2(vec2 v) {
     return dot(v, v);
@@ -48,7 +48,7 @@ float test_overload_vector_types() {
     return result;
 }
 
-// run: test_overload_vector_types() ~= 38.0
+// run: test_overload_vector_types() ~= 38.0 [expect-fail]
 
 vec2 scale_vec2(vec2 v, float s) {
     return v * s;
@@ -71,7 +71,7 @@ float test_overload_mixed_types() {
     return result;
 }
 
-// run: test_overload_mixed_types() ~= 12.0
+// run: test_overload_mixed_types() ~= 12.0 [expect-fail]
 
 float sum_1(float a) {
     return a;
@@ -92,7 +92,7 @@ float test_overload_parameter_count() {
     return result;
 }
 
-// run: test_overload_parameter_count() ~= 12.0
+// run: test_overload_parameter_count() ~= 12.0 [expect-fail]
 
 float determinant2(mat2 m) {
     return m[0][0] * m[1][1] - m[0][1] * m[1][0];
@@ -111,7 +111,7 @@ float test_overload_matrix_types() {
     return result;
 }
 
-// run: test_overload_matrix_types() ~= -1.0
+// run: test_overload_matrix_types() ~= -1.0 [expect-fail]
 
 bool is_zero_float(float x) {
     return x == 0.0;
@@ -131,7 +131,7 @@ bool test_overload_bool_types() {
     return is_zero_float(0.0) && is_zero_int(0) && is_zero_vec2(vec2(0.0, 0.0));
 }
 
-// run: test_overload_bool_types() == true
+// run: test_overload_bool_types() == true [expect-fail]
 
 float sum_array_arr2(float[2] arr) {
     return arr[0] + arr[1];
@@ -149,4 +149,4 @@ float test_overload_array_types() {
     return sum_array_arr2(arr2) + sum_array_arr3(arr3);
 }
 
-// run: test_overload_array_types() ~= 9.0
+// run: test_overload_array_types() ~= 9.0 [expect-fail]

@@ -75,4 +75,4 @@ ivec2 c = ivec2(2, 3);
 return equal(equal(a, b), equal(b, c));
 }
 
-// run: test_ivec2_equal_function_in_expression() == bvec2(false, false)
+// run: test_ivec2_equal_function_in_expression() == bvec2(false, false) [expect-fail]

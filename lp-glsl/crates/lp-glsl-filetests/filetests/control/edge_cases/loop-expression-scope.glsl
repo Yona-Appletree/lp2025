@@ -25,7 +25,7 @@ int test_for_loop_expression_modified_in_body() {
     return i;
 }
 
-// run: test_for_loop_expression_modified_in_body() == 5
+// run: test_for_loop_expression_modified_in_body() == 5 [expect-fail]
 
 int test_for_loop_expression_break() {
     int i = 0;

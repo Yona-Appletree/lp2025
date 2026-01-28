@@ -5,6 +5,7 @@ use crate::parse::TestFile;
 use crate::test_run::TestCaseStats;
 use crate::test_run::execution;
 use crate::test_run::parse_assert;
+use crate::test_run::record_failure;
 use crate::test_run::target;
 use crate::test_run::test_glsl;
 use anyhow::Result;
@@ -22,7 +23,7 @@ pub fn run(
     path: &Path,
     line_filter: Option<usize>,
     output_mode: OutputMode,
-) -> Result<(Result<()>, TestCaseStats, Vec<usize>)> {
+) -> Result<(Result<()>, TestCaseStats, Vec<usize>, Vec<usize>)> {
     // Read the original file lines to pass to test glsl generation
     let file_contents = std::fs::read_to_string(path)
         .map_err(|e| anyhow::anyhow!("failed to read {}: {}", path.display(), e))?;
@@ -55,6 +56,7 @@ pub fn run(
     let mut stats = TestCaseStats::default();
     let mut errors = Vec::new();
     let mut unexpected_pass_lines = Vec::new();
+    let mut failed_lines = Vec::new();
 
     // Process each run directive
     for directive in &test_file.run_directives {
@@ -74,7 +76,7 @@ pub fn run(
         ) {
             Ok(result) => result,
             Err(e) => {
-                stats.failed += 1;
+                record_failure(directive, &mut stats, &mut failed_lines);
                 let error_msg = format!("failed to generate test GLSL: {e}");
                 eprintln!("{error_msg}");
                 errors.push(e.context(error_msg));
@@ -91,7 +93,8 @@ pub fn run(
         ) {
             Ok(exec) => exec,
             Err(e) => {
-                stats.failed += 1;
+                // Compilation failed - check if this is an expected failure
+                record_failure(directive, &mut stats, &mut failed_lines);
                 let formatted_error = format_compilation_error(
                     &e,
                     &test_glsl_result,
@@ -117,7 +120,7 @@ pub fn run(
             match parse_assert::parse_function_call(&directive.expression_str) {
                 Ok(result) => result,
                 Err(e) => {
-                    stats.failed += 1;
+                    record_failure(directive, &mut stats, &mut failed_lines);
                     let error_msg = format!(
                         "failed to parse function call: {}",
                         directive.expression_str
@@ -132,7 +135,7 @@ pub fn run(
         let args = match parse_assert::parse_function_arguments(&arg_strings) {
             Ok(result) => result,
             Err(e) => {
-                stats.failed += 1;
+                record_failure(directive, &mut stats, &mut failed_lines);
                 let error_msg = format!("failed to parse function arguments: {arg_strings:?}");
                 eprintln!("{error_msg}");
                 errors.push(e.context(error_msg));
@@ -147,11 +150,7 @@ pub fn run(
         match (execution_result, trap_expectation) {
             (Ok(actual_value), Some(exp)) => {
                 // Expected a trap but got a value
-                if directive.expect_fail {
-                    stats.expect_fail += 1;
-                } else {
-                    stats.failed += 1;
-                }
+                record_failure(directive, &mut stats, &mut failed_lines);
                 let error_msg = format_error(
                     ErrorType::ExpectedTrapGotValue,
                     &format!(
@@ -185,11 +184,7 @@ pub fn run(
 
                 if is_trap {
                     // Unexpected trap
-                    if directive.expect_fail {
-                        stats.expect_fail += 1;
-                    } else {
-                        stats.failed += 1;
-                    }
+                    record_failure(directive, &mut stats, &mut failed_lines);
                     // Extract just the error message (before emulator state)
                     let error_msg = extract_error_message(&error_str);
                     let formatted_error = format_error(
@@ -211,11 +206,7 @@ pub fn run(
                     // Other error - format through unified formatter
                     // Extract just the error message (before emulator state)
                     let error_msg = extract_error_message(&error_str);
-                    if directive.expect_fail {
-                        stats.expect_fail += 1;
-                    } else {
-                        stats.failed += 1;
-                    }
+                    record_failure(directive, &mut stats, &mut failed_lines);
                     let formatted_error = format_error(
                         ErrorType::ExecutionTrap,
                         &error_msg,
@@ -239,11 +230,7 @@ pub fn run(
                 // Check trap code if specified
                 if let Some(expected_code) = exp.trap_code {
                     if !error_str.contains(&format!("user{expected_code}")) {
-                        if directive.expect_fail {
-                            stats.expect_fail += 1;
-                        } else {
-                            stats.failed += 1;
-                        }
+                        record_failure(directive, &mut stats, &mut failed_lines);
                         let formatted_error = format_error(
                             ErrorType::TrapMismatch,
                             &format!(
@@ -265,11 +252,7 @@ pub fn run(
                 // Check trap message if specified
                 if let Some(ref expected_msg) = exp.trap_message {
                     if !error_str.contains(expected_msg) {
-                        if directive.expect_fail {
-                            stats.expect_fail += 1;
-                        } else {
-                            stats.failed += 1;
-                        }
+                        record_failure(directive, &mut stats, &mut failed_lines);
                         let formatted_error = format_error(
                             ErrorType::TrapMismatch,
                             &format!(
@@ -303,7 +286,7 @@ pub fn run(
                 let expected_value = match parse_assert::parse_glsl_value(&directive.expected_str) {
                     Ok(value) => value,
                     Err(e) => {
-                        stats.failed += 1;
+                        record_failure(directive, &mut stats, &mut failed_lines);
                         let error_msg =
                             format!("failed to parse expected value: {}", directive.expected_str);
                         eprintln!("{error_msg}");
@@ -365,11 +348,7 @@ pub fn run(
                         //     file_update.update_run_expectation(...)?;
                         //     stats.passed += 1;
                         // } else {
-                        if directive.expect_fail {
-                            stats.expect_fail += 1;
-                        } else {
-                            stats.failed += 1;
-                        }
+                        record_failure(directive, &mut stats, &mut failed_lines);
                         // Format the // run: line
                         let op_str = match directive.comparison {
                             crate::parse::test_type::ComparisonOp::Exact => "==",
@@ -431,23 +410,31 @@ pub fn run(
         }
     }
 
-    let result = if stats.failed > 0 {
-        // Combine all errors into one message
-        let error_summary = if errors.len() == 1 {
-            format!("{}", errors[0])
+    // Exit with error if there are unexpected failures (regressions) or unexpected passes
+    let result = if stats.failed > 0 || stats.unexpected_pass > 0 {
+        if stats.unexpected_pass > 0 {
+            Err(anyhow::anyhow!(
+                "{} test case(s) marked [expect-fail] are now passing",
+                stats.unexpected_pass
+            ))
         } else {
-            let mut summary = format!("{} test case(s) failed:\n\n", stats.failed);
-            for (i, err) in errors.iter().enumerate() {
-                summary.push_str(&format!("{}. {}\n", i + 1, err));
-            }
-            summary
-        };
-        Err(anyhow::anyhow!("{error_summary}"))
+            // Combine all errors into one message
+            let error_summary = if errors.len() == 1 {
+                format!("{}", errors[0])
+            } else {
+                let mut summary = format!("{} test case(s) failed:\n\n", stats.failed);
+                for (i, err) in errors.iter().enumerate() {
+                    summary.push_str(&format!("{}. {}\n", i + 1, err));
+                }
+                summary
+            };
+            Err(anyhow::anyhow!("{error_summary}"))
+        }
     } else {
         Ok(())
     };
 
-    Ok((result, stats, unexpected_pass_lines))
+    Ok((result, stats, unexpected_pass_lines, failed_lines))
 }
 
 /// Error type for unified error formatting.

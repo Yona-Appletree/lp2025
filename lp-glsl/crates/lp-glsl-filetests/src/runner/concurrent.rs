@@ -32,6 +32,8 @@ pub enum Reply {
         stats: TestCaseStats,
         /// Line numbers with unexpected passes (tests marked [expect-fail] that passed).
         unexpected_pass_lines: Vec<usize>,
+        /// Line numbers that failed (tests not marked [expect-fail] that failed).
+        failed_lines: Vec<usize>,
     },
 }
 
@@ -149,7 +151,7 @@ fn worker_thread(
                 };
 
                 // Use AssertUnwindSafe to allow catching panics from code that isn't unwind-safe
-                let (result, stats, unexpected_pass_lines) =
+                let (result, stats, unexpected_pass_lines, failed_lines) =
                     match catch_unwind(std::panic::AssertUnwindSafe(|| {
                         crate::run_filetest_with_line_filter(
                             path.as_path(),
@@ -157,14 +159,14 @@ fn worker_thread(
                             output_mode,
                         )
                     })) {
-                        Ok(Ok((inner_result, inner_stats, lines))) => {
-                            (inner_result, inner_stats, lines)
+                        Ok(Ok((inner_result, inner_stats, unexpected_lines, failed_lines))) => {
+                            (inner_result, inner_stats, unexpected_lines, failed_lines)
                         }
                         Ok(Err(e)) => {
                             // Error occurred, but try to preserve test case count
                             // Count test cases even on error so we can show stats
                             let error_stats = crate::count_test_cases(path.as_path(), line_filter);
-                            (Err(e), error_stats, Vec::new())
+                            (Err(e), error_stats, Vec::new(), Vec::new())
                         }
                         Err(e) => {
                             // The test panicked, leaving us a `Box<Any>`.
@@ -188,6 +190,7 @@ fn worker_thread(
                                 Err(anyhow::anyhow!("panicked: {short_msg}")),
                                 panic_stats,
                                 Vec::new(),
+                                Vec::new(),
                             )
                         }
                     };
@@ -198,6 +201,7 @@ fn worker_thread(
                         result,
                         stats,
                         unexpected_pass_lines,
+                        failed_lines,
                     })
                     .unwrap();
             }

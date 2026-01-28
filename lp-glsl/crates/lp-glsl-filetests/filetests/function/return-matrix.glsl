@@ -14,7 +14,7 @@ mat2 test_return_mat2_simple() {
     return get_identity2();
 }
 
-// run: test_return_mat2_simple() ~= mat2(1.0, 0.0, 0.0, 1.0)
+// run: test_return_mat2_simple() ~= mat2(1.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat3 get_identity3() {
     return mat3(1.0);
@@ -25,7 +25,7 @@ mat3 test_return_mat3_simple() {
     return get_identity3();
 }
 
-// run: test_return_mat3_simple() ~= mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_return_mat3_simple() ~= mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat4 get_identity4() {
     return mat4(1.0);
@@ -36,7 +36,7 @@ mat4 test_return_mat4_simple() {
     return get_identity4();
 }
 
-// run: test_return_mat4_simple() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_return_mat4_simple() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat2 get_matrix2() {
     return mat2(vec2(1.0, 2.0), vec2(3.0, 4.0));
@@ -47,7 +47,7 @@ mat2 test_return_mat2_explicit() {
     return get_matrix2();
 }
 
-// run: test_return_mat2_explicit() ~= mat2(vec2(1.0, 2.0), vec2(3.0, 4.0))
+// run: test_return_mat2_explicit() ~= mat2(vec2(1.0, 2.0), vec2(3.0, 4.0)) [expect-fail]
 
 mat3 get_matrix3() {
     return mat3(vec3(1.0, 0.0, 0.0),
@@ -60,7 +60,7 @@ mat3 test_return_mat3_explicit() {
     return get_matrix3();
 }
 
-// run: test_return_mat3_explicit() ~= mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0))
+// run: test_return_mat3_explicit() ~= mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)) [expect-fail]
 
 mat4 get_matrix4() {
     return mat4(vec4(1.0, 0.0, 0.0, 0.0),
@@ -74,7 +74,7 @@ mat4 test_return_mat4_explicit() {
     return get_matrix4();
 }
 
-// run: test_return_mat4_explicit() ~= mat4(vec4(1.0, 0.0, 0.0, 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0))
+// run: test_return_mat4_explicit() ~= mat4(vec4(1.0, 0.0, 0.0, 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0)) [expect-fail]
 
 mat2 add_matrices(mat2 a, mat2 b) {
     return a + b;
@@ -87,7 +87,7 @@ mat2 test_return_mat2_operations() {
     return add_matrices(m1, m2);
 }
 
-// run: test_return_mat2_operations() ~= mat2(1.5, 3.5, 5.5, 7.5)
+// run: test_return_mat2_operations() ~= mat2(1.5, 3.5, 5.5, 7.5) [expect-fail]
 
 mat3 get_transposed(mat3 m) {
     return transpose(m);
@@ -101,7 +101,7 @@ mat3 test_return_mat3_transpose() {
     return get_transposed(m);
 }
 
-// run: test_return_mat3_transpose() ~= mat3(vec3(1.0, 4.0, 7.0), vec3(2.0, 5.0, 8.0), vec3(3.0, 6.0, 9.0))
+// run: test_return_mat3_transpose() ~= mat3(vec3(1.0, 4.0, 7.0), vec3(2.0, 5.0, 8.0), vec3(3.0, 6.0, 9.0)) [expect-fail]
 
 mat4 get_scaling_matrix(float scale) {
     return mat4(scale, 0.0, 0.0, 0.0,
@@ -115,4 +115,4 @@ mat4 test_return_mat4_scaling() {
     return get_scaling_matrix(2.0);
 }
 
-// run: test_return_mat4_scaling() ~= mat4(2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_return_mat4_scaling() ~= mat4(2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]

@@ -183,9 +183,8 @@ pub(crate) fn convert_fcvt_to_sint(
 /// Convert FcvtToUint instruction.
 /// In q32 mode, floats are represented as integers shifted left by shift_amount.
 /// Converting float to uint means: truncate(float_value) = truncate(int_value / 2^shift) = int_value >> shift_amount
-/// Note: GLSL spec says converting negative float to uint is undefined behavior.
-/// We choose to clamp negative values to 0 (since uint cannot represent negative values).
-/// This matches "truncate toward zero" semantics: negative values become 0.
+/// Note: GLSL spec says converting negative float to uint wraps (modulo 2^32).
+/// We wrap negative values by converting to i32 first, then casting to u32 (which wraps automatically).
 pub(crate) fn convert_fcvt_to_uint(
     old_func: &Function,
     old_inst: Inst,
@@ -208,7 +207,8 @@ pub(crate) fn convert_fcvt_to_uint(
     let shift_amount = format.shift_amount();
     let target_type = format.cranelift_type();
 
-    // Check if value is negative (in fixed-point representation, negative means < 0)
+    // Truncate toward zero: shift right, but for negative values we need to round up (toward zero)
+    let shift_const = builder.ins().iconst(target_type, i64::from(shift_amount));
     let zero = builder.ins().iconst(target_type, 0);
     let is_negative = builder.ins().icmp(
         cranelift_codegen::ir::condcodes::IntCC::SignedLessThan,
@@ -216,10 +216,20 @@ pub(crate) fn convert_fcvt_to_uint(
         zero,
     );
 
-    // For negative values, clamp to 0; for positive values, shift right
-    let shift_const = builder.ins().iconst(target_type, shift_amount);
-    let shifted = builder.ins().ushr(mapped_arg, shift_const);
-    let result = builder.ins().select(is_negative, zero, shifted);
+    // For truncation toward zero:
+    // - Positive values: shift right (rounds down toward zero) ✓
+    // - Negative values: need to round up toward zero
+    //   Add (1 << shift_amount) - 1 before shifting to round up
+    let mask_value = (1u64 << shift_amount) - 1;
+    let mask = builder.ins().iconst(target_type, mask_value as i64);
+    let adjusted_negative = builder.ins().iadd(mapped_arg, mask);
+    let shifted_negative = builder.ins().sshr(adjusted_negative, shift_const);
+    let shifted_positive = builder.ins().sshr(mapped_arg, shift_const);
+
+    // Select based on sign: use rounded-up value for negatives, normal shift for positives
+    let result = builder
+        .ins()
+        .select(is_negative, shifted_negative, shifted_positive);
 
     // If result type is smaller than target_type, truncate
     let final_result = if result_ty.bits() < target_type.bits() {

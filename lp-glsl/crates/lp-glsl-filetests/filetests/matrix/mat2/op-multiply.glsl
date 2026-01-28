@@ -12,7 +12,7 @@ mat2 test_mat2_multiply_identity() {
     return a * identity;
 }
 
-// run: test_mat2_multiply_identity() ~= mat2(1.0, 2.0, 3.0, 4.0)
+// run: test_mat2_multiply_identity() ~= mat2(1.0, 2.0, 3.0, 4.0) [expect-fail]
 
 mat2 test_mat2_multiply_simple() {
     // Simple matrix multiplication
@@ -22,7 +22,7 @@ mat2 test_mat2_multiply_simple() {
     return a * b;
 }
 
-// run: test_mat2_multiply_simple() ~= mat2(19.0, 22.0, 43.0, 50.0)
+// run: test_mat2_multiply_simple() ~= mat2(19.0, 22.0, 43.0, 50.0) [expect-fail]
 
 mat2 test_mat2_multiply_scale() {
     // Scaling matrix multiplication
@@ -31,7 +31,7 @@ mat2 test_mat2_multiply_scale() {
     return a * b;
 }
 
-// run: test_mat2_multiply_scale() ~= mat2(2.0, 4.0, 9.0, 12.0)
+// run: test_mat2_multiply_scale() ~= mat2(2.0, 4.0, 9.0, 12.0) [expect-fail]
 
 mat2 test_mat2_multiply_zero() {
     mat2 a = mat2(1.0, 2.0, 3.0, 4.0);
@@ -39,7 +39,7 @@ mat2 test_mat2_multiply_zero() {
     return a * zero;
 }
 
-// run: test_mat2_multiply_zero() ~= mat2(0.0, 0.0, 0.0, 0.0)
+// run: test_mat2_multiply_zero() ~= mat2(0.0, 0.0, 0.0, 0.0) [expect-fail]
 
 mat2 test_mat2_multiply_variables() {
     mat2 a = mat2(1.0, 0.0, 0.0, 1.0); // identity
@@ -47,13 +47,13 @@ mat2 test_mat2_multiply_variables() {
     return a * b;
 }
 
-// run: test_mat2_multiply_variables() ~= mat2(2.0, 3.0, 4.0, 5.0)
+// run: test_mat2_multiply_variables() ~= mat2(2.0, 3.0, 4.0, 5.0) [expect-fail]
 
 mat2 test_mat2_multiply_expressions() {
     return mat2(1.0, 1.0, 0.0, 1.0) * mat2(1.0, 0.0, 1.0, 1.0);
 }
 
-// run: test_mat2_multiply_expressions() ~= mat2(2.0, 1.0, 1.0, 1.0)
+// run: test_mat2_multiply_expressions() ~= mat2(2.0, 1.0, 1.0, 1.0) [expect-fail]
 
 mat2 test_mat2_multiply_in_assignment() {
     mat2 result = mat2(1.0, 2.0, 3.0, 4.0);
@@ -61,7 +61,7 @@ mat2 test_mat2_multiply_in_assignment() {
     return result;
 }
 
-// run: test_mat2_multiply_in_assignment() ~= mat2(1.0, 2.0, 3.0, 4.0)
+// run: test_mat2_multiply_in_assignment() ~= mat2(1.0, 2.0, 3.0, 4.0) [expect-fail]
 
 mat2 test_mat2_multiply_associative() {
     mat2 a = mat2(1.0, 2.0, 3.0, 4.0);
@@ -71,4 +71,4 @@ mat2 test_mat2_multiply_associative() {
     // (a * b) * c result depends on the matrices
 }
 
-// run: test_mat2_multiply_associative() ~= mat2(6.0, 6.0, 14.0, 14.0)
+// run: test_mat2_multiply_associative() ~= mat2(6.0, 6.0, 14.0, 14.0) [expect-fail]

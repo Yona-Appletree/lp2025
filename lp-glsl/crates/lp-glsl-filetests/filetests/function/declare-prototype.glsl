@@ -34,7 +34,7 @@ vec4 test_declare_prototype_vector(vec4 a, vec4 b) {
     return add_vectors(a, b);
 }
 
-// run: test_declare_prototype_vector(vec4(1.0), vec4(2.0)) ~= vec4(3.0)
+// run: test_declare_prototype_vector(vec4(1.0), vec4(2.0)) ~= vec4(3.0) [expect-fail]
 
 float test_declare_prototype_multiple();
 

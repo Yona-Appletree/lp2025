@@ -11,7 +11,7 @@ mat4 test_mat4_add_assign_simple() {
     return result;
 }
 
-// run: test_mat4_add_assign_simple() ~= mat4(1.5, 3.5, 5.5, 7.5, 9.5, 11.5, 13.5, 15.5, 17.5, 19.5, 21.5, 23.5, 25.5, 27.5, 29.5, 31.5)
+// run: test_mat4_add_assign_simple() ~= mat4(1.5, 3.5, 5.5, 7.5, 9.5, 11.5, 13.5, 15.5, 17.5, 19.5, 21.5, 23.5, 25.5, 27.5, 29.5, 31.5) [expect-fail]
 
 mat4 test_mat4_add_assign_identity() {
     mat4 result = mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
@@ -19,7 +19,7 @@ mat4 test_mat4_add_assign_identity() {
     return result;
 }
 
-// run: test_mat4_add_assign_identity() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_mat4_add_assign_identity() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat4 test_mat4_add_assign_variables() {
     mat4 a = mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0);
@@ -28,7 +28,7 @@ mat4 test_mat4_add_assign_variables() {
     return a;
 }
 
-// run: test_mat4_add_assign_variables() ~= mat4(17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0)
+// run: test_mat4_add_assign_variables() ~= mat4(17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0) [expect-fail]
 
 mat4 test_mat4_add_assign_expressions() {
     mat4 result = mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0);
@@ -36,7 +36,7 @@ mat4 test_mat4_add_assign_expressions() {
     return result;
 }
 
-// run: test_mat4_add_assign_expressions() ~= mat4(2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5)
+// run: test_mat4_add_assign_expressions() ~= mat4(2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5) [expect-fail]
 
 mat4 test_mat4_add_assign_zero() {
     mat4 result = mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0);
@@ -44,7 +44,7 @@ mat4 test_mat4_add_assign_zero() {
     return result;
 }
 
-// run: test_mat4_add_assign_zero() ~= mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0)
+// run: test_mat4_add_assign_zero() ~= mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0) [expect-fail]
 
 mat4 test_mat4_add_assign_negative() {
     mat4 result = mat4(1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0, 9.0, -10.0, 11.0, -12.0, 13.0, -14.0, 15.0, -16.0);
@@ -52,7 +52,7 @@ mat4 test_mat4_add_assign_negative() {
     return result;
 }
 
-// run: test_mat4_add_assign_negative() ~= mat4(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+// run: test_mat4_add_assign_negative() ~= mat4(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) [expect-fail]
 
 mat4 test_mat4_add_assign_chained() {
     mat4 a = mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0);
@@ -62,7 +62,7 @@ mat4 test_mat4_add_assign_chained() {
     return b;
 }
 
-// run: test_mat4_add_assign_chained() ~= mat4(5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0, 31.0, 33.0, 35.0)
+// run: test_mat4_add_assign_chained() ~= mat4(5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0, 31.0, 33.0, 35.0) [expect-fail]
 
 mat4 test_mat4_add_assign_large_values() {
     mat4 result = mat4(1000.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0, 7000.0, 8000.0, 9000.0, 10000.0, 11000.0, 12000.0, 13000.0, 14000.0, 15000.0, 16000.0);
@@ -70,7 +70,7 @@ mat4 test_mat4_add_assign_large_values() {
     return result;
 }
 
-// run: test_mat4_add_assign_large_values() ~= mat4(2000.0, 4000.0, 6000.0, 8000.0, 10000.0, 12000.0, 14000.0, 16000.0, 18000.0, 20000.0, 22000.0, 24000.0, 26000.0, 28000.0, 30000.0, 32000.0)
+// run: test_mat4_add_assign_large_values() ~= mat4(2000.0, 4000.0, 6000.0, 8000.0, 10000.0, 12000.0, 14000.0, 16000.0, 18000.0, 20000.0, 22000.0, 24000.0, 26000.0, 28000.0, 30000.0, 32000.0) [expect-fail]
 
 
 

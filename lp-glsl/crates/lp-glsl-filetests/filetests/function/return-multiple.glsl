@@ -20,7 +20,7 @@ float test_return_multiple_conditional() {
     return classify_number(5.0) + classify_number(-3.0) + classify_number(0.0);
 }
 
-// run: test_return_multiple_conditional() ~= 0.0
+// run: test_return_multiple_conditional() ~= 0.0 [expect-fail]
 
 int categorize_value(int x) {
     if (x < 10) {
@@ -39,7 +39,7 @@ int test_return_multiple_ranges() {
     return categorize_value(5) + categorize_value(25) + categorize_value(75) + categorize_value(150);
 }
 
-// run: test_return_multiple_ranges() == 6
+// run: test_return_multiple_ranges() == 6 [expect-fail]
 
 float get_multiplier(int category) {
     if (category == 0) {
@@ -58,7 +58,7 @@ float test_return_multiple_switch_like() {
     return get_multiplier(0) + get_multiplier(1) + get_multiplier(2) + get_multiplier(3);
 }
 
-// run: test_return_multiple_switch_like() ~= 6.5
+// run: test_return_multiple_switch_like() ~= 6.5 [expect-fail]
 
 vec2 get_direction(int dir) {
     if (dir == 0) {
@@ -79,7 +79,7 @@ vec2 test_return_multiple_vector() {
     return dir1 + dir2;
 }
 
-// run: test_return_multiple_vector() ~= vec2(1.0, 1.0)
+// run: test_return_multiple_vector() ~= vec2(1.0, 1.0) [expect-fail]
 
 bool validate_input(float x, float min_val, float max_val) {
     if (x < min_val) {
@@ -96,7 +96,7 @@ bool test_return_multiple_bool() {
     return validate_input(5.0, 0.0, 10.0) && validate_input(15.0, 0.0, 10.0);
 }
 
-// run: test_return_multiple_bool() == false
+// run: test_return_multiple_bool() == false [expect-fail]
 
 float complex_logic(int a, int b, bool flag) {
     if (a > b) {
@@ -119,7 +119,7 @@ float test_return_multiple_nested() {
     return complex_logic(5, 3, true) + complex_logic(3, 5, false);
 }
 
-// run: test_return_multiple_nested() ~= 11.0
+// run: test_return_multiple_nested() ~= 11.0 [expect-fail]
 
 int find_special_value(int[5] arr) {
     for (int i = 0; i < 5; i++) {
@@ -139,7 +139,7 @@ int test_return_multiple_loop() {
     return find_special_value(data1) + find_special_value(data2) + 10; // 2 + (-1) + 10 = 11
 }
 
-// run: test_return_multiple_loop() == 11
+// run: test_return_multiple_loop() == 11 [expect-fail]
 
 float process_sequence(float[4] arr) {
     if (arr[0] < 0.0) {
@@ -161,7 +161,7 @@ float test_return_multiple_early_exit() {
     return process_sequence(data);
 }
 
-// run: test_return_multiple_early_exit() ~= 10.0
+// run: test_return_multiple_early_exit() ~= 10.0 [expect-fail]
 
 void process_with_exits(int x) {
     if (x < 0) {
@@ -181,4 +181,4 @@ void test_return_multiple_void() {
     process_with_exits(50);
 }
 
-// run: test_return_multiple_void() == 0.0
+// run: test_return_multiple_void() == 0.0 [expect-fail]

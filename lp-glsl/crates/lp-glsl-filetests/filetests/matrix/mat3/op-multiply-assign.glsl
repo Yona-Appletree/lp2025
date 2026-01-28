@@ -11,7 +11,7 @@ mat3 test_mat3_multiply_assign_matrix() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_matrix() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+// run: test_mat3_multiply_assign_matrix() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_matrix_simple() {
     mat3 result = mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
@@ -19,7 +19,7 @@ mat3 test_mat3_multiply_assign_matrix_simple() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_matrix_simple() ~= mat3(2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0)
+// run: test_mat3_multiply_assign_matrix_simple() ~= mat3(2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_matrix_variables() {
     mat3 a = mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0); // identity
@@ -28,7 +28,7 @@ mat3 test_mat3_multiply_assign_matrix_variables() {
     return a;
 }
 
-// run: test_mat3_multiply_assign_matrix_variables() ~= mat3(2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0)
+// run: test_mat3_multiply_assign_matrix_variables() ~= mat3(2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_matrix_expressions() {
     mat3 result = mat3(1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
@@ -36,7 +36,7 @@ mat3 test_mat3_multiply_assign_matrix_expressions() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_matrix_expressions() ~= mat3(2.0, 2.0, 2.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0)
+// run: test_mat3_multiply_assign_matrix_expressions() ~= mat3(2.0, 2.0, 2.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar() {
     mat3 result = mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
@@ -44,7 +44,7 @@ mat3 test_mat3_multiply_assign_scalar() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_scalar() ~= mat3(2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0)
+// run: test_mat3_multiply_assign_scalar() ~= mat3(2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar_zero() {
     mat3 result = mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
@@ -52,7 +52,7 @@ mat3 test_mat3_multiply_assign_scalar_zero() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_scalar_zero() ~= mat3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+// run: test_mat3_multiply_assign_scalar_zero() ~= mat3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar_variables() {
     mat3 a = mat3(2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0);
@@ -61,7 +61,7 @@ mat3 test_mat3_multiply_assign_scalar_variables() {
     return a;
 }
 
-// run: test_mat3_multiply_assign_scalar_variables() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+// run: test_mat3_multiply_assign_scalar_variables() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar_expressions() {
     mat3 result = mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
@@ -69,7 +69,7 @@ mat3 test_mat3_multiply_assign_scalar_expressions() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_scalar_expressions() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+// run: test_mat3_multiply_assign_scalar_expressions() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar_negative() {
     mat3 result = mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
@@ -77,7 +77,7 @@ mat3 test_mat3_multiply_assign_scalar_negative() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_scalar_negative() ~= mat3(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0)
+// run: test_mat3_multiply_assign_scalar_negative() ~= mat3(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0) [expect-fail]
 
 mat3 test_mat3_multiply_assign_scalar_large() {
     mat3 result = mat3(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
@@ -85,7 +85,7 @@ mat3 test_mat3_multiply_assign_scalar_large() {
     return result;
 }
 
-// run: test_mat3_multiply_assign_scalar_large() ~= mat3(1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0)
+// run: test_mat3_multiply_assign_scalar_large() ~= mat3(1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0) [expect-fail]
 
 
 

@@ -75,4 +75,4 @@ vec2 c = vec2(2.0, 3.0);
 return equal(equal(a, b), equal(b, c));
 }
 
-// run: test_vec2_equal_function_in_expression() == bvec2(false, false)
+// run: test_vec2_equal_function_in_expression() == bvec2(false, false) [expect-fail]

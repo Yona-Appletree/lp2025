@@ -4,6 +4,7 @@ use crate::parse::TestFile;
 use crate::test_run::TestCaseStats;
 use crate::test_run::execution;
 use crate::test_run::parse_assert;
+use crate::test_run::record_failure;
 use crate::test_run::target;
 use anyhow::Result;
 use lp_glsl_compiler::GlslOptions;
@@ -13,12 +14,12 @@ use std::path::Path;
 use crate::util::format_glsl_value;
 
 /// Run tests in summary mode: compile all functions once and reuse the same emulator.
-/// Returns result, stats, and list of line numbers that had unexpected passes.
+/// Returns result, stats, list of line numbers that had unexpected passes, and list of line numbers that failed.
 pub fn run(
     test_file: &TestFile,
     path: &Path,
     line_filter: Option<usize>,
-) -> Result<(Result<()>, TestCaseStats, Vec<usize>)> {
+) -> Result<(Result<()>, TestCaseStats, Vec<usize>, Vec<usize>)> {
     // Compute relative path for rerun command
     let filetests_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("filetests");
     let relative_path = path
@@ -55,8 +56,29 @@ pub fn run(
     ) {
         Ok(exec) => exec,
         Err(e) => {
-            // Compilation failed - return stats with all test cases marked as failed
-            stats.failed = stats.total;
+            // Compilation failed - categorize directives based on whether they're marked [expect-fail]
+            // Only unmarked directives should go into failed_lines (for bless)
+            // Marked directives should be counted as expect_fail
+            let mut failed_lines = Vec::new();
+            let mut expect_fail_count = 0;
+
+            for directive in &test_file.run_directives {
+                // Respect line filter if present
+                if let Some(filter_line) = line_filter {
+                    if directive.line_number != filter_line {
+                        continue;
+                    }
+                }
+
+                if directive.expect_fail {
+                    expect_fail_count += 1;
+                } else {
+                    failed_lines.push(directive.line_number);
+                }
+            }
+
+            stats.failed = failed_lines.len();
+            stats.expect_fail = expect_fail_count;
             stats.passed = 0;
             return Ok((
                 Err(anyhow::anyhow!(
@@ -64,6 +86,7 @@ pub fn run(
                 )),
                 stats,
                 Vec::new(),
+                failed_lines,
             ));
         }
     };
@@ -74,6 +97,7 @@ pub fn run(
 
     let mut first_error: Option<anyhow::Error> = None;
     let mut unexpected_pass_lines = Vec::new();
+    let mut failed_lines = Vec::new();
 
     // Process each run directive using the same emulator
     for directive in &test_file.run_directives {
@@ -94,7 +118,7 @@ pub fn run(
             match parse_assert::parse_function_call(&directive.expression_str) {
                 Ok(parsed) => parsed,
                 Err(e) => {
-                    stats.failed += 1;
+                    record_failure(directive, &mut stats, &mut failed_lines);
                     if first_error.is_none() {
                         first_error = Some(anyhow::anyhow!(
                             "failed to parse function call at line {}: {}",
@@ -110,7 +134,7 @@ pub fn run(
         let args = match parse_assert::parse_function_arguments(&arg_strings) {
             Ok(parsed) => parsed,
             Err(e) => {
-                stats.failed += 1;
+                record_failure(directive, &mut stats, &mut failed_lines);
                 if first_error.is_none() {
                     first_error = Some(anyhow::anyhow!(
                         "failed to parse function arguments at line {}: {}",
@@ -129,16 +153,12 @@ pub fn run(
         match (execution_result, trap_expectation) {
             (Ok(_actual_value), Some(_exp)) => {
                 // Expected a trap but got a value
-                if directive.expect_fail {
-                    stats.expect_fail += 1;
-                } else {
-                    stats.failed += 1;
-                    if first_error.is_none() {
-                        first_error = Some(anyhow::anyhow!(
-                            "run test failed at line {}: expected trap but execution succeeded",
-                            directive.line_number
-                        ));
-                    }
+                record_failure(directive, &mut stats, &mut failed_lines);
+                if first_error.is_none() {
+                    first_error = Some(anyhow::anyhow!(
+                        "run test failed at line {}: expected trap but execution succeeded",
+                        directive.line_number
+                    ));
                 }
             }
             (Err(e), None) => {
@@ -150,26 +170,18 @@ pub fn run(
 
                 if is_trap {
                     // Unexpected trap
-                    if directive.expect_fail {
-                        stats.expect_fail += 1;
-                    } else {
-                        stats.failed += 1;
-                        if first_error.is_none() {
-                            first_error = Some(anyhow::anyhow!(
-                                "run test failed at line {}: unexpected trap",
-                                directive.line_number
-                            ));
-                        }
+                    record_failure(directive, &mut stats, &mut failed_lines);
+                    if first_error.is_none() {
+                        first_error = Some(anyhow::anyhow!(
+                            "run test failed at line {}: unexpected trap",
+                            directive.line_number
+                        ));
                     }
                 } else {
                     // Other error - pass through
-                    if directive.expect_fail {
-                        stats.expect_fail += 1;
-                    } else {
-                        stats.failed += 1;
-                        if first_error.is_none() {
-                            first_error = Some(e);
-                        }
+                    record_failure(directive, &mut stats, &mut failed_lines);
+                    if first_error.is_none() {
+                        first_error = Some(e);
                     }
                 }
             }
@@ -180,18 +192,14 @@ pub fn run(
                 // Check trap code if specified
                 if let Some(expected_code) = exp.trap_code {
                     if !error_str.contains(&format!("user{expected_code}")) {
-                        if directive.expect_fail {
-                            stats.expect_fail += 1;
-                        } else {
-                            stats.failed += 1;
-                            if first_error.is_none() {
-                                first_error = Some(anyhow::anyhow!(
-                                    "run test failed at line {}: trap code mismatch (expected {}, got {})",
-                                    directive.line_number,
-                                    expected_code,
-                                    error_str
-                                ));
-                            }
+                        record_failure(directive, &mut stats, &mut failed_lines);
+                        if first_error.is_none() {
+                            first_error = Some(anyhow::anyhow!(
+                                "run test failed at line {}: trap code mismatch (expected {}, got {})",
+                                directive.line_number,
+                                expected_code,
+                                error_str
+                            ));
                         }
                         continue;
                     }
@@ -200,16 +208,12 @@ pub fn run(
                 // Check trap message if specified
                 if let Some(ref expected_msg) = exp.trap_message {
                     if !error_str.contains(expected_msg) {
-                        if directive.expect_fail {
-                            stats.expect_fail += 1;
-                        } else {
-                            stats.failed += 1;
-                            if first_error.is_none() {
-                                first_error = Some(anyhow::anyhow!(
-                                    "run test failed at line {}: trap message mismatch",
-                                    directive.line_number
-                                ));
-                            }
+                        record_failure(directive, &mut stats, &mut failed_lines);
+                        if first_error.is_none() {
+                            first_error = Some(anyhow::anyhow!(
+                                "run test failed at line {}: trap message mismatch",
+                                directive.line_number
+                            ));
                         }
                         continue;
                     }
@@ -231,7 +235,7 @@ pub fn run(
                 let expected_value = match parse_assert::parse_glsl_value(&directive.expected_str) {
                     Ok(parsed) => parsed,
                     Err(e) => {
-                        stats.failed += 1;
+                        record_failure(directive, &mut stats, &mut failed_lines);
                         if first_error.is_none() {
                             first_error = Some(anyhow::anyhow!(
                                 "failed to parse expected value at line {}: {}",
@@ -263,20 +267,14 @@ pub fn run(
                     }
                     Err(_err_msg) => {
                         // Test failed
-                        if directive.expect_fail {
-                            // Expected failure: test marked [expect-fail] and failed as expected
-                            stats.expect_fail += 1;
-                        } else {
-                            // Unexpected failure: test not marked but failed (regression)
-                            stats.failed += 1;
-                            if first_error.is_none() {
-                                first_error = Some(anyhow::anyhow!(
-                                    "run test failed at line {}: expected {}, got {}",
-                                    directive.line_number,
-                                    format_glsl_value(&expected_value),
-                                    format_glsl_value(&actual_value)
-                                ));
-                            }
+                        record_failure(directive, &mut stats, &mut failed_lines);
+                        if first_error.is_none() {
+                            first_error = Some(anyhow::anyhow!(
+                                "run test failed at line {}: expected {}, got {}",
+                                directive.line_number,
+                                format_glsl_value(&expected_value),
+                                format_glsl_value(&actual_value)
+                            ));
                         }
                     }
                 }
@@ -299,5 +297,5 @@ pub fn run(
         Ok(())
     };
 
-    Ok((result, stats, unexpected_pass_lines))
+    Ok((result, stats, unexpected_pass_lines, failed_lines))
 }

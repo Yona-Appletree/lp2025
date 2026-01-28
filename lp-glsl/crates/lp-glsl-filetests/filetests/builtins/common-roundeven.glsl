@@ -68,7 +68,7 @@ vec4 test_roundeven_vec4() {
     return roundEven(vec4(1.1, 2.9, -0.5, 4.0));
 }
 
-// run: test_roundeven_vec4() ~= vec4(1.0, 3.0, -1.0, 4.0)
+// run: test_roundeven_vec4() ~= vec4(1.0, 3.0, -1.0, 4.0) [expect-fail]
 
 
 

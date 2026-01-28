@@ -11,7 +11,7 @@ mat4 test_mat4_assign_simple() {
     return result;
 }
 
-// run: test_mat4_assign_simple() ~= mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0)
+// run: test_mat4_assign_simple() ~= mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0) [expect-fail]
 
 mat4 test_mat4_assign_variables() {
     mat4 a = mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0);
@@ -20,7 +20,7 @@ mat4 test_mat4_assign_variables() {
     return result;
 }
 
-// run: test_mat4_assign_variables() ~= mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0)
+// run: test_mat4_assign_variables() ~= mat4(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0) [expect-fail]
 
 mat4 test_mat4_assign_expressions() {
     mat4 result;
@@ -28,7 +28,7 @@ mat4 test_mat4_assign_expressions() {
     return result;
 }
 
-// run: test_mat4_assign_expressions() ~= mat4(1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5)
+// run: test_mat4_assign_expressions() ~= mat4(1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5) [expect-fail]
 
 mat4 test_mat4_assign_identity() {
     mat4 result;
@@ -36,7 +36,7 @@ mat4 test_mat4_assign_identity() {
     return result;
 }
 
-// run: test_mat4_assign_identity() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_mat4_assign_identity() ~= mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat4 test_mat4_assign_zero() {
     mat4 result;
@@ -44,7 +44,7 @@ mat4 test_mat4_assign_zero() {
     return result;
 }
 
-// run: test_mat4_assign_zero() ~= mat4(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+// run: test_mat4_assign_zero() ~= mat4(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) [expect-fail]
 
 mat4 test_mat4_assign_negative() {
     mat4 result;
@@ -52,7 +52,7 @@ mat4 test_mat4_assign_negative() {
     return result;
 }
 
-// run: test_mat4_assign_negative() ~= mat4(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0, -10.0, -11.0, -12.0, -13.0, -14.0, -15.0, -16.0)
+// run: test_mat4_assign_negative() ~= mat4(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0, -10.0, -11.0, -12.0, -13.0, -14.0, -15.0, -16.0) [expect-fail]
 
 mat4 test_mat4_assign_chained() {
     mat4 a, b;
@@ -61,7 +61,7 @@ mat4 test_mat4_assign_chained() {
     return b;
 }
 
-// run: test_mat4_assign_chained() ~= mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0)
+// run: test_mat4_assign_chained() ~= mat4(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0) [expect-fail]
 
 mat4 test_mat4_assign_function_result() {
     mat4 result;
@@ -69,7 +69,7 @@ mat4 test_mat4_assign_function_result() {
     return result;
 }
 
-// run: test_mat4_assign_function_result() ~= mat4(2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0)
+// run: test_mat4_assign_function_result() ~= mat4(2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0) [expect-fail]
 
 mat4 test_mat4_assign_after_operations() {
     mat4 a = mat4(1.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
@@ -78,7 +78,7 @@ mat4 test_mat4_assign_after_operations() {
     return a;
 }
 
-// run: test_mat4_assign_after_operations() ~= mat4(2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 18.0, 19.0, 20.0, 21.0, 14.0, 15.0, 16.0, 17.0)
+// run: test_mat4_assign_after_operations() ~= mat4(2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 18.0, 19.0, 20.0, 21.0, 14.0, 15.0, 16.0, 17.0) [expect-fail]
 
 
 

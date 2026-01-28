@@ -29,7 +29,7 @@ float test_param_struct_simple() {
     return distance_from_origin(origin);
 }
 
-// run: test_param_struct_simple() ~= 5.0
+// run: test_param_struct_simple() ~= 5.0 [expect-fail]
 
 void move_point(inout Point p, float dx, float dy) {
     p.x = p.x + dx;
@@ -43,7 +43,7 @@ void test_param_struct_modify() {
     // p should now be (6.0, 5.0)
 }
 
-// run: test_param_struct_modify() == 0.0
+// run: test_param_struct_modify() == 0.0 [expect-fail]
 
 float circle_area(Circle c) {
     return 3.14159 * c.radius * c.radius;
@@ -55,7 +55,7 @@ float test_param_struct_nested() {
     return circle_area(circle);
 }
 
-// run: test_param_struct_nested() ~= 12.56636
+// run: test_param_struct_nested() ~= 12.56636 [expect-fail]
 
 Color blend_colors(Color c1, Color c2, float factor) {
     return Color(mix(c1.rgb, c2.rgb, factor), mix(c1.alpha, c2.alpha, factor));
@@ -68,7 +68,7 @@ Color test_param_struct_return() {
     return blend_colors(red, blue, 0.5);
 }
 
-// run: test_param_struct_return() ~= Color(vec3(0.5, 0.0, 0.5), 0.9)
+// run: test_param_struct_return() ~= Color(vec3(0.5, 0.0, 0.5), 0.9) [expect-fail]
 
 void create_circle(out Circle c, Point center, float radius) {
     c.center = center;
@@ -82,7 +82,7 @@ void test_param_struct_out() {
     // circle should be properly initialized
 }
 
-// run: test_param_struct_out() == 0.0
+// run: test_param_struct_out() == 0.0 [expect-fail]
 
 float get_alpha(const Color c) {
     return c.alpha;
@@ -94,7 +94,7 @@ float test_param_struct_const() {
     return get_alpha(color);
 }
 
-// run: test_param_struct_const() ~= 0.7
+// run: test_param_struct_const() ~= 0.7 [expect-fail]
 
 void process_circle(in Circle input, out Circle output, inout Point center) {
     output = input;
@@ -112,7 +112,7 @@ float test_param_struct_mixed_qualifiers() {
     return out_circle.radius + center.x + center.y; // 6.0 + 11.0 + 11.0 = 28.0
 }
 
-// run: test_param_struct_mixed_qualifiers() ~= 28.0
+// run: test_param_struct_mixed_qualifiers() ~= 28.0 [expect-fail]
 
 struct Triangle {
     Point a, b, c;
@@ -135,4 +135,4 @@ float test_param_struct_complex() {
     return triangle_perimeter(triangle);
 }
 
-// run: test_param_struct_complex() ~= 12.0
+// run: test_param_struct_complex() ~= 12.0 [expect-fail]

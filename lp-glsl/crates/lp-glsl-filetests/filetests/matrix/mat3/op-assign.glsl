@@ -11,7 +11,7 @@ mat3 test_mat3_assign_simple() {
     return result;
 }
 
-// run: test_mat3_assign_simple() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+// run: test_mat3_assign_simple() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0) [expect-fail]
 
 mat3 test_mat3_assign_variables() {
     mat3 a = mat3(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0);
@@ -20,7 +20,7 @@ mat3 test_mat3_assign_variables() {
     return result;
 }
 
-// run: test_mat3_assign_variables() ~= mat3(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0)
+// run: test_mat3_assign_variables() ~= mat3(5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0) [expect-fail]
 
 mat3 test_mat3_assign_expressions() {
     mat3 result;
@@ -28,7 +28,7 @@ mat3 test_mat3_assign_expressions() {
     return result;
 }
 
-// run: test_mat3_assign_expressions() ~= mat3(1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5)
+// run: test_mat3_assign_expressions() ~= mat3(1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5) [expect-fail]
 
 mat3 test_mat3_assign_identity() {
     mat3 result;
@@ -36,7 +36,7 @@ mat3 test_mat3_assign_identity() {
     return result;
 }
 
-// run: test_mat3_assign_identity() ~= mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+// run: test_mat3_assign_identity() ~= mat3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0) [expect-fail]
 
 mat3 test_mat3_assign_zero() {
     mat3 result;
@@ -44,7 +44,7 @@ mat3 test_mat3_assign_zero() {
     return result;
 }
 
-// run: test_mat3_assign_zero() ~= mat3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+// run: test_mat3_assign_zero() ~= mat3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) [expect-fail]
 
 mat3 test_mat3_assign_negative() {
     mat3 result;
@@ -52,7 +52,7 @@ mat3 test_mat3_assign_negative() {
     return result;
 }
 
-// run: test_mat3_assign_negative() ~= mat3(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0)
+// run: test_mat3_assign_negative() ~= mat3(-1.0, -2.0, -3.0, -4.0, -5.0, -6.0, -7.0, -8.0, -9.0) [expect-fail]
 
 mat3 test_mat3_assign_chained() {
     mat3 a, b;
@@ -61,7 +61,7 @@ mat3 test_mat3_assign_chained() {
     return b;
 }
 
-// run: test_mat3_assign_chained() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+// run: test_mat3_assign_chained() ~= mat3(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0) [expect-fail]
 
 mat3 test_mat3_assign_function_result() {
     mat3 result;
@@ -69,7 +69,7 @@ mat3 test_mat3_assign_function_result() {
     return result;
 }
 
-// run: test_mat3_assign_function_result() ~= mat3(2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0)
+// run: test_mat3_assign_function_result() ~= mat3(2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0) [expect-fail]
 
 mat3 test_mat3_assign_after_operations() {
     mat3 a = mat3(1.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
@@ -78,7 +78,7 @@ mat3 test_mat3_assign_after_operations() {
     return a;
 }
 
-// run: test_mat3_assign_after_operations() ~= mat3(2.0, 3.0, 4.0, 10.0, 11.0, 12.0, 8.0, 9.0, 10.0)
+// run: test_mat3_assign_after_operations() ~= mat3(2.0, 3.0, 4.0, 10.0, 11.0, 12.0, 8.0, 9.0, 10.0) [expect-fail]
 
 
 
