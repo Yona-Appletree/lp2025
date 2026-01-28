@@ -1,59 +1,65 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use super::q32::Q32;
-use super::vec2_q32::Vec2Q32;
-use super::vec3_q32::Vec3Q32;
+use crate::glsl::q32::types::q32::Q32;
+use crate::glsl::q32::types::vec2_q32::Vec2Q32;
 use crate::builtins::q32::__lp_q32_sqrt;
 
-/// 4D vector for Q32 fixed-point arithmetic (useful for RGBA colors and homogeneous coordinates)
+/// 3D vector for Q32 fixed-point arithmetic
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Vec4Q32 {
+pub struct Vec3Q32 {
     pub x: Q32,
     pub y: Q32,
     pub z: Q32,
-    pub w: Q32,
 }
 
-impl Vec4Q32 {
+impl Vec3Q32 {
     #[inline(always)]
-    pub const fn new(x: Q32, y: Q32, z: Q32, w: Q32) -> Self {
-        Vec4Q32 { x, y, z, w }
+    pub const fn new(x: Q32, y: Q32, z: Q32) -> Self {
+        Vec3Q32 { x, y, z }
     }
 
     #[inline(always)]
-    pub fn from_f32(x: f32, y: f32, z: f32, w: f32) -> Self {
-        Vec4Q32 {
+    pub fn from_f32(x: f32, y: f32, z: f32) -> Self {
+        Vec3Q32 {
             x: Q32::from_f32(x),
             y: Q32::from_f32(y),
             z: Q32::from_f32(z),
-            w: Q32::from_f32(w),
         }
     }
 
     #[inline(always)]
-    pub fn from_i32(x: i32, y: i32, z: i32, w: i32) -> Self {
-        Vec4Q32 {
+    pub fn from_i32(x: i32, y: i32, z: i32) -> Self {
+        Vec3Q32 {
             x: Q32::from_i32(x),
             y: Q32::from_i32(y),
             z: Q32::from_i32(z),
-            w: Q32::from_i32(w),
         }
     }
 
     #[inline(always)]
     pub const fn zero() -> Self {
-        Vec4Q32::new(Q32::ZERO, Q32::ZERO, Q32::ZERO, Q32::ZERO)
+        Vec3Q32::new(Q32::ZERO, Q32::ZERO, Q32::ZERO)
     }
 
     #[inline(always)]
     pub const fn one() -> Self {
-        Vec4Q32::new(Q32::ONE, Q32::ONE, Q32::ONE, Q32::ONE)
+        Vec3Q32::new(Q32::ONE, Q32::ONE, Q32::ONE)
     }
 
     /// Dot product
     #[inline(always)]
     pub fn dot(self, rhs: Self) -> Q32 {
-        (self.x * rhs.x) + (self.y * rhs.y) + (self.z * rhs.z) + (self.w * rhs.w)
+        (self.x * rhs.x) + (self.y * rhs.y) + (self.z * rhs.z)
+    }
+
+    /// Cross product
+    #[inline(always)]
+    pub fn cross(self, rhs: Self) -> Self {
+        Vec3Q32::new(
+            (self.y * rhs.z) - (self.z * rhs.y),
+            (self.z * rhs.x) - (self.x * rhs.z),
+            (self.x * rhs.y) - (self.y * rhs.x),
+        )
     }
 
     /// Length squared (avoids sqrt)
@@ -80,9 +86,17 @@ impl Vec4Q32 {
     pub fn normalize(self) -> Self {
         let len = self.length();
         if len.to_fixed() == 0 {
-            return Vec4Q32::zero();
+            return Vec3Q32::zero();
         }
         self / len
+    }
+
+    /// Reflect vector around normal
+    #[inline(always)]
+    pub fn reflect(self, normal: Self) -> Self {
+        // reflect = v - 2 * dot(v, n) * n
+        let dot_2 = self.dot(normal) * Q32::from_fixed(2 << 16);
+        self - (normal * dot_2)
     }
 
     // Swizzle accessors (GLSL-style) - scalar
@@ -102,11 +116,6 @@ impl Vec4Q32 {
     }
 
     #[inline(always)]
-    pub fn w(self) -> Q32 {
-        self.w
-    }
-
-    #[inline(always)]
     pub fn r(self) -> Q32 {
         self.x
     }
@@ -121,11 +130,6 @@ impl Vec4Q32 {
         self.z
     }
 
-    #[inline(always)]
-    pub fn a(self) -> Q32 {
-        self.w
-    }
-
     // 2-component swizzles (most common)
     #[inline(always)]
     pub fn xy(self) -> Vec2Q32 {
@@ -138,50 +142,55 @@ impl Vec4Q32 {
     }
 
     #[inline(always)]
-    pub fn xw(self) -> Vec2Q32 {
-        Vec2Q32::new(self.x, self.w)
-    }
-
-    #[inline(always)]
     pub fn yz(self) -> Vec2Q32 {
         Vec2Q32::new(self.y, self.z)
     }
 
     #[inline(always)]
-    pub fn yw(self) -> Vec2Q32 {
-        Vec2Q32::new(self.y, self.w)
+    pub fn yx(self) -> Vec2Q32 {
+        Vec2Q32::new(self.y, self.x)
     }
 
     #[inline(always)]
-    pub fn zw(self) -> Vec2Q32 {
-        Vec2Q32::new(self.z, self.w)
+    pub fn zx(self) -> Vec2Q32 {
+        Vec2Q32::new(self.z, self.x)
     }
 
-    // 3-component swizzles (most common)
+    #[inline(always)]
+    pub fn zy(self) -> Vec2Q32 {
+        Vec2Q32::new(self.z, self.y)
+    }
+
+    // 3-component swizzles (permutations)
     #[inline(always)]
     pub fn xyz(self) -> Vec3Q32 {
-        Vec3Q32::new(self.x, self.y, self.z)
-    }
-
-    #[inline(always)]
-    pub fn xyw(self) -> Vec3Q32 {
-        Vec3Q32::new(self.x, self.y, self.w)
-    }
-
-    #[inline(always)]
-    pub fn xzw(self) -> Vec3Q32 {
-        Vec3Q32::new(self.x, self.z, self.w)
-    }
-
-    #[inline(always)]
-    pub fn yzw(self) -> Vec3Q32 {
-        Vec3Q32::new(self.y, self.z, self.w)
-    }
-
-    // 4-component swizzle (identity)
-    #[inline(always)]
-    pub fn xyzw(self) -> Vec4Q32 {
         self
+    }
+
+    // identity
+    #[inline(always)]
+    pub fn xzy(self) -> Vec3Q32 {
+        Vec3Q32::new(self.x, self.z, self.y)
+    }
+
+    #[inline(always)]
+    pub fn yxz(self) -> Vec3Q32 {
+        Vec3Q32::new(self.y, self.x, self.z)
+    }
+
+    #[inline(always)]
+    pub fn yzx(self) -> Vec3Q32 {
+        Vec3Q32::new(self.y, self.z, self.x)
+    }
+
+    #[inline(always)]
+    pub fn zxy(self) -> Vec3Q32 {
+        Vec3Q32::new(self.z, self.x, self.y)
+    }
+
+    #[inline(always)]
+    pub fn zyx(self) -> Vec3Q32 {
+        Vec3Q32::new(self.z, self.y, self.x)
     }
 
     // RGBA variants
@@ -196,105 +205,84 @@ impl Vec4Q32 {
     }
 
     #[inline(always)]
-    pub fn rgb(self) -> Vec3Q32 {
-        self.xyz()
+    pub fn gb(self) -> Vec2Q32 {
+        self.yz()
     }
 
     #[inline(always)]
-    pub fn rgba(self) -> Vec4Q32 {
+    pub fn rgb(self) -> Vec3Q32 {
         self
     }
 
     /// Component-wise multiply
     #[inline(always)]
     pub fn mul_comp(self, rhs: Self) -> Self {
-        Vec4Q32::new(
-            self.x * rhs.x,
-            self.y * rhs.y,
-            self.z * rhs.z,
-            self.w * rhs.w,
-        )
+        Vec3Q32::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z)
     }
 
     /// Component-wise divide
     #[inline(always)]
     pub fn div_comp(self, rhs: Self) -> Self {
-        Vec4Q32::new(
-            self.x / rhs.x,
-            self.y / rhs.y,
-            self.z / rhs.z,
-            self.w / rhs.w,
-        )
+        Vec3Q32::new(self.x / rhs.x, self.y / rhs.y, self.z / rhs.z)
     }
 
     /// Clamp components between min and max
     #[inline(always)]
     pub fn clamp(self, min: Q32, max: Q32) -> Self {
-        Vec4Q32::new(
+        Vec3Q32::new(
             self.x.clamp(min, max),
             self.y.clamp(min, max),
             self.z.clamp(min, max),
-            self.w.clamp(min, max),
         )
     }
 }
 
 // Vector + Vector
-impl Add for Vec4Q32 {
+impl Add for Vec3Q32 {
     type Output = Self;
 
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Vec4Q32::new(
-            self.x + rhs.x,
-            self.y + rhs.y,
-            self.z + rhs.z,
-            self.w + rhs.w,
-        )
+        Vec3Q32::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 
 // Vector - Vector
-impl Sub for Vec4Q32 {
+impl Sub for Vec3Q32 {
     type Output = Self;
 
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Vec4Q32::new(
-            self.x - rhs.x,
-            self.y - rhs.y,
-            self.z - rhs.z,
-            self.w - rhs.w,
-        )
+        Vec3Q32::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
 }
 
 // Vector * Scalar
-impl Mul<Q32> for Vec4Q32 {
+impl Mul<Q32> for Vec3Q32 {
     type Output = Self;
 
     #[inline(always)]
     fn mul(self, rhs: Q32) -> Self {
-        Vec4Q32::new(self.x * rhs, self.y * rhs, self.z * rhs, self.w * rhs)
+        Vec3Q32::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
 
 // Vector / Scalar
-impl Div<Q32> for Vec4Q32 {
+impl Div<Q32> for Vec3Q32 {
     type Output = Self;
 
     #[inline(always)]
     fn div(self, rhs: Q32) -> Self {
-        Vec4Q32::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
+        Vec3Q32::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
 
-impl Neg for Vec4Q32 {
+impl Neg for Vec3Q32 {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self {
-        Vec4Q32::new(-self.x, -self.y, -self.z, -self.w)
+        Vec3Q32::new(-self.x, -self.y, -self.z)
     }
 }
 
@@ -306,125 +294,121 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let v = Vec4Q32::new(
-            Q32::from_i32(1),
-            Q32::from_i32(2),
-            Q32::from_i32(3),
-            Q32::from_i32(4),
-        );
+        let v = Vec3Q32::new(Q32::from_i32(1), Q32::from_i32(2), Q32::from_i32(3));
         assert_eq!(v.x.to_f32(), 1.0);
         assert_eq!(v.y.to_f32(), 2.0);
         assert_eq!(v.z.to_f32(), 3.0);
-        assert_eq!(v.w.to_f32(), 4.0);
     }
 
     #[test]
     fn test_from_f32() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         assert_eq!(v.x.to_f32(), 1.0);
         assert_eq!(v.y.to_f32(), 2.0);
         assert_eq!(v.z.to_f32(), 3.0);
-        assert_eq!(v.w.to_f32(), 4.0);
     }
 
     #[test]
     fn test_from_i32() {
-        let v = Vec4Q32::from_i32(5, 10, 15, 20);
+        let v = Vec3Q32::from_i32(5, 10, 15);
         assert_eq!(v.x.to_f32(), 5.0);
         assert_eq!(v.y.to_f32(), 10.0);
         assert_eq!(v.z.to_f32(), 15.0);
-        assert_eq!(v.w.to_f32(), 20.0);
     }
 
     #[test]
     fn test_zero_one() {
-        let z = Vec4Q32::zero();
+        let z = Vec3Q32::zero();
         assert_eq!(z.x.to_f32(), 0.0);
         assert_eq!(z.y.to_f32(), 0.0);
         assert_eq!(z.z.to_f32(), 0.0);
-        assert_eq!(z.w.to_f32(), 0.0);
 
-        let o = Vec4Q32::one();
+        let o = Vec3Q32::one();
         assert_eq!(o.x.to_f32(), 1.0);
         assert_eq!(o.y.to_f32(), 1.0);
         assert_eq!(o.z.to_f32(), 1.0);
-        assert_eq!(o.w.to_f32(), 1.0);
     }
 
     #[test]
     fn test_add() {
-        let a = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
-        let b = Vec4Q32::from_f32(5.0, 6.0, 7.0, 8.0);
+        let a = Vec3Q32::from_f32(1.0, 2.0, 3.0);
+        let b = Vec3Q32::from_f32(4.0, 5.0, 6.0);
         let c = a + b;
-        assert_eq!(c.x.to_f32(), 6.0);
-        assert_eq!(c.y.to_f32(), 8.0);
-        assert_eq!(c.z.to_f32(), 10.0);
-        assert_eq!(c.w.to_f32(), 12.0);
+        assert_eq!(c.x.to_f32(), 5.0);
+        assert_eq!(c.y.to_f32(), 7.0);
+        assert_eq!(c.z.to_f32(), 9.0);
     }
 
     #[test]
     fn test_sub() {
-        let a = Vec4Q32::from_f32(5.0, 7.0, 9.0, 11.0);
-        let b = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let a = Vec3Q32::from_f32(5.0, 7.0, 9.0);
+        let b = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         let c = a - b;
         assert_eq!(c.x.to_f32(), 4.0);
         assert_eq!(c.y.to_f32(), 5.0);
         assert_eq!(c.z.to_f32(), 6.0);
-        assert_eq!(c.w.to_f32(), 7.0);
     }
 
     #[test]
     fn test_mul_scalar() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         let s = Q32::from_f32(2.0);
         let result = v * s;
         assert_eq!(result.x.to_f32(), 2.0);
         assert_eq!(result.y.to_f32(), 4.0);
         assert_eq!(result.z.to_f32(), 6.0);
-        assert_eq!(result.w.to_f32(), 8.0);
     }
 
     #[test]
     fn test_div_scalar() {
-        let v = Vec4Q32::from_f32(4.0, 6.0, 8.0, 10.0);
+        let v = Vec3Q32::from_f32(4.0, 6.0, 8.0);
         let s = Q32::from_f32(2.0);
         let result = v / s;
         assert_eq!(result.x.to_f32(), 2.0);
         assert_eq!(result.y.to_f32(), 3.0);
         assert_eq!(result.z.to_f32(), 4.0);
-        assert_eq!(result.w.to_f32(), 5.0);
     }
 
     #[test]
     fn test_neg() {
-        let v = Vec4Q32::from_f32(5.0, -3.0, 7.0, -9.0);
+        let v = Vec3Q32::from_f32(5.0, -3.0, 7.0);
         let neg = -v;
         assert_eq!(neg.x.to_f32(), -5.0);
         assert_eq!(neg.y.to_f32(), 3.0);
         assert_eq!(neg.z.to_f32(), -7.0);
-        assert_eq!(neg.w.to_f32(), 9.0);
     }
 
     #[test]
     fn test_dot() {
-        let a = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
-        let b = Vec4Q32::from_f32(5.0, 6.0, 7.0, 8.0);
+        let a = Vec3Q32::from_f32(1.0, 2.0, 3.0);
+        let b = Vec3Q32::from_f32(4.0, 5.0, 6.0);
         let dot = a.dot(b);
-        // 1*5 + 2*6 + 3*7 + 4*8 = 5 + 12 + 21 + 32 = 70
-        assert_eq!(dot.to_f32(), 70.0);
+        // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
+        assert_eq!(dot.to_f32(), 32.0);
+    }
+
+    #[test]
+    fn test_cross() {
+        let a = Vec3Q32::from_f32(1.0, 0.0, 0.0);
+        let b = Vec3Q32::from_f32(0.0, 1.0, 0.0);
+        let c = a.cross(b);
+        // (1,0,0) × (0,1,0) = (0,0,1)
+        assert!((c.x.to_f32() - 0.0).abs() < 0.01);
+        assert!((c.y.to_f32() - 0.0).abs() < 0.01);
+        assert!((c.z.to_f32() - 1.0).abs() < 0.01);
     }
 
     #[test]
     fn test_length_squared() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 2.0, 4.0);
+        let v = Vec3Q32::from_f32(2.0, 3.0, 6.0);
         let len_sq = v.length_squared();
-        // 1^2 + 2^2 + 2^2 + 4^2 = 1 + 4 + 4 + 16 = 25
-        assert_eq!(len_sq.to_f32(), 25.0);
+        // 2^2 + 3^2 + 6^2 = 4 + 9 + 36 = 49
+        assert_eq!(len_sq.to_f32(), 49.0);
     }
 
     #[test]
     fn test_length() {
-        let v = Vec4Q32::from_f32(3.0, 0.0, 4.0, 0.0);
+        let v = Vec3Q32::from_f32(3.0, 0.0, 4.0);
         let len = v.length();
         // Length should be 5
         assert!((len.to_f32() - 5.0).abs() < 0.01);
@@ -432,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_normalize() {
-        let v = Vec4Q32::from_f32(3.0, 0.0, 4.0, 0.0);
+        let v = Vec3Q32::from_f32(3.0, 0.0, 4.0);
         let n = v.normalize();
 
         // Check length is approximately 1
@@ -442,74 +426,81 @@ mod tests {
 
     #[test]
     fn test_normalize_zero() {
-        let v = Vec4Q32::zero();
+        let v = Vec3Q32::zero();
         let n = v.normalize();
         // Should return zero vector, not panic
         assert_eq!(n.x.to_f32(), 0.0);
         assert_eq!(n.y.to_f32(), 0.0);
         assert_eq!(n.z.to_f32(), 0.0);
-        assert_eq!(n.w.to_f32(), 0.0);
     }
 
     #[test]
     fn test_distance() {
-        let a = Vec4Q32::from_f32(0.0, 0.0, 0.0, 0.0);
-        let b = Vec4Q32::from_f32(1.0, 2.0, 2.0, 4.0);
+        let a = Vec3Q32::from_f32(0.0, 0.0, 0.0);
+        let b = Vec3Q32::from_f32(3.0, 0.0, 4.0);
         let dist = a.distance(b);
         // Distance should be 5
         assert!((dist.to_f32() - 5.0).abs() < 0.01);
     }
 
     #[test]
+    fn test_reflect() {
+        let v = Vec3Q32::from_f32(1.0, -1.0, 0.0);
+        let normal = Vec3Q32::from_f32(0.0, 1.0, 0.0);
+        let reflected = v.reflect(normal);
+        // reflect = v - 2 * dot(v, n) * n
+        // dot(v, n) = 1*0 + (-1)*1 + 0*0 = -1
+        // reflect = (1, -1, 0) - 2*(-1)*(0, 1, 0) = (1, -1, 0) + (0, 2, 0) = (1, 1, 0)
+        assert!((reflected.x.to_f32() - 1.0).abs() < 0.01);
+        assert!((reflected.y.to_f32() - 1.0).abs() < 0.01);
+        assert!((reflected.z.to_f32() - 0.0).abs() < 0.01);
+    }
+
+    #[test]
     fn test_mul_comp() {
-        let a = Vec4Q32::from_f32(2.0, 3.0, 4.0, 5.0);
-        let b = Vec4Q32::from_f32(6.0, 7.0, 8.0, 9.0);
+        let a = Vec3Q32::from_f32(2.0, 3.0, 4.0);
+        let b = Vec3Q32::from_f32(5.0, 6.0, 7.0);
         let c = a.mul_comp(b);
-        assert_eq!(c.x.to_f32(), 12.0);
-        assert_eq!(c.y.to_f32(), 21.0);
-        assert_eq!(c.z.to_f32(), 32.0);
-        assert_eq!(c.w.to_f32(), 45.0);
+        assert_eq!(c.x.to_f32(), 10.0);
+        assert_eq!(c.y.to_f32(), 18.0);
+        assert_eq!(c.z.to_f32(), 28.0);
     }
 
     #[test]
     fn test_div_comp() {
-        let a = Vec4Q32::from_f32(12.0, 21.0, 32.0, 45.0);
-        let b = Vec4Q32::from_f32(2.0, 3.0, 4.0, 5.0);
+        let a = Vec3Q32::from_f32(10.0, 18.0, 28.0);
+        let b = Vec3Q32::from_f32(2.0, 3.0, 4.0);
         let c = a.div_comp(b);
-        assert_eq!(c.x.to_f32(), 6.0);
-        assert_eq!(c.y.to_f32(), 7.0);
-        assert_eq!(c.z.to_f32(), 8.0);
-        assert_eq!(c.w.to_f32(), 9.0);
+        assert_eq!(c.x.to_f32(), 5.0);
+        assert_eq!(c.y.to_f32(), 6.0);
+        assert_eq!(c.z.to_f32(), 7.0);
     }
 
     #[test]
     fn test_clamp() {
-        let v = Vec4Q32::from_f32(-1.0, 0.5, 1.5, 2.0);
+        let v = Vec3Q32::from_f32(-1.0, 0.5, 2.0);
         let min = Q32::from_f32(0.0);
         let max = Q32::from_f32(1.0);
         let clamped = v.clamp(min, max);
         assert_eq!(clamped.x.to_f32(), 0.0);
         assert_eq!(clamped.y.to_f32(), 0.5);
         assert_eq!(clamped.z.to_f32(), 1.0);
-        assert_eq!(clamped.w.to_f32(), 1.0);
     }
 
     #[test]
     fn test_swizzle_scalar() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         assert_eq!(v.x().to_f32(), 1.0);
         assert_eq!(v.y().to_f32(), 2.0);
         assert_eq!(v.z().to_f32(), 3.0);
-        assert_eq!(v.w().to_f32(), 4.0);
         assert_eq!(v.r().to_f32(), 1.0);
         assert_eq!(v.g().to_f32(), 2.0);
         assert_eq!(v.b().to_f32(), 3.0);
-        assert_eq!(v.a().to_f32(), 4.0);
     }
 
     #[test]
     fn test_swizzle_xy() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         let xy = v.xy();
         assert_eq!(xy.x.to_f32(), 1.0);
         assert_eq!(xy.y.to_f32(), 2.0);
@@ -517,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_swizzle_xyz() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         let xyz = v.xyz();
         assert_eq!(xyz.x.to_f32(), 1.0);
         assert_eq!(xyz.y.to_f32(), 2.0);
@@ -525,28 +516,30 @@ mod tests {
     }
 
     #[test]
-    fn test_swizzle_xyzw() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
-        let xyzw = v.xyzw();
-        assert_eq!(xyzw.x.to_f32(), 1.0);
-        assert_eq!(xyzw.y.to_f32(), 2.0);
-        assert_eq!(xyzw.z.to_f32(), 3.0);
-        assert_eq!(xyzw.w.to_f32(), 4.0);
+    fn test_swizzle_permutations() {
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
+        let xzy = v.xzy();
+        assert_eq!(xzy.x.to_f32(), 1.0);
+        assert_eq!(xzy.y.to_f32(), 3.0);
+        assert_eq!(xzy.z.to_f32(), 2.0);
+
+        let yxz = v.yxz();
+        assert_eq!(yxz.x.to_f32(), 2.0);
+        assert_eq!(yxz.y.to_f32(), 1.0);
+        assert_eq!(yxz.z.to_f32(), 3.0);
     }
 
     #[test]
     fn test_swizzle_rgba() {
-        let v = Vec4Q32::from_f32(1.0, 2.0, 3.0, 4.0);
+        let v = Vec3Q32::from_f32(1.0, 2.0, 3.0);
         assert_eq!(v.rg().x.to_f32(), 1.0);
         assert_eq!(v.rg().y.to_f32(), 2.0);
         assert_eq!(v.rb().x.to_f32(), 1.0);
         assert_eq!(v.rb().y.to_f32(), 3.0);
+        assert_eq!(v.gb().x.to_f32(), 2.0);
+        assert_eq!(v.gb().y.to_f32(), 3.0);
         assert_eq!(v.rgb().x.to_f32(), 1.0);
         assert_eq!(v.rgb().y.to_f32(), 2.0);
         assert_eq!(v.rgb().z.to_f32(), 3.0);
-        assert_eq!(v.rgba().x.to_f32(), 1.0);
-        assert_eq!(v.rgba().y.to_f32(), 2.0);
-        assert_eq!(v.rgba().z.to_f32(), 3.0);
-        assert_eq!(v.rgba().w.to_f32(), 4.0);
     }
 }

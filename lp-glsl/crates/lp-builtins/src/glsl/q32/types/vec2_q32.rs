@@ -1,6 +1,6 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use super::q32::Q32;
+use crate::glsl::q32::types::q32::Q32;
 use crate::builtins::q32::__lp_q32_sqrt;
 
 /// 2D vector for Q32 fixed-point arithmetic

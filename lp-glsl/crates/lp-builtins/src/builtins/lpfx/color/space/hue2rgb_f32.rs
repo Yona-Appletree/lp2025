@@ -4,7 +4,7 @@
 //! For now, it calls the q32 version with conversion.
 
 use crate::builtins::lpfx::color::space::hue2rgb_q32::__lpfx_hue2rgb_q32;
-use crate::util::q32::Q32;
+use crate::glsl::q32::types::q32::Q32;
 
 /// Convert hue value to RGB color (extern C wrapper for compiler).
 ///

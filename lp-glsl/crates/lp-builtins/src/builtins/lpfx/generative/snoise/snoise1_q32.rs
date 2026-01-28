@@ -28,7 +28,7 @@
 //! operates on Q32 fixed-point values. The compiler handles type conversion automatically.
 
 use crate::builtins::lpfx::hash::lpfx_hash;
-use crate::util::q32::Q32;
+use crate::glsl::q32::types::q32::Q32;
 
 /// 1D Simplex noise function.
 ///

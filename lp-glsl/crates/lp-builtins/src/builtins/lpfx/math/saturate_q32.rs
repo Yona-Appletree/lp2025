@@ -3,9 +3,9 @@
 //! This function clamps values to the [0, 1] range, which is commonly used in color
 //! space conversions and other graphics operations.
 
-use crate::util::q32::Q32;
-use crate::util::vec3_q32::Vec3Q32;
-use crate::util::vec4_q32::Vec4Q32;
+use crate::glsl::q32::types::q32::Q32;
+use crate::glsl::q32::types::vec3_q32::Vec3Q32;
+use crate::glsl::q32::types::vec4_q32::Vec4Q32;
 
 /// Saturate a single Q32 value (clamp to [0, 1]).
 ///

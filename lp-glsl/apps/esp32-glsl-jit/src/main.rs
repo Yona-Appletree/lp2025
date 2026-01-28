@@ -21,7 +21,7 @@ use hashbrown::HashMap;
 
 use cranelift_codegen::isa::riscv32::isa_builder;
 use cranelift_codegen::settings::{self, Configurable};
-use lp_builtins::util::q32::Q32;
+use lp_builtins::glsl::q32::types::q32::Q32;
 use lp_glsl_compiler::Compiler;
 use lp_glsl_compiler::backend::transform::q32::{FixedPointFormat, Q32Transform};
 use target_lexicon::Triple;

@@ -4,7 +4,7 @@
 //! For now, it calls the q32 version with conversion.
 
 use crate::builtins::lpfx::generative::snoise::snoise3_q32::__lpfx_snoise3_q32;
-use crate::util::q32::Q32;
+use crate::glsl::q32::types::q32::Q32;
 
 /// 3D Simplex noise function (float version).
 ///

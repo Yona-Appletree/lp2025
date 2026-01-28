@@ -29,8 +29,8 @@
 //! by the compiler (vec2 becomes two i32 parameters).
 
 use crate::builtins::lpfx::hash::lpfx_hash2;
-use crate::util::q32::Q32;
-use crate::util::vec2_q32::Vec2Q32;
+use crate::glsl::q32::types::q32::Q32;
+use crate::glsl::q32::types::vec2_q32::Vec2Q32;
 
 /// Fixed-point constants
 const TWO: Q32 = Q32(0x00020000); // 2.0 in Q16.16

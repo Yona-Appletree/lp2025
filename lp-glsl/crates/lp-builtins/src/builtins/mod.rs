@@ -24,7 +24,7 @@
 //!
 //! Example:
 //! ```rust
-//! use lp_builtins::util::q32::Q32;
+//! use lp_builtins::glsl::q32::types::q32::Q32;
 //!
 //! // Public Rust API - can be inlined
 //! #[inline(always)]

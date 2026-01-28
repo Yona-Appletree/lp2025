@@ -3,7 +3,7 @@
 //! This is a stub implementation that calls the q32 version with conversion.
 
 use crate::builtins::lpfx::generative::psrdnoise::psrdnoise2_q32::__lpfx_psrdnoise2_q32;
-use crate::util::q32::Q32;
+use crate::glsl::q32::types::q32::Q32;
 
 /// 2D Periodic Simplex Rotational Domain noise function (float version).
 ///

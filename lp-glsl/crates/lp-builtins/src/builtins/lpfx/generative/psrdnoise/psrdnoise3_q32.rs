@@ -27,8 +27,8 @@
 //! Noise value approximately in range [-1, 1] (float)
 
 use crate::builtins::q32::{__lp_q32_cos, __lp_q32_mod, __lp_q32_sin, __lp_q32_sqrt};
-use crate::util::q32::Q32;
-use crate::util::vec3_q32::Vec3Q32;
+use crate::glsl::q32::types::q32::Q32;
+use crate::glsl::q32::types::vec3_q32::Vec3Q32;
 
 /// Fixed-point constants
 const HALF: Q32 = Q32(0x00008000); // 0.5 in Q16.16
