@@ -1711,32 +1711,40 @@ impl GlslExecutable for GlslEmulatorModule {
         // Get function signature (clone to avoid borrow conflicts)
         let sig = self.get_function_signature(name)?.clone();
 
+        // Check if function uses StructReturn (before processing arguments)
+        let uses_struct_return = sig
+            .params
+            .iter()
+            .any(|p| p.purpose == ArgumentPurpose::StructReturn);
+
         // Convert arguments to DataValue
-        let mut arg_idx = 0;
+        // Skip StructReturn parameter if present (it's handled internally by emulator)
+        let mut arg_idx = if uses_struct_return { 1 } else { 0 };
         let mut data_args = Vec::new();
         for arg in args {
             data_args.extend(self.glsl_value_to_data_value(arg, &sig, &mut arg_idx)?);
         }
 
-        // Validate argument count matches signature
-        if data_args.len() != sig.params.len() {
+        // Validate argument count matches signature (excluding StructReturn parameter)
+        let expected_params = if uses_struct_return {
+            // StructReturn parameter is added internally, don't count it
+            sig.params.len() - 1
+        } else {
+            sig.params.len()
+        };
+
+        if data_args.len() != expected_params {
             return Err(GlslError::new(
                 ErrorCode::E0400,
                 format!(
-                    "Argument count mismatch calling function '{}': expected {} parameter(s), got {} argument(s). Signature: {:?}",
+                    "Argument count mismatch calling function '{}': expected {} parameter(s) (excluding StructReturn), got {} argument(s). Signature: {:?}",
                     name,
-                    sig.params.len(),
+                    expected_params,
                     data_args.len(),
                     sig
                 ),
             ));
         }
-
-        // Check if function uses StructReturn
-        let uses_struct_return = sig
-            .params
-            .iter()
-            .any(|p| p.purpose == ArgumentPurpose::StructReturn);
 
         if uses_struct_return {
             // Clone signature before mutable borrow
