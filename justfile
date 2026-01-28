@@ -149,3 +149,14 @@ push: check
 # Push changes, run ci, and merge PR if successful
 merge: check
     scripts/push.sh --merge
+
+# ============================================================================
+# Demo projects
+# ============================================================================
+
+# Run lp-cli dev server with an example project
+# Usage: just demo [example-name]
+# Example: just demo basic
+demo example="basic":
+    cd lp-app/apps/lp-cli && cargo run -- dev ../../../examples/{{example}}
+

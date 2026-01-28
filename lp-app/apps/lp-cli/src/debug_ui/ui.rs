@@ -60,7 +60,7 @@ impl DebugUiState {
             project_handle,
             async_client: Arc::new(tokio::sync::Mutex::new(async_client)),
             tracked_nodes: BTreeSet::new(),
-            all_detail: false,
+            all_detail: true,
             sync_in_progress: false,
             pending_sync: None,
             tracked_nodes_changed: false,
@@ -121,6 +121,15 @@ impl DebugUiState {
                                             _ => {}
                                         }
                                     }
+                                    // If "All detail" is enabled, track all nodes
+                                    if self.all_detail && !view.nodes.is_empty() {
+                                        let all_node_handles: BTreeSet<_> =
+                                            view.nodes.keys().copied().collect();
+                                        if self.tracked_nodes != all_node_handles {
+                                            self.tracked_nodes = all_node_handles;
+                                        }
+                                    }
+
                                     self.sync_in_progress = false;
                                     // Check if tracked_nodes changed while sync was in progress
                                     // If so, we need to sync again immediately
