@@ -85,7 +85,10 @@ run(test_file: &TestFile, path: &Path, line_filter: Option<usize>) -> Result<(Re
 ```
 run(files: &[String]) -> anyhow::Result<()>
   # UPDATE: Add fix_xfail: bool parameter (from --fix flag or LP_FIX_XFAIL env var)
+  # UPDATE: Check for LP_MARK_FAILING_TESTS_EXPECTED env var
+  # UPDATE: If baseline marking enabled, show warning and require confirmation
   # UPDATE: Pass fix_xfail to test execution and file update logic
+  # UPDATE: Collect failing tests and mark them if baseline marking confirmed
 ```
 
 ### format_results_summary (`lib.rs`)
@@ -115,6 +118,16 @@ remove_expect_fail_marker(&self, line_number: usize) -> Result<()>
   # NEW: Remove [expect-fail] marker from specified line
   # Preserve formatting and indentation
   # Handle multiple markers in same file (track line_diff)
+```
+
+### add_expect_fail_marker (`util/file_update.rs`)
+
+```
+add_expect_fail_marker(&self, line_number: usize) -> Result<()>
+  # NEW: Add [expect-fail] marker to specified line
+  # Preserve formatting and indentation
+  # Skip if marker already exists
+  # Handle multiple additions in same file (track line_diff)
 ```
 
 ### TestOptions (`apps/lp-test/src/main.rs`)
@@ -162,6 +175,23 @@ TestOptions - # UPDATE: Add fix flag
   To fix: rerun tests with LP_FIX_XFAIL=1 or --fix flag to automatically remove markers.
   ```
 
+## Baseline Marking Feature
+
+A separate feature to automatically mark all currently failing tests with `[expect-fail]` markers. This is useful for establishing a baseline when introducing this feature to an existing codebase.
+
+- **Environment variable:** `LP_MARK_FAILING_TESTS_EXPECTED=1`
+- **Purpose:** Mark all failing tests as expected failures (establish baseline)
+- **Safety:** Requires explicit confirmation with stern warning
+- **Warning message:**
+  ```
+  WARNING: This will mark ALL currently failing tests with [expect-fail] markers.
+  This should only be done when establishing a baseline for expected-fail tracking.
+  Type 'yes' to confirm: 
+  ```
+- **Confirmation:** Must type "yes" exactly to proceed
+- **Behavior:** After confirmation, run tests and add `[expect-fail]` to all failing test directives
+- **One-time use:** Intended for initial setup only, not regular use
+
 ## Implementation Notes
 
 1. **Parsing:** Strip `[expect-fail]` from the end of run directive lines before parsing expected value
@@ -171,3 +201,4 @@ TestOptions - # UPDATE: Add fix flag
 5. **CI Integration:** Tests fail on unexpected passes by default (no file modifications), use `LP_FIX_XFAIL=1` or `--fix` to enable auto-removal
 6. **Command-line flag:** Add `--fix` flag to `TestOptions` in `lp-test/src/main.rs`, pass to `run()` function
 7. **Flag precedence:** Check both `LP_FIX_XFAIL` env var and `--fix` flag (either enables auto-removal)
+8. **Baseline marking:** Separate feature with `LP_MARK_FAILING_TESTS_EXPECTED=1`, requires explicit "yes" confirmation

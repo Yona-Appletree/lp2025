@@ -7,16 +7,16 @@ use anyhow::Result;
 use std::path::Path;
 
 /// Run all tests in a test file with optional line number filtering.
-/// Returns the result and test case statistics.
+/// Returns the result, test case statistics, and line numbers with unexpected passes.
 pub fn run_test_file_with_line_filter(
     test_file: &TestFile,
     path: &Path,
     line_filter: Option<usize>,
     output_mode: OutputMode,
-) -> Result<(Result<()>, TestCaseStats)> {
+) -> Result<(Result<()>, TestCaseStats, Vec<usize>)> {
     if !test_file.is_test_run {
         // Not a test run file, skip
-        return Ok((Ok(()), TestCaseStats::default()));
+        return Ok((Ok(()), TestCaseStats::default(), Vec::new()));
     }
 
     match output_mode {
@@ -29,7 +29,7 @@ pub fn run_test_file_with_line_filter(
 
 /// Run all tests in a test file.
 pub fn run_test_file(test_file: &TestFile, path: &Path) -> Result<()> {
-    let (result, _stats) = run_test_file_with_line_filter(
+    let (result, _stats, _) = run_test_file_with_line_filter(
         test_file,
         path,
         None,

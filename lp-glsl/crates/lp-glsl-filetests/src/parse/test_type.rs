@@ -42,6 +42,8 @@ pub struct RunDirective {
     pub tolerance: Option<f32>,
     /// Line number for bless mode updates.
     pub line_number: usize,
+    /// Whether this test is marked as expected to fail with `[expect-fail]`.
+    pub expect_fail: bool,
 }
 
 /// A trap expectation parsed from a `// EXPECT_TRAP:` or `// EXPECT_TRAP_CODE:` line.

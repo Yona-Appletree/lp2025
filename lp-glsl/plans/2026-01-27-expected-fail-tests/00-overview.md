@@ -11,10 +11,12 @@ Implement support for marking tests as expected to fail using `[expect-fail]` sy
 3. **Track test result categories** - Update test execution to categorize results into passed, expected-fail, unexpected-fail, and unexpected-pass
 4. **Update reporting format** - Modify output to show expected-fail counts and handle unexpected passes
 5. **Implement marker removal** - Add `remove_expect_fail_marker()` method to `FileUpdate`
-6. **Add fix flag support** - Add `--fix` flag to CLI and `LP_FIX_XFAIL` env var support
-7. **Update exit code logic** - Ensure tests fail on unexpected passes with appropriate error messages
-8. **Add filetests** - Create filetests to verify the expected-fail functionality
-9. **Cleanup and finalization** - Fix warnings, format code, verify all tests pass
+6. **Implement marker addition** - Add `add_expect_fail_marker()` method to `FileUpdate` for baseline marking
+7. **Add fix flag support** - Add `--fix` flag to CLI and `LP_FIX_XFAIL` env var support
+8. **Add baseline marking feature** - Add `LP_MARK_FAILING_TESTS_EXPECTED` with confirmation prompt
+9. **Update exit code logic** - Ensure tests fail on unexpected passes with appropriate error messages
+10. **Add filetests** - Create filetests to verify the expected-fail functionality
+11. **Cleanup and finalization** - Fix warnings, format code, verify all tests pass
 
 ## Success Criteria
 

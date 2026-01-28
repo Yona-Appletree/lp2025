@@ -16,12 +16,13 @@ use crate::colors;
 use crate::util::format_glsl_value;
 
 /// Run tests in detail mode: compile per test case with function filtering.
+/// Returns result, stats, and list of line numbers that had unexpected passes.
 pub fn run(
     test_file: &TestFile,
     path: &Path,
     line_filter: Option<usize>,
     output_mode: OutputMode,
-) -> Result<(Result<()>, TestCaseStats)> {
+) -> Result<(Result<()>, TestCaseStats, Vec<usize>)> {
     // Read the original file lines to pass to test glsl generation
     let file_contents = std::fs::read_to_string(path)
         .map_err(|e| anyhow::anyhow!("failed to read {}: {}", path.display(), e))?;
@@ -53,6 +54,7 @@ pub fn run(
 
     let mut stats = TestCaseStats::default();
     let mut errors = Vec::new();
+    let mut unexpected_pass_lines = Vec::new();
 
     // Process each run directive
     for directive in &test_file.run_directives {
@@ -145,7 +147,11 @@ pub fn run(
         match (execution_result, trap_expectation) {
             (Ok(actual_value), Some(exp)) => {
                 // Expected a trap but got a value
-                stats.failed += 1;
+                if directive.expect_fail {
+                    stats.expect_fail += 1;
+                } else {
+                    stats.failed += 1;
+                }
                 let error_msg = format_error(
                     ErrorType::ExpectedTrapGotValue,
                     &format!(
@@ -179,7 +185,11 @@ pub fn run(
 
                 if is_trap {
                     // Unexpected trap
-                    stats.failed += 1;
+                    if directive.expect_fail {
+                        stats.expect_fail += 1;
+                    } else {
+                        stats.failed += 1;
+                    }
                     // Extract just the error message (before emulator state)
                     let error_msg = extract_error_message(&error_str);
                     let formatted_error = format_error(
@@ -201,7 +211,11 @@ pub fn run(
                     // Other error - format through unified formatter
                     // Extract just the error message (before emulator state)
                     let error_msg = extract_error_message(&error_str);
-                    stats.failed += 1;
+                    if directive.expect_fail {
+                        stats.expect_fail += 1;
+                    } else {
+                        stats.failed += 1;
+                    }
                     let formatted_error = format_error(
                         ErrorType::ExecutionTrap,
                         &error_msg,
@@ -225,7 +239,11 @@ pub fn run(
                 // Check trap code if specified
                 if let Some(expected_code) = exp.trap_code {
                     if !error_str.contains(&format!("user{expected_code}")) {
-                        stats.failed += 1;
+                        if directive.expect_fail {
+                            stats.expect_fail += 1;
+                        } else {
+                            stats.failed += 1;
+                        }
                         let formatted_error = format_error(
                             ErrorType::TrapMismatch,
                             &format!(
@@ -247,7 +265,11 @@ pub fn run(
                 // Check trap message if specified
                 if let Some(ref expected_msg) = exp.trap_message {
                     if !error_str.contains(expected_msg) {
-                        stats.failed += 1;
+                        if directive.expect_fail {
+                            stats.expect_fail += 1;
+                        } else {
+                            stats.failed += 1;
+                        }
                         let formatted_error = format_error(
                             ErrorType::TrapMismatch,
                             &format!(
@@ -267,7 +289,12 @@ pub fn run(
                 }
 
                 // Trap matches expectation - test passes
-                stats.passed += 1;
+                if directive.expect_fail {
+                    stats.unexpected_pass += 1;
+                    unexpected_pass_lines.push(directive.line_number);
+                } else {
+                    stats.passed += 1;
+                }
                 continue;
             }
             (Ok(actual_value), None) => {
@@ -293,8 +320,14 @@ pub fn run(
                     directive.tolerance,
                 ) {
                     Ok(()) => {
-                        // Test passed - print success message in detailed mode
-                        stats.passed += 1;
+                        // Test passed
+                        if directive.expect_fail {
+                            stats.unexpected_pass += 1;
+                            unexpected_pass_lines.push(directive.line_number);
+                        } else {
+                            stats.passed += 1;
+                        }
+                        // Print success message in detailed mode
                         if output_mode.show_full_output() {
                             use crate::{colors, colors::should_color};
                             use std::path::Path;
@@ -332,7 +365,11 @@ pub fn run(
                         //     file_update.update_run_expectation(...)?;
                         //     stats.passed += 1;
                         // } else {
-                        stats.failed += 1;
+                        if directive.expect_fail {
+                            stats.expect_fail += 1;
+                        } else {
+                            stats.failed += 1;
+                        }
                         // Format the // run: line
                         let op_str = match directive.comparison {
                             crate::parse::test_type::ComparisonOp::Exact => "==",
@@ -410,7 +447,7 @@ pub fn run(
         Ok(())
     };
 
-    Ok((result, stats))
+    Ok((result, stats, unexpected_pass_lines))
 }
 
 /// Error type for unified error formatting.

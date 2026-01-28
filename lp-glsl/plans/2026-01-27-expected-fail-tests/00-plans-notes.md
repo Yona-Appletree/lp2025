@@ -176,9 +176,34 @@ This follows common patterns (like Rust's `#[should_panic]`) and is easy to dete
 
 ---
 
+### Q10: Baseline Marking Feature
+
+**Question:** How should we handle marking all currently failing tests as expected failures when introducing this feature?
+
+**Context:** When introducing expected-fail tracking to an existing codebase, we need a way to establish a baseline by marking all currently failing tests.
+
+**Decision:**
+- Add `LP_MARK_FAILING_TESTS_EXPECTED=1` environment variable (no CLI flag - keep it hard to use)
+- Show stern warning with explicit confirmation required:
+  ```
+  WARNING: This will mark ALL currently failing tests with [expect-fail] markers.
+  This should only be done when establishing a baseline for expected-fail tracking.
+  
+  This operation will modify test files. Make sure you have committed your changes.
+  
+  Type 'yes' to confirm:
+  ```
+- Require typing "yes" exactly (case-sensitive) to proceed
+- Run tests, collect all failing test directives, add `[expect-fail]` marker to each
+- Show summary of how many tests were marked
+- This is a one-time setup feature, not for regular use
+
+---
+
 ## Notes
 
 - User mentioned reviewing filetests for this feature - we should ensure good test coverage
 - The feature should be backward compatible - existing tests without `[expect-fail]` work as before
 - Consider adding a command-line flag or env var to list all expected failures (for documentation)
 - Verbose output: In single-test mode, show which specific tests had markers removed (for debugging)
+- Baseline marking feature should be hard to use and require explicit confirmation (safety measure)
