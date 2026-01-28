@@ -58,11 +58,13 @@ lp-glsl/crates/lp-glsl-compiler/src/
 ### signature.rs
 
 **UPDATE**: `SignatureBuilder::add_parameters()`
+
 - Check `param.qualifier` for each parameter
 - For `Out`/`InOut`: Add pointer type parameter instead of value types
 - For `In`: Continue existing behavior (expand to components)
 
 **UPDATE**: `SignatureBuilder::add_type_as_params()`
+
 - New parameter: `qualifier: ParamQualifier`
 - If `Out`/`InOut`: Add single pointer parameter
 - If `In`: Expand to components as before
@@ -70,36 +72,43 @@ lp-glsl/crates/lp-glsl-compiler/src/
 ### function.rs
 
 **UPDATE**: `prepare_call_arguments()`
+
 - For out/inout parameters: Resolve argument as lvalue, get address
 - Pass pointer as argument
 - Track which arguments are out/inout for copy-back
 
 **NEW**: `copy_back_out_parameters()`
+
 - After function call completes
 - For each out/inout parameter: Load from pointer, store to original lvalue
 - Copy back in parameter order
 
 **UPDATE**: `emit_user_function_call()`
+
 - Call `copy_back_out_parameters()` after `execute_function_call()`
 
 ### glsl_compiler.rs
 
 **UPDATE**: Parameter declaration section
+
 - For out/inout parameters: Store pointer from block parameter (don't load value)
 - For in parameters: Continue existing behavior (load values)
 
 **UPDATE**: Variable declaration for parameters
+
 - Out/inout parameters: Store as pointer variable
 - When parameter is accessed: Load/store from pointer
 
 ### lpfx_sig.rs
 
 **UPDATE**: `build_call_signature()`
+
 - Check parameter qualifiers from `func.glsl_sig.parameters`
 - For out/inout: Add pointer type to signature
 - For in: Continue existing behavior
 
 **UPDATE**: `convert_to_cranelift_types()`
+
 - New parameter: `qualifiers: &[ParamQualifier]`
 - For out/inout: Return pointer type
 - For in: Return value types as before
@@ -107,6 +116,7 @@ lp-glsl/crates/lp-glsl-compiler/src/
 ### Semantic Validation
 
 **NEW**: `validate_out_inout_arguments()`
+
 - In semantic checking phase (before codegen)
 - For each out/inout parameter: Try to resolve argument as lvalue
 - Emit error if `resolve_lvalue()` fails
@@ -116,6 +126,7 @@ lp-glsl/crates/lp-glsl-compiler/src/
 ### Pointer Handling for Vectors/Matrices
 
 For out/inout vector/matrix parameters:
+
 - Pass single pointer to first element
 - In function body: Use pointer arithmetic for component access
 - Component access (e.g., `result.x`): Compute offset, load/store at offset
@@ -123,6 +134,7 @@ For out/inout vector/matrix parameters:
 ### Copy-Back Implementation
 
 After function call:
+
 ```rust
 // For each out/inout parameter:
 let pointer = call_args[param_idx];
@@ -137,11 +149,13 @@ for i in 0..component_count {
 ### Parameter Storage in Function Body
 
 For out/inout parameters:
+
 - Store pointer in variable (not values)
-- When reading: `load(pointer, offset)` 
+- When reading: `load(pointer, offset)`
 - When writing: `store(pointer, offset, value)`
 
 For in parameters:
+
 - Continue existing behavior (values stored in variables)
 
 ## Edge Cases

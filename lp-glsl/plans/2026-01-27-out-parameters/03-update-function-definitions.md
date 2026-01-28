@@ -51,5 +51,5 @@ Update function definition codegen to handle out/inout parameters that arrive as
 
 - Out parameters start uninitialized (undefined behavior to read before write)
 - Inout parameters: Load initial value from pointer when reading
-- Component access: Use pointer arithmetic (offset = component_index * element_size)
+- Component access: Use pointer arithmetic (offset = component_index \* element_size)
 - Vector/matrix out parameters: Single pointer to first element, use offsets for components

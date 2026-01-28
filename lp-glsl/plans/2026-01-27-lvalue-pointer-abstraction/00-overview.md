@@ -38,13 +38,13 @@ if let Some(var_name) = name {
 
 ### Pointer-Based LValues
 
-| LValue Type | Storage Location | Access Pattern |
-|------------|-----------------|----------------|
-| `ArrayElement` | `array_ptr: Value` (in variant) | Direct access |
-| `Variable` (out/inout) | `VarInfo.out_inout_ptr` (via name) | Runtime lookup |
+| LValue Type             | Storage Location                   | Access Pattern |
+| ----------------------- | ---------------------------------- | -------------- |
+| `ArrayElement`          | `array_ptr: Value` (in variant)    | Direct access  |
+| `Variable` (out/inout)  | `VarInfo.out_inout_ptr` (via name) | Runtime lookup |
 | `Component` (out/inout) | `VarInfo.out_inout_ptr` (via name) | Runtime lookup |
-| `Variable` (regular) | `vars: Vec<Variable>` (SSA) | Direct access |
-| `Component` (regular) | `base_vars: Vec<Variable>` (SSA) | Direct access |
+| `Variable` (regular)    | `vars: Vec<Variable>` (SSA)        | Direct access  |
+| `Component` (regular)   | `base_vars: Vec<Variable>` (SSA)   | Direct access  |
 
 ### Issues
 
@@ -79,11 +79,13 @@ enum PointerAccessPattern {
 ```
 
 **Pros**:
+
 - Clear separation of storage models
 - No runtime lookups needed
 - Type-safe: can't accidentally mix storage models
 
 **Cons**:
+
 - Requires refactoring existing code
 - Need to update all LValue creation sites
 
@@ -110,11 +112,13 @@ pub enum LValue {
 ```
 
 **Pros**:
+
 - Minimal changes to existing code
 - Pointer available at LValue creation time
 - No runtime lookups
 
 **Cons**:
+
 - Still dual-purpose variants
 - `Option<Value>` adds some complexity
 
@@ -134,16 +138,19 @@ enum StorageLocation {
 ```
 
 **Pros**:
+
 - Clean abstraction
 - Can be added incrementally
 
 **Cons**:
+
 - Still requires runtime checks (moved to trait)
 - Doesn't solve the fundamental inconsistency
 
 ## Recommendation
 
 **Option 1 (Unified Pointer Variant)** is recommended because:
+
 - It provides the clearest separation of concerns
 - Eliminates all runtime lookups
 - Makes the storage model explicit in the type system

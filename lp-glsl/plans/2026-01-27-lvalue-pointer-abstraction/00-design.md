@@ -24,6 +24,7 @@ The compiler currently uses three different storage models:
 ### The Problem
 
 The third model (out/inout) is inconsistent:
+
 - Arrays store pointer directly in LValue variant
 - Out/inout store pointer in VarInfo, accessed via name lookup
 - This forces verbose runtime checks in read/write functions
@@ -41,7 +42,7 @@ pub enum LValue {
         vars: Vec<Variable>,
         ty: GlslType,
     },
-    
+
     /// SSA-based component access: `v.x` or `v.xy`
     Component {
         base_vars: Vec<Variable>,
@@ -49,14 +50,14 @@ pub enum LValue {
         indices: Vec<usize>,
         result_ty: GlslType,
     },
-    
+
     /// Pointer-based storage: arrays, out/inout params, future structs
     PointerBased {
         ptr: Value,
         base_ty: GlslType,
         access_pattern: PointerAccessPattern,
     },
-    
+
     // ... other variants (MatrixElement, MatrixColumn, VectorElement)
 }
 
@@ -68,14 +69,14 @@ pub enum PointerAccessPattern {
     Direct {
         component_count: usize,
     },
-    
+
     /// Component access: `v.x`, `arr[i].xy`
     /// Examples: `v.x` (out/inout param component), `arr[0].x` (array element component)
     Component {
         indices: Vec<usize>,
         result_ty: GlslType,
     },
-    
+
     /// Array element access: `arr[i]`
     /// Examples: `arr[0]`, `arr[idx]`
     ArrayElement {
@@ -197,16 +198,19 @@ LValue::PointerBased {
 ### Pointer Access Pattern Calculation
 
 For out/inout parameters:
+
 - **Direct**: When accessing entire variable (`v`)
 - **Component**: When accessing components (`v.x`, `v.xy`)
 
 For arrays:
+
 - **ArrayElement**: When accessing elements (`arr[i]`)
 - **Component** (nested): When accessing components of elements (`arr[i].x`)
 
 ### Offset Calculation
 
 All pointer-based access uses the same offset calculation:
+
 - Base type determines component size
 - Component index determines offset: `offset = index * component_size_bytes`
 - For arrays: `offset = element_index * element_size_bytes + component_offset`
@@ -214,6 +218,7 @@ All pointer-based access uses the same offset calculation:
 ### Type Information
 
 `base_ty` in `PointerBased` stores the full type (vector, matrix, array, scalar):
+
 - Used to determine component count
 - Used to determine base Cranelift type
 - Used for type checking
@@ -223,18 +228,21 @@ All pointer-based access uses the same offset calculation:
 ### Nested Component Access
 
 `arr[i].x` on an array of vectors:
+
 - First resolve to `ArrayElement` with `component_indices`
 - Could be represented as `PointerBased` with nested `ArrayElement` + `Component`
 
 ### Out/Inout Array Parameters
 
 Arrays as out/inout parameters:
+
 - Currently handled specially (use `array_ptr` directly)
 - With unified variant, would use `PointerBased` with `Direct` pattern
 
 ### Component Swizzling
 
 `v.xy` on out/inout parameter:
+
 - `PointerBased` with `Component` pattern, `indices = [0, 1]`
 - Load components at offsets 0 and 4 (for float)
 
@@ -250,12 +258,14 @@ Arrays as out/inout parameters:
 ### Struct Support
 
 When structs are added, they will likely be pointer-based:
+
 - Structs as out/inout parameters → `PointerBased` with `Direct` or `Component`
 - Struct fields → `PointerBased` with field offset calculation
 
 ### Optimization Opportunities
 
 With unified variant:
+
 - Easier to optimize pointer-based access patterns
 - Can combine multiple loads/stores into single operations
 - Better alias analysis (all pointer-based access in one place)
