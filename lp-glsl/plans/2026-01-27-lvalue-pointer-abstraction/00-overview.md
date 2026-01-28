@@ -2,7 +2,7 @@
 
 ## Status
 
-**Status**: Future Work  
+**Status**: Planning Complete - Ready for Implementation  
 **Priority**: Medium  
 **Dependencies**: None (can be done independently)
 
@@ -156,14 +156,14 @@ enum StorageLocation {
 - Makes the storage model explicit in the type system
 - Aligns with how arrays are already handled
 
-## Implementation Strategy
+## Implementation Phases
 
-1. **Phase 1**: Add `PointerBased` variant to `LValue` enum
-2. **Phase 2**: Update LValue creation to use `PointerBased` for out/inout params
-3. **Phase 3**: Update `read_lvalue()` and `write_lvalue()` to handle `PointerBased`
-4. **Phase 4**: Remove `name` field and runtime lookups
-5. **Phase 5**: Update all LValue creation sites
-6. **Phase 6**: Tests and cleanup
+1. **Add PointerBased Variant** (`01-add-pointerbased-variant.md`): Add `PointerBased` variant and `PointerAccessPattern` enum to `LValue`, update `ty()` method
+2. **Update Out/Inout Resolution** (`02-update-out-inout-resolution.md`): Modify variable and component resolution to create `PointerBased` for out/inout parameters
+3. **Update Read/Write Functions** (`03-update-read-write-functions.md`): Add handling for `PointerBased` variant in read/write functions, keep old code path temporarily
+4. **Migrate All Usage** (`04-migrate-all-usage.md`): Update all LValue creation sites, ensure all out/inout params use `PointerBased`, remove `name` field usage
+5. **Remove Old Code** (`05-remove-old-code.md`): Remove `name` fields, runtime lookups, and `out_inout_ptr` from `VarInfo`
+6. **Testing & Cleanup** (`06-testing-cleanup.md`): Run all tests, add new tests for `PointerBased`, verify no regressions, cleanup
 
 ## Success Criteria
 

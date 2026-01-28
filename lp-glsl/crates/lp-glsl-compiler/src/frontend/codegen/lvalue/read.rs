@@ -162,6 +162,14 @@ pub fn read_lvalue<M: cranelift_module::Module>(
             Ok((vec![val], base_type))
         }
 
+        LValue::PointerBased { .. } => {
+            // TODO: Implement in Phase 3
+            return Err(GlslError::new(
+                ErrorCode::E0400,
+                "PointerBased LValue read not yet implemented",
+            ));
+        }
+
         LValue::ArrayElement {
             array_ptr,
             base_ty,

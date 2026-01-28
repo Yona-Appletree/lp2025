@@ -216,4 +216,21 @@ In `resolve_component_on_variable()`:
 
 ### DirectXShaderCompiler Reference
 
-Searched for reference implementation patterns but didn't find directly comparable code structure. Our architecture is different enough that we should proceed with our own design based on the array element pattern.
+**Architecture Differences:**
+
+DirectXShaderCompiler uses LLVM IR, which fundamentally differs from our approach:
+
+1. **LLVM Arguments as Pointers**: In LLVM IR, function arguments are already Values. For inout parameters, they're pointer types (`i32*`, `<4 x float>*`, etc.), so the pointer is inherent in the type system.
+
+2. **No Custom LValue Abstraction**: They work directly with LLVM Values/Arguments. No equivalent to our `LValue` enum - they use LLVM's type system to distinguish storage models.
+
+3. **Inout Handling**: They process inout parameters twice:
+   - First as output (generate StoreOutput calls)
+   - Then as input (generate LoadInput calls)
+   - Tracked in `m_inoutArgSet` set for validation
+
+4. **Code Generation**: They replace loads/stores with DXIL intrinsics (`LoadInput`/`StoreOutput`) during a lowering pass, rather than generating pointer-based code upfront.
+
+**Key Insight**: Their approach works because LLVM's type system already distinguishes pointer types. Our approach needs to be explicit because Cranelift doesn't have the same semantic distinction - we need to track whether an LValue uses SSA variables or pointer-based storage.
+
+**Our Design Comparison**: Our unified `PointerBased` variant is conceptually similar to how LLVM treats pointer-typed arguments - the storage model is explicit in the type. This validates our approach of making storage model explicit in the LValue type system.

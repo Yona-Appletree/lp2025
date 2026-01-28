@@ -177,14 +177,15 @@ fn emit_lp_lib_fn_call_expr<M: cranelift_module::Module>(
                                         return Err(GlslError::new(
                                             ErrorCode::E0400,
                                             format!(
-                                                "Array variable {var_name} does not have array pointer"
+                                                "Array variable {} does not have array pointer",
+                                                var_name
                                             ),
                                         ));
                                     }
                                 } else {
                                     return Err(GlslError::new(
                                         ErrorCode::E0400,
-                                        format!("Variable {var_name} not found"),
+                                        format!("Variable {} not found", var_name),
                                     ));
                                 }
                             } else {
@@ -193,6 +194,13 @@ fn emit_lp_lib_fn_call_expr<M: cranelift_module::Module>(
                                     "Array lvalue missing variable name",
                                 ));
                             }
+                        }
+                        crate::frontend::codegen::lvalue::LValue::PointerBased { .. } => {
+                            // TODO: Handle PointerBased arrays in Phase 4
+                            return Err(GlslError::new(
+                                ErrorCode::E0400,
+                                "PointerBased array handling not yet implemented",
+                            ));
                         }
                         _ => {
                             return Err(GlslError::new(
@@ -526,14 +534,15 @@ fn prepare_call_arguments<M: cranelift_module::Module>(
                                         return Err(GlslError::new(
                                             ErrorCode::E0400,
                                             format!(
-                                                "Array variable {var_name} does not have array pointer"
+                                                "Array variable {} does not have array pointer",
+                                                var_name
                                             ),
                                         ));
                                     }
                                 } else {
                                     return Err(GlslError::new(
                                         ErrorCode::E0400,
-                                        format!("Variable {var_name} not found"),
+                                        format!("Variable {} not found", var_name),
                                     ));
                                 }
                             } else {
@@ -542,6 +551,13 @@ fn prepare_call_arguments<M: cranelift_module::Module>(
                                     "Array lvalue missing variable name",
                                 ));
                             }
+                        }
+                        crate::frontend::codegen::lvalue::LValue::PointerBased { .. } => {
+                            // TODO: Handle PointerBased arrays in Phase 4
+                            return Err(GlslError::new(
+                                ErrorCode::E0400,
+                                "PointerBased array handling not yet implemented",
+                            ));
                         }
                         _ => {
                             return Err(GlslError::new(

@@ -21,6 +21,14 @@ pub fn write_lvalue<M: cranelift_module::Module>(
     ctx.ensure_block()?;
 
     match lvalue {
+        LValue::PointerBased { .. } => {
+            // TODO: Implement in Phase 3
+            return Err(GlslError::new(
+                ErrorCode::E0400,
+                "PointerBased LValue write not yet implemented",
+            ));
+        }
+
         LValue::Variable { vars, ty, name } => {
             // Check if this is an out/inout parameter (has pointer)
             if let Some(var_name) = name {
