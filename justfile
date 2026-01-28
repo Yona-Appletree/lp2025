@@ -53,24 +53,13 @@ build-rv32-release: install-rv32-target
     cd lp-glsl/apps/esp32-glsl-jit && cargo build --target {{rv32_target}} --release --features esp32c6
 
 # Build all packages (host and RISC-V)
+[parallel]
 build: build-host build-rv32
 
 # Build all packages in release mode
+[parallel]
 build-release: build-host-release build-rv32-release
 
-# Build lp-builtins-app with special flags for filetests
-# This is required before running tests that use the emulator
-filetests-setup: generate-builtins install-rv32-target
-    @echo "Building lp-builtins-app for filetests ({{rv32_target}})..."
-    RUSTFLAGS="-C opt-level=1 -C panic=abort -C overflow-checks=off -C debuginfo=0 -C link-dead-code=off -C codegen-units=1" \
-    cargo build \
-        --target {{rv32_target}} \
-        --package lp-builtins-app \
-        --release
-    @if command -v nm > /dev/null 2>&1; then \
-        LP_SYMBOLS=`nm target/{{rv32_target}}/release/lp-builtins-app 2>/dev/null | grep "__lp_" | wc -l | xargs`; \
-        echo "✓ lp-builtins-app built with $LP_SYMBOLS built-ins"; \
-    fi
 
 # ============================================================================
 # Formatting
@@ -114,22 +103,27 @@ fix: fmt clippy-fix
 # Testing
 # ============================================================================
 
-# Run all tests (requires filetests-setup)
-test: filetests-setup
+# Run all tests
+# Note: glsl-filetests.sh handles building builtins automatically
+[parallel]
+test: test-rust test-filetests
+
+test-rust:
     cargo test
 
-# Run GLSL filetests specifically
-test-filetests: filetests-setup
-    cargo test -p lp-glsl-filetests --test filetests
+test-filetests:
+    scripts/glsl-filetests.sh
 
 # ============================================================================
 # CI and validation
 # ============================================================================
 
 # Check code for linting, formatting, etc...
+[parallel]
 check: fmt-check clippy
 
 # Full CI check: build, format check, clippy, and test
+[parallel]
 ci: check build test
 
 # ============================================================================
