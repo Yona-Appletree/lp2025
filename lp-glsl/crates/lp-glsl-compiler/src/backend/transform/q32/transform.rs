@@ -40,6 +40,9 @@ impl Transform for Q32Transform {
         let new_sig = convert_signature(&old_func.signature, self.format);
         let format = self.format;
 
+        // 2. Get pointer type from module ISA (needed for builtin signatures)
+        let pointer_type = ctx.module.module_internal().isa().pointer_type();
+
         // 3. Capture func_id_map and old_func_id_map from context
         let func_id_map = ctx.func_id_map.clone();
         let old_func_id_map = ctx.old_func_id_map.clone();
@@ -69,6 +72,7 @@ impl Transform for Q32Transform {
                     &mut *call_state.borrow_mut(),
                     &func_id_map,
                     &old_func_id_map,
+                    pointer_type,
                 )
             },
             // Type mapping callback for block parameters

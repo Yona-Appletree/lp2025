@@ -86,7 +86,8 @@ impl GlModule<JITModule> {
                 // Declare builtin functions when module is created
                 {
                     use crate::backend::builtins::declare_builtins;
-                    declare_builtins(&mut module)?;
+                    let pointer_type = module.isa().pointer_type();
+                    declare_builtins(&mut module, pointer_type)?;
                 }
 
                 Ok(Self {
@@ -130,7 +131,8 @@ impl GlModule<ObjectModule> {
                 // Declare builtin functions when module is created
                 {
                     use crate::backend::builtins::declare_builtins;
-                    declare_builtins(&mut module)?;
+                    let pointer_type = module.isa().pointer_type();
+                    declare_builtins(&mut module, pointer_type)?;
                 }
 
                 // Declare host functions when module is created (for emulator)

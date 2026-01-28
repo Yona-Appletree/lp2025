@@ -156,8 +156,8 @@ pub fn lpfx_worley2_value(p: Vec2Q32, seed: u32) -> Q32 {
     let normalized = Q32::from_i32((hash_value & 0xFF) as i32) / MAX_HASH;
 
     // Scale to [-1, 1] range: value * 2.0 - 1.0
-    let scaled = normalized * TWO - Q32::ONE;
-    scaled
+
+    normalized * TWO - Q32::ONE
 }
 
 /// 2D Worley noise function value variant (extern C wrapper for compiler).

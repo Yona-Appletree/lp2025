@@ -9,8 +9,8 @@ use crate::error::{ErrorCode, GlslError};
 use crate::frontend::semantic::lpfx::lpfx_fn_registry::find_lpfx_fn_by_builtin_id;
 use alloc::{format, string::String, vec::Vec};
 use cranelift_codegen::ir::{
-    ArgumentPurpose, ExtFuncData, ExternalName, FuncRef, Function, Inst, InstBuilder,
-    InstructionData, SigRef, UserExternalName, Value, types,
+    ExtFuncData, ExternalName, FuncRef, Function, Inst, InstBuilder, InstructionData, SigRef,
+    UserExternalName, Value, types,
 };
 use cranelift_frontend::FunctionBuilder;
 use cranelift_module::FuncId;
@@ -121,6 +121,7 @@ pub(crate) fn convert_call(
     format: FixedPointFormat,
     func_id_map: &HashMap<String, FuncId>,
     old_func_id_map: &HashMap<FuncId, String>,
+    pointer_type: cranelift_codegen::ir::Type,
 ) -> Result<(), GlslError> {
     let inst_data = &old_func.dfg.insts[old_inst];
 
@@ -296,8 +297,9 @@ pub(crate) fn convert_call(
                     )
                 })?;
 
-                // Use the builtin's signature - it knows about StructReturn and correct parameter types
-                let sig = builtin_id.signature();
+                // Use the builtin's signature - it knows about result pointer and correct parameter types
+                // Use the ISA's pointer type (not hardcoded I32) to support both 32-bit and 64-bit targets
+                let sig = builtin_id.signature(pointer_type);
                 let sig_ref = builder.func.import_signature(sig);
 
                 // Create UserExternalName with the FuncId
@@ -317,15 +319,15 @@ pub(crate) fn convert_call(
                 };
                 let builtin_func_ref = builder.func.import_function(ext_func);
 
-                // Handle return values based on whether this is a StructReturn function
-                let sig = builtin_id.signature();
-                let uses_struct_return = sig.uses_special_param(ArgumentPurpose::StructReturn);
+                // Handle return values based on whether this uses a result pointer
+                let sig = builtin_id.signature(pointer_type);
+                let uses_result_ptr = sig.returns.is_empty(); // Functions with result pointer return void
 
                 // Call the builtin function with mapped arguments
                 let call_inst = builder.ins().call(builtin_func_ref, &mapped_args);
 
-                if uses_struct_return {
-                    // StructReturn functions return void - the call doesn't produce results
+                if uses_result_ptr {
+                    // Functions with result pointer return void - the call doesn't produce results
                     // The old call instruction's results come from loads from the buffer that happen after the call
                     // Those loads are separate instructions that will be processed by the transform
                     // The buffer pointer is already in mapped_args[0], so the loads will read from the correct buffer
@@ -593,6 +595,7 @@ pub(crate) fn convert_call_indirect(
 #[cfg(test)]
 #[cfg(feature = "std")]
 mod tests {
+    #[cfg(feature = "emulator")]
     use crate::backend::transform::q32::q32_test_util;
 
     /// Test function calls: add(f32, f32) -> f32

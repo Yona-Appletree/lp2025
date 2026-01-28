@@ -324,7 +324,7 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push('\n');
 
     output.push_str("use crate::error::{ErrorCode, GlslError};\n");
-    output.push_str("use cranelift_codegen::ir::{AbiParam, ArgumentPurpose, Signature, types};\n");
+    output.push_str("use cranelift_codegen::ir::{AbiParam, Signature, types};\n");
     output.push_str("use cranelift_codegen::isa::CallConv;\n");
     output.push_str("use cranelift_module::{Linkage, Module};\n\n");
     output.push_str("#[cfg(not(feature = \"std\"))]\n");
@@ -385,7 +385,15 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
 
     // Generate signature() method
     output.push_str("    /// Get the Cranelift signature for this builtin function.\n");
-    output.push_str("    pub fn signature(&self) -> Signature {\n");
+    output.push_str("    /// \n");
+    output.push_str(
+        "    /// `pointer_type` is the native pointer type for the target architecture.\n",
+    );
+    output.push_str("    /// For RISC-V 32-bit, this should be `types::I32`.\n");
+    output.push_str(
+        "    /// For 64-bit architectures (like Apple Silicon), this should be `types::I64`.\n",
+    );
+    output.push_str("    pub fn signature(&self, pointer_type: types::Type) -> Signature {\n");
     output.push_str("        let mut sig = Signature::new(CallConv::SystemV);\n");
     output.push_str("        match self {\n");
 
@@ -432,15 +440,14 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
             }
             output.push_str(" => {\n");
             output.push_str(
-                "                // StructReturn: (*mut i32, i32, i32, i32, i32) -> ()\n",
+                "                // Result pointer as normal parameter: (pointer_type, i32, i32, i32, i32) -> ()\n",
             );
-            output.push_str("                let pointer_type = types::I32;\n");
-            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                sig.params.insert(0, AbiParam::new(pointer_type));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("                // Functions with result pointer return void\n");
             output.push_str("            }\n");
         }
 
@@ -453,13 +460,12 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
                 output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
             output.push_str(" => {\n");
-            output.push_str("                // StructReturn: (*mut i32, i32, i32, i32) -> ()\n");
-            output.push_str("                let pointer_type = types::I32;\n");
-            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                // Result pointer as normal parameter: (pointer_type, i32, i32, i32) -> ()\n");
+            output.push_str("                sig.params.insert(0, AbiParam::new(pointer_type));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("                // Functions with result pointer return void\n");
             output.push_str("            }\n");
         }
 
@@ -472,12 +478,11 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
                 output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
             output.push_str(" => {\n");
-            output.push_str("                // StructReturn: (*mut i32, i32, i32) -> ()\n");
-            output.push_str("                let pointer_type = types::I32;\n");
-            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                // Result pointer as normal parameter: (pointer_type, i32, i32) -> ()\n");
+            output.push_str("                sig.params.insert(0, AbiParam::new(pointer_type));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("                // Functions with result pointer return void\n");
             output.push_str("            }\n");
         }
 
@@ -490,11 +495,10 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
                 output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
             }
             output.push_str(" => {\n");
-            output.push_str("                // StructReturn: (*mut i32, i32) -> ()\n");
-            output.push_str("                let pointer_type = types::I32;\n");
-            output.push_str("                sig.params.insert(0, AbiParam::special(pointer_type, ArgumentPurpose::StructReturn));\n");
+            output.push_str("                // Result pointer as normal parameter: (pointer_type, i32) -> ()\n");
+            output.push_str("                sig.params.insert(0, AbiParam::new(pointer_type));\n");
             output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
-            output.push_str("                // StructReturn functions return void\n");
+            output.push_str("                // Functions with result pointer return void\n");
             output.push_str("            }\n");
         }
 
@@ -686,12 +690,18 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str(
         "/// - Emulator: Symbols are resolved by the linker when linking the static library\n",
     );
+    output.push_str("///\n");
+    output.push_str("/// `pointer_type` is the native pointer type for the target architecture.\n");
+    output.push_str("/// For RISC-V 32-bit, this should be `types::I32`.\n");
     output.push_str(
-        "pub fn declare_builtins<M: Module>(module: &mut M) -> Result<(), GlslError> {\n",
+        "/// For 64-bit architectures (like Apple Silicon), this should be `types::I64`.\n",
+    );
+    output.push_str(
+        "pub fn declare_builtins<M: Module>(module: &mut M, pointer_type: types::Type) -> Result<(), GlslError> {\n",
     );
     output.push_str("    for builtin in BuiltinId::all() {\n");
     output.push_str("        let name = builtin.name();\n");
-    output.push_str("        let sig = builtin.signature();\n\n");
+    output.push_str("        let sig = builtin.signature(pointer_type);\n\n");
     output.push_str("        module\n");
     output.push_str("            .declare_function(name, Linkage::Import, &sig)\n");
     output.push_str("            .map_err(|e| {\n");
@@ -711,9 +721,11 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
     output.push_str(
         "/// are registered via a symbol lookup function that's added during module creation.\n",
     );
+    output.push_str("///\n");
+    output.push_str("/// `pointer_type` is the native pointer type for the target architecture.\n");
     output
-        .push_str("pub fn declare_for_jit<M: Module>(module: &mut M) -> Result<(), GlslError> {\n");
-    output.push_str("    declare_builtins(module)\n");
+        .push_str("pub fn declare_for_jit<M: Module>(module: &mut M, pointer_type: types::Type) -> Result<(), GlslError> {\n");
+    output.push_str("    declare_builtins(module, pointer_type)\n");
     output.push_str("}\n\n");
 
     output.push_str("/// Declare builtin functions as external symbols for emulator mode.\n");
@@ -722,10 +734,12 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
         "/// This declares all builtins as external symbols (Linkage::Import) that will\n",
     );
     output.push_str("/// be resolved by the linker when linking the static library.\n");
+    output.push_str("///\n");
+    output.push_str("/// `pointer_type` is the native pointer type for the target architecture.\n");
     output.push_str(
-        "pub fn declare_for_emulator<M: Module>(module: &mut M) -> Result<(), GlslError> {\n",
+        "pub fn declare_for_emulator<M: Module>(module: &mut M, pointer_type: types::Type) -> Result<(), GlslError> {\n",
     );
-    output.push_str("    declare_builtins(module)\n");
+    output.push_str("    declare_builtins(module, pointer_type)\n");
     output.push_str("}\n");
 
     fs::write(path, output).expect("Failed to write registry.rs");

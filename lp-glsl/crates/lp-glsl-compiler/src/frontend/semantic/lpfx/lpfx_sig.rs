@@ -5,7 +5,7 @@ use super::lpfx_fn::LpfxFn;
 use crate::DecimalFormat;
 use crate::semantic::types::Type;
 use alloc::vec::Vec;
-use cranelift_codegen::ir::{AbiParam, ArgumentPurpose, Signature, Type as IrType, types};
+use cranelift_codegen::ir::{AbiParam, Signature, Type as IrType, types};
 use cranelift_codegen::isa::CallConv;
 
 /// Expand vector arguments to individual components
@@ -159,7 +159,7 @@ pub fn convert_to_cranelift_types(
 /// * `func` - The LPFX function definition
 /// * `_builtin_id` - Builtin ID (unused, kept for compatibility)
 /// * `format` - Decimal format (Q32 or Float)
-/// * `pointer_type` - Pointer type for StructReturn parameter (required for vector returns)
+/// * `pointer_type` - Pointer type for result pointer parameter (required for vector returns)
 pub fn build_call_signature(
     func: &LpfxFn,
     _builtin_id: crate::backend::builtins::registry::BuiltinId,
@@ -168,16 +168,13 @@ pub fn build_call_signature(
 ) -> Signature {
     let mut sig = Signature::new(CallConv::SystemV);
 
-    // Handle return type FIRST (before params) - if vector, add StructReturn parameter
+    // Handle return type FIRST (before params) - if vector, add result pointer as normal parameter
     let return_type = &func.glsl_sig.return_type;
     if return_type.is_vector() {
-        // Vector return: use StructReturn parameter
-        // Add StructReturn parameter FIRST (before regular params)
-        sig.params.insert(
-            0,
-            AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
-        );
-        // StructReturn functions return void
+        // Vector return: pass result pointer as first normal parameter (not StructReturn)
+        // This avoids ABI issues - Rust functions already take result_ptr as first parameter
+        sig.params.insert(0, AbiParam::new(pointer_type));
+        // Functions with result pointer return void
         sig.returns.clear();
     } else {
         // Scalar return: add return value

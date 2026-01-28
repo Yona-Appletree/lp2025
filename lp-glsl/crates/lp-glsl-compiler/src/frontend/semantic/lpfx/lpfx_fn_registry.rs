@@ -154,10 +154,10 @@ mod tests {
     #[test]
     fn test_find_non_overloaded_function() {
         // Test finding a non-overloaded function
-        let func = find_lpfx_fn("lpfx_hash1", &[Type::UInt, Type::UInt]);
+        let func = find_lpfx_fn("lpfx_hash", &[Type::UInt, Type::UInt]);
         assert!(func.is_some());
         let func = func.unwrap();
-        assert_eq!(func.glsl_sig.name, "lpfx_hash1");
+        assert_eq!(func.glsl_sig.name, "lpfx_hash");
         assert_eq!(func.glsl_sig.parameters.len(), 2);
     }
 
@@ -280,7 +280,7 @@ mod tests {
     fn test_is_lpfx_fn() {
         // Test is_lpfx_fn helper
         assert!(is_lpfx_fn("lpfx_hsv2rgb"));
-        assert!(is_lpfx_fn("lpfx_hash1"));
+        assert!(is_lpfx_fn("lpfx_hash"));
         assert!(!is_lpfx_fn("hsv2rgb"));
         assert!(!is_lpfx_fn("lpfx"));
         assert!(!is_lpfx_fn(""));

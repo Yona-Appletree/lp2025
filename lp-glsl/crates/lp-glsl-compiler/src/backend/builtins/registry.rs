@@ -12,7 +12,7 @@
 //! JIT (function pointer) and emulator (ELF symbol) linking.
 
 use crate::error::{ErrorCode, GlslError};
-use cranelift_codegen::ir::{AbiParam, ArgumentPurpose, Signature, types};
+use cranelift_codegen::ir::{AbiParam, Signature, types};
 use cranelift_codegen::isa::CallConv;
 use cranelift_module::{Linkage, Module};
 
@@ -227,7 +227,11 @@ impl BuiltinId {
     }
 
     /// Get the Cranelift signature for this builtin function.
-    pub fn signature(&self) -> Signature {
+    ///
+    /// `pointer_type` is the native pointer type for the target architecture.
+    /// For RISC-V 32-bit, this should be `types::I32`.
+    /// For 64-bit architectures (like Apple Silicon), this should be `types::I64`.
+    pub fn signature(&self, pointer_type: types::Type) -> Signature {
         let mut sig = Signature::new(CallConv::SystemV);
         match self {
             BuiltinId::LpfxHsv2rgbVec4F32
@@ -236,17 +240,13 @@ impl BuiltinId {
             | BuiltinId::LpfxRgb2hsvVec4Q32
             | BuiltinId::LpfxSaturateVec4F32
             | BuiltinId::LpfxSaturateVec4Q32 => {
-                // StructReturn: (*mut i32, i32, i32, i32, i32) -> ()
-                let pointer_type = types::I32;
-                sig.params.insert(
-                    0,
-                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
-                );
+                // Result pointer as normal parameter: (pointer_type, i32, i32, i32, i32) -> ()
+                sig.params.insert(0, AbiParam::new(pointer_type));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
-                // StructReturn functions return void
+                // Functions with result pointer return void
             }
             BuiltinId::LpfxHsv2rgbF32
             | BuiltinId::LpfxHsv2rgbQ32
@@ -254,26 +254,18 @@ impl BuiltinId {
             | BuiltinId::LpfxRgb2hsvQ32
             | BuiltinId::LpfxSaturateVec3F32
             | BuiltinId::LpfxSaturateVec3Q32 => {
-                // StructReturn: (*mut i32, i32, i32, i32) -> ()
-                let pointer_type = types::I32;
-                sig.params.insert(
-                    0,
-                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
-                );
+                // Result pointer as normal parameter: (pointer_type, i32, i32, i32) -> ()
+                sig.params.insert(0, AbiParam::new(pointer_type));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
                 sig.params.push(AbiParam::new(types::I32));
-                // StructReturn functions return void
+                // Functions with result pointer return void
             }
             BuiltinId::LpfxHue2rgbF32 | BuiltinId::LpfxHue2rgbQ32 => {
-                // StructReturn: (*mut i32, i32) -> ()
-                let pointer_type = types::I32;
-                sig.params.insert(
-                    0,
-                    AbiParam::special(pointer_type, ArgumentPurpose::StructReturn),
-                );
+                // Result pointer as normal parameter: (pointer_type, i32) -> ()
+                sig.params.insert(0, AbiParam::new(pointer_type));
                 sig.params.push(AbiParam::new(types::I32));
-                // StructReturn functions return void
+                // Functions with result pointer return void
             }
             BuiltinId::LpfxHash3
             | BuiltinId::LpfxSnoise3F32
@@ -531,10 +523,17 @@ pub fn get_function_pointer(builtin: BuiltinId) -> *const u8 {
 /// The difference is only in how they're linked:
 /// - JIT: Function pointers are registered via symbol_lookup_fn during module creation
 /// - Emulator: Symbols are resolved by the linker when linking the static library
-pub fn declare_builtins<M: Module>(module: &mut M) -> Result<(), GlslError> {
+///
+/// `pointer_type` is the native pointer type for the target architecture.
+/// For RISC-V 32-bit, this should be `types::I32`.
+/// For 64-bit architectures (like Apple Silicon), this should be `types::I64`.
+pub fn declare_builtins<M: Module>(
+    module: &mut M,
+    pointer_type: types::Type,
+) -> Result<(), GlslError> {
     for builtin in BuiltinId::all() {
         let name = builtin.name();
-        let sig = builtin.signature();
+        let sig = builtin.signature(pointer_type);
 
         module
             .declare_function(name, Linkage::Import, &sig)
@@ -553,14 +552,24 @@ pub fn declare_builtins<M: Module>(module: &mut M) -> Result<(), GlslError> {
 ///
 /// This declares all builtins as external functions. The function pointers
 /// are registered via a symbol lookup function that's added during module creation.
-pub fn declare_for_jit<M: Module>(module: &mut M) -> Result<(), GlslError> {
-    declare_builtins(module)
+///
+/// `pointer_type` is the native pointer type for the target architecture.
+pub fn declare_for_jit<M: Module>(
+    module: &mut M,
+    pointer_type: types::Type,
+) -> Result<(), GlslError> {
+    declare_builtins(module, pointer_type)
 }
 
 /// Declare builtin functions as external symbols for emulator mode.
 ///
 /// This declares all builtins as external symbols (Linkage::Import) that will
 /// be resolved by the linker when linking the static library.
-pub fn declare_for_emulator<M: Module>(module: &mut M) -> Result<(), GlslError> {
-    declare_builtins(module)
+///
+/// `pointer_type` is the native pointer type for the target architecture.
+pub fn declare_for_emulator<M: Module>(
+    module: &mut M,
+    pointer_type: types::Type,
+) -> Result<(), GlslError> {
+    declare_builtins(module, pointer_type)
 }

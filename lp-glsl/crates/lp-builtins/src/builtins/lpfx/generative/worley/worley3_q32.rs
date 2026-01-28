@@ -265,8 +265,8 @@ pub fn lpfx_worley3(p: Vec3Q32, seed: u32) -> Q32 {
     // We scale by dividing by 3.0 and then mapping [0, 3] to [-1, 1]
     // distance / 3.0 gives [0, 1], then * 2.0 - 1.0 gives [-1, 1]
     const THREE: Q32 = Q32(0x00030000); // 3.0 in Q16.16
-    let scaled = (distance / THREE) * TWO - Q32::ONE;
-    scaled
+
+    (distance / THREE) * TWO - Q32::ONE
 }
 
 /// 3D Worley noise function (extern C wrapper for compiler).

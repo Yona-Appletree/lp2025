@@ -139,8 +139,8 @@ pub fn lpfx_worley2(p: Vec2Q32, seed: u32) -> Q32 {
     // The maximum distance in a unit cell is sqrt(2) ≈ 1.414, so squared is 2.0
     // We scale by dividing by 2.0 and then mapping [0, 2] to [-1, 1]
     // distance / 2.0 gives [0, 1], then * 2.0 - 1.0 gives [-1, 1]
-    let scaled = (distance / TWO) * TWO - Q32::ONE;
-    scaled
+
+    (distance / TWO) * TWO - Q32::ONE
 }
 
 /// 2D Worley noise function (extern C wrapper for compiler).

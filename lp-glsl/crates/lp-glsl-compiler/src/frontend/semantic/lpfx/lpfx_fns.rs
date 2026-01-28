@@ -46,81 +46,6 @@ fn init_functions() -> &'static [LpfxFn] {
     let vec: Vec<LpfxFn> = vec![
         LpfxFn {
             glsl_sig: FunctionSignature {
-                name: String::from("lpfx_saturate"),
-                return_type: Type::Vec3,
-                parameters: vec![Parameter {
-                    name: String::from("v"),
-                    ty: Type::Vec3,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxSaturateVec3F32,
-                q32_impl: BuiltinId::LpfxSaturateVec3Q32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_saturate"),
-                return_type: Type::Vec4,
-                parameters: vec![Parameter {
-                    name: String::from("v"),
-                    ty: Type::Vec4,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxSaturateVec4F32,
-                q32_impl: BuiltinId::LpfxSaturateVec4Q32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_saturate"),
-                return_type: Type::Float,
-                parameters: vec![Parameter {
-                    name: String::from("x"),
-                    ty: Type::Float,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxSaturateF32,
-                q32_impl: BuiltinId::LpfxSaturateQ32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_hsv2rgb"),
-                return_type: Type::Vec3,
-                parameters: vec![Parameter {
-                    name: String::from("hsv"),
-                    ty: Type::Vec3,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxHsv2rgbF32,
-                q32_impl: BuiltinId::LpfxHsv2rgbQ32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_hsv2rgb"),
-                return_type: Type::Vec4,
-                parameters: vec![Parameter {
-                    name: String::from("hsv"),
-                    ty: Type::Vec4,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxHsv2rgbVec4F32,
-                q32_impl: BuiltinId::LpfxHsv2rgbVec4Q32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
                 name: String::from("lpfx_worley"),
                 return_type: Type::Float,
                 parameters: vec![
@@ -165,6 +90,70 @@ fn init_functions() -> &'static [LpfxFn] {
         },
         LpfxFn {
             glsl_sig: FunctionSignature {
+                name: String::from("lpfx_rgb2hsv"),
+                return_type: Type::Vec4,
+                parameters: vec![Parameter {
+                    name: String::from("rgb"),
+                    ty: Type::Vec4,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxRgb2hsvVec4F32,
+                q32_impl: BuiltinId::LpfxRgb2hsvVec4Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_rgb2hsv"),
+                return_type: Type::Vec3,
+                parameters: vec![Parameter {
+                    name: String::from("rgb"),
+                    ty: Type::Vec3,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxRgb2hsvF32,
+                q32_impl: BuiltinId::LpfxRgb2hsvQ32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_hue2rgb"),
+                return_type: Type::Vec3,
+                parameters: vec![Parameter {
+                    name: String::from("hue"),
+                    ty: Type::Float,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxHue2rgbF32,
+                q32_impl: BuiltinId::LpfxHue2rgbQ32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_hash"),
+                return_type: Type::UInt,
+                parameters: vec![
+                    Parameter {
+                        name: String::from("xyz"),
+                        ty: Type::UVec3,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("seed"),
+                        ty: Type::UInt,
+                        qualifier: ParamQualifier::In,
+                    },
+                ],
+            },
+            impls: LpfxFnImpl::NonDecimal(BuiltinId::LpfxHash3),
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
                 name: String::from("lpfx_hash"),
                 return_type: Type::UInt,
                 parameters: vec![
@@ -203,66 +192,77 @@ fn init_functions() -> &'static [LpfxFn] {
         },
         LpfxFn {
             glsl_sig: FunctionSignature {
-                name: String::from("lpfx_hash"),
-                return_type: Type::UInt,
-                parameters: vec![
-                    Parameter {
-                        name: String::from("xyz"),
-                        ty: Type::UVec3,
-                        qualifier: ParamQualifier::In,
-                    },
-                    Parameter {
-                        name: String::from("seed"),
-                        ty: Type::UInt,
-                        qualifier: ParamQualifier::In,
-                    },
-                ],
-            },
-            impls: LpfxFnImpl::NonDecimal(BuiltinId::LpfxHash3),
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_hue2rgb"),
+                name: String::from("lpfx_saturate"),
                 return_type: Type::Vec3,
                 parameters: vec![Parameter {
-                    name: String::from("hue"),
-                    ty: Type::Float,
-                    qualifier: ParamQualifier::In,
-                }],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxHue2rgbF32,
-                q32_impl: BuiltinId::LpfxHue2rgbQ32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_rgb2hsv"),
-                return_type: Type::Vec3,
-                parameters: vec![Parameter {
-                    name: String::from("rgb"),
+                    name: String::from("v"),
                     ty: Type::Vec3,
                     qualifier: ParamQualifier::In,
                 }],
             },
             impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxRgb2hsvF32,
-                q32_impl: BuiltinId::LpfxRgb2hsvQ32,
+                float_impl: BuiltinId::LpfxSaturateVec3F32,
+                q32_impl: BuiltinId::LpfxSaturateVec3Q32,
             },
         },
         LpfxFn {
             glsl_sig: FunctionSignature {
-                name: String::from("lpfx_rgb2hsv"),
+                name: String::from("lpfx_saturate"),
+                return_type: Type::Float,
+                parameters: vec![Parameter {
+                    name: String::from("x"),
+                    ty: Type::Float,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxSaturateF32,
+                q32_impl: BuiltinId::LpfxSaturateQ32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_saturate"),
                 return_type: Type::Vec4,
                 parameters: vec![Parameter {
-                    name: String::from("rgb"),
+                    name: String::from("v"),
                     ty: Type::Vec4,
                     qualifier: ParamQualifier::In,
                 }],
             },
             impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxRgb2hsvVec4F32,
-                q32_impl: BuiltinId::LpfxRgb2hsvVec4Q32,
+                float_impl: BuiltinId::LpfxSaturateVec4F32,
+                q32_impl: BuiltinId::LpfxSaturateVec4Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_hsv2rgb"),
+                return_type: Type::Vec4,
+                parameters: vec![Parameter {
+                    name: String::from("hsv"),
+                    ty: Type::Vec4,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxHsv2rgbVec4F32,
+                q32_impl: BuiltinId::LpfxHsv2rgbVec4Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_hsv2rgb"),
+                return_type: Type::Vec3,
+                parameters: vec![Parameter {
+                    name: String::from("hsv"),
+                    ty: Type::Vec3,
+                    qualifier: ParamQualifier::In,
+                }],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxHsv2rgbF32,
+                q32_impl: BuiltinId::LpfxHsv2rgbQ32,
             },
         },
         LpfxFn {
@@ -315,28 +315,6 @@ fn init_functions() -> &'static [LpfxFn] {
                 return_type: Type::Float,
                 parameters: vec![
                     Parameter {
-                        name: String::from("x"),
-                        ty: Type::Float,
-                        qualifier: ParamQualifier::In,
-                    },
-                    Parameter {
-                        name: String::from("seed"),
-                        ty: Type::UInt,
-                        qualifier: ParamQualifier::In,
-                    },
-                ],
-            },
-            impls: LpfxFnImpl::Decimal {
-                float_impl: BuiltinId::LpfxSnoise1F32,
-                q32_impl: BuiltinId::LpfxSnoise1Q32,
-            },
-        },
-        LpfxFn {
-            glsl_sig: FunctionSignature {
-                name: String::from("lpfx_snoise"),
-                return_type: Type::Float,
-                parameters: vec![
-                    Parameter {
                         name: String::from("p"),
                         ty: Type::Vec2,
                         qualifier: ParamQualifier::In,
@@ -373,6 +351,28 @@ fn init_functions() -> &'static [LpfxFn] {
             impls: LpfxFnImpl::Decimal {
                 float_impl: BuiltinId::LpfxSnoise3F32,
                 q32_impl: BuiltinId::LpfxSnoise3Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_snoise"),
+                return_type: Type::Float,
+                parameters: vec![
+                    Parameter {
+                        name: String::from("x"),
+                        ty: Type::Float,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("seed"),
+                        ty: Type::UInt,
+                        qualifier: ParamQualifier::In,
+                    },
+                ],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxSnoise1F32,
+                q32_impl: BuiltinId::LpfxSnoise1Q32,
             },
         },
     ];

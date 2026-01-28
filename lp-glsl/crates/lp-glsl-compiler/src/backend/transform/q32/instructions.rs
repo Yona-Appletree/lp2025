@@ -39,6 +39,7 @@ pub(crate) fn convert_all_instructions(
     call_state: &mut CallConversionState,
     func_id_map: &HashMap<String, FuncId>,
     old_func_id_map: &HashMap<FuncId, String>,
+    pointer_type: cranelift_codegen::ir::Type,
 ) -> Result<(), GlslError> {
     convert_instruction(
         old_func,
@@ -51,6 +52,7 @@ pub(crate) fn convert_all_instructions(
         call_state,
         func_id_map,
         old_func_id_map,
+        pointer_type,
     )
 }
 
@@ -66,6 +68,7 @@ fn convert_instruction(
     call_state: &mut CallConversionState,
     func_id_map: &HashMap<String, FuncId>,
     old_func_id_map: &HashMap<FuncId, String>,
+    pointer_type: cranelift_codegen::ir::Type,
 ) -> Result<(), GlslError> {
     // Copy source location
     let srcloc = old_func.srcloc(old_inst);
@@ -139,6 +142,7 @@ fn convert_instruction(
                 format,
                 func_id_map,
                 old_func_id_map,
+                pointer_type,
             )?;
         }
         Opcode::CallIndirect => {

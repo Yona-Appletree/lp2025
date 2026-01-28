@@ -220,6 +220,7 @@ pub(crate) fn convert_sqrt(
 #[cfg(test)]
 #[cfg(feature = "std")]
 mod tests {
+    #[cfg(feature = "emulator")]
     use crate::backend::transform::q32::q32_test_util;
 
     /// Test sqrt: square root

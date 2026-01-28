@@ -55,6 +55,7 @@ pub(crate) fn convert_f32const(
 #[cfg(test)]
 #[cfg(feature = "std")]
 mod tests {
+    #[cfg(feature = "emulator")]
     use crate::backend::transform::q32::q32_test_util;
 
     /// Test fconst: constant conversion
