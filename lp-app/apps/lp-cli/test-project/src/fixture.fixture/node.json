@@ -1,0 +1,33 @@
+{
+  "output_spec": "/src/strip.output",
+  "texture_spec": "/src/main.texture",
+  "mapping": "linear",
+  "lamp_type": "rgb",
+  "color_order": "Rgb",
+  "transform": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ]
+}

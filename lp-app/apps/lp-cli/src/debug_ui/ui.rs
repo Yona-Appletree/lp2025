@@ -43,6 +43,8 @@ pub struct DebugUiState {
     last_server_frame_time: Option<Instant>,
     /// Server FPS history (last 60 measurements)
     server_fps_history: Vec<f32>,
+    /// Current theoretical FPS from server (based on frame processing time)
+    theoretical_fps: Option<f32>,
 }
 
 impl DebugUiState {
@@ -67,6 +69,7 @@ impl DebugUiState {
             last_server_frame_id: None,
             last_server_frame_time: None,
             server_fps_history: Vec::new(),
+            theoretical_fps: None,
         }
     }
 
@@ -79,12 +82,45 @@ impl DebugUiState {
         if let Some(mut receiver) = self.pending_sync.take() {
             match receiver.try_recv() {
                 Ok(Ok(serializable_response)) => {
+                    // Extract theoretical FPS from response before converting
+                    let lp_model::project::api::SerializableProjectResponse::GetChanges {
+                        theoretical_fps,
+                        ..
+                    } = &serializable_response;
+                    self.theoretical_fps = *theoretical_fps;
+
                     // Sync completed successfully - convert and apply changes in UI thread
                     match serializable_response_to_project_response(serializable_response) {
                         Ok(project_response) => {
                             let mut view = self.project_view.lock().unwrap();
                             match view.apply_changes(&project_response) {
-                                Ok(()) => {
+                                Ok(status_changes) => {
+                                    // Log status changes
+                                    for change in &status_changes {
+                                        match (&change.old_status, &change.new_status) {
+                                            (
+                                                lp_model::project::api::NodeStatus::Ok,
+                                                lp_model::project::api::NodeStatus::Error(msg),
+                                            ) => {
+                                                println!(
+                                                    "[{}] Status changed: Ok -> Error(\"{}\")",
+                                                    change.path.as_str(),
+                                                    msg
+                                                );
+                                            }
+                                            (
+                                                lp_model::project::api::NodeStatus::Error(old_msg),
+                                                lp_model::project::api::NodeStatus::Ok,
+                                            ) => {
+                                                println!(
+                                                    "[{}] Status changed: Error(\"{}\") -> Ok",
+                                                    change.path.as_str(),
+                                                    old_msg
+                                                );
+                                            }
+                                            _ => {}
+                                        }
+                                    }
                                     self.sync_in_progress = false;
                                     // Check if tracked_nodes changed while sync was in progress
                                     // If so, we need to sync again immediately
@@ -231,6 +267,7 @@ impl eframe::App for DebugUiState {
                 } else {
                     0.0
                 },
+                self.theoretical_fps,
                 self.sync_in_progress,
             );
         });

@@ -104,7 +104,7 @@ fn assert_memory_output_red(
 /// Sync the client view with the runtime
 fn sync_client_view(runtime: &ProjectRuntime, client_view: &mut ClientProjectView) {
     let response = runtime
-        .get_changes(client_view.frame_id, &client_view.detail_specifier())
+        .get_changes(client_view.frame_id, &client_view.detail_specifier(), None)
         .unwrap();
     client_view.apply_changes(&response).unwrap();
 }
