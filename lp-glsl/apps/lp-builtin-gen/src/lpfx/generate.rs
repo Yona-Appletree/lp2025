@@ -67,10 +67,40 @@ pub fn generate_lpfx_fns(parsed_functions: &[ParsedLpfxFunction]) -> String {
     // Group functions by GLSL name for overload support
     let grouped = group_functions_by_name(parsed_functions);
 
+    // Sort function names for deterministic ordering
+    let mut sorted_names: Vec<&String> = grouped.keys().collect();
+    sorted_names.sort();
+
     // Generate LpfxFn structures - one per unique signature
-    for functions in grouped.values() {
+    for name in sorted_names {
+        let functions = &grouped[name];
         // Group by unique signature (name + return type + parameters)
-        let signatures = group_by_signature(functions);
+        let mut signatures = group_by_signature(functions);
+
+        // Sort signatures for deterministic ordering within each function name group
+        // Sort by return type first, then by parameter count, then by parameter types
+        signatures.sort_by(|(_, sig_a), (_, sig_b)| {
+            // Compare return types
+            let ret_cmp =
+                format!("{:?}", sig_a.return_type).cmp(&format!("{:?}", sig_b.return_type));
+            if ret_cmp != std::cmp::Ordering::Equal {
+                return ret_cmp;
+            }
+            // Compare parameter counts
+            let param_count_cmp = sig_a.parameters.len().cmp(&sig_b.parameters.len());
+            if param_count_cmp != std::cmp::Ordering::Equal {
+                return param_count_cmp;
+            }
+            // Compare parameter types
+            for (param_a, param_b) in sig_a.parameters.iter().zip(sig_b.parameters.iter()) {
+                let param_cmp = format!("{:?}{:?}", param_a.ty, param_a.qualifier)
+                    .cmp(&format!("{:?}{:?}", param_b.ty, param_b.qualifier));
+                if param_cmp != std::cmp::Ordering::Equal {
+                    return param_cmp;
+                }
+            }
+            std::cmp::Ordering::Equal
+        });
 
         // Generate one LpfxFn entry per unique signature
         for (signature_funcs, sig) in signatures {
