@@ -66,7 +66,6 @@ const HASH_CONST_10: Q32 = Q32(10 << 16); // 10.0
 ///
 /// # Returns
 /// Tuple of (noise_value, gradient_x, gradient_y) in Q32 fixed-point format
-#[inline(always)]
 pub fn lpfx_psrdnoise2(x: Vec2Q32, period: Vec2Q32, alpha: Q32, _seed: u32) -> (Q32, Q32, Q32) {
     // Transform to simplex space (axis-aligned hexagonal grid)
     // uv = vec2(x.x + x.y*0.5, x.y)

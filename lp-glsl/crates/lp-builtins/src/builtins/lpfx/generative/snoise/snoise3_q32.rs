@@ -52,7 +52,6 @@ const UNSKEW_FACTOR_3D: Q32 = Q32(10923);
 ///
 /// # Returns
 /// Noise value in Q32 fixed-point format, approximately in range [-1, 1]
-#[inline(always)]
 pub fn lpfx_snoise3(p: Vec3Q32, seed: u32) -> Q32 {
     let x = p.x;
     let y = p.y;
@@ -238,7 +237,6 @@ fn dot_3d(x1: Q32, y1: Q32, z1: Q32, x2: Q32, y2: Q32, z2: Q32) -> Q32 {
 
 /// Get 3D gradient vector from gradient index
 /// Returns (gx, gy, gz) in Q32 fixed-point format
-#[inline(always)]
 fn grad3(index: usize) -> (Q32, Q32, Q32) {
     // Gradients are combinations of -1, 0, and 1, normalized
     // For 3D, we use 12 edge gradients + 8 corner gradients (32 total)
@@ -271,7 +269,6 @@ fn grad3(index: usize) -> (Q32, Q32, Q32) {
 }
 
 /// Compute surflet contribution for a corner
-#[inline(always)]
 fn surflet_3d(gradient_index: usize, x: Q32, y: Q32, z: Q32) -> Q32 {
     // t = 1.0 - dist^2 * 2.0
     let dist_sq = magnitude_squared_3d(x, y, z);

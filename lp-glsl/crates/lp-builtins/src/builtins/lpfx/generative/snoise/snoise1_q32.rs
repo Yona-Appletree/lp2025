@@ -38,7 +38,6 @@ use crate::util::q32::Q32;
 ///
 /// # Returns
 /// Noise value in Q32 fixed-point format, approximately in range [-1, 1]
-#[inline(always)]
 pub fn lpfx_snoise(x: Q32, seed: u32) -> Q32 {
     // Get cell coordinate (floor)
     let cell = x.to_i32();

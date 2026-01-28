@@ -87,7 +87,6 @@ fn permute_q32(v: i32) -> i32 {
 ///
 /// # Returns
 /// Tuple of (noise_value, gradient_x, gradient_y, gradient_z) in Q32 fixed-point format
-#[inline(always)]
 pub fn lpfx_psrdnoise3(
     x: Vec3Q32,
     period: Vec3Q32,

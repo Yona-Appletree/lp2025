@@ -46,7 +46,6 @@ const MAX_HASH: Q32 = Q32(255 << 16); // 255.0 in Q16.16
 ///
 /// # Returns
 /// Hash value of nearest cell in Q32 fixed-point format, approximately in range [-1, 1]
-#[inline(always)]
 pub fn lpfx_worley3_value(p: Vec3Q32, seed: u32) -> Q32 {
     let x = p.x;
     let y = p.y;
@@ -325,7 +324,6 @@ pub extern "C" fn __lpfx_worley3_value_q32(x: i32, y: i32, z: i32, seed: u32) ->
 
 /// Get feature point offset from hash index and cell coordinates
 /// Returns (offset_x, offset_y, offset_z) in Q32 fixed-point format
-#[inline(always)]
 fn get_point_3d(index: usize, cell_x: i32, cell_y: i32, cell_z: i32) -> (Q32, Q32, Q32) {
     // Length ranges from 0 to 0.5, based on upper 3 bits of index
     // length = ((index & 0xE0) >> 5) * 0.5 / 7.0
