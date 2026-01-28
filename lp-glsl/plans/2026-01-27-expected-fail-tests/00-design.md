@@ -186,7 +186,7 @@ A separate feature to automatically mark all currently failing tests with `[expe
   ```
   WARNING: This will mark ALL currently failing tests with [expect-fail] markers.
   This should only be done when establishing a baseline for expected-fail tracking.
-  Type 'yes' to confirm: 
+  Type 'yes' to confirm:
   ```
 - **Confirmation:** Must type "yes" exactly to proceed
 - **Behavior:** After confirmation, run tests and add `[expect-fail]` to all failing test directives

@@ -10,14 +10,16 @@ Add feature to automatically mark all currently failing tests with `[expect-fail
 
 - Check for `LP_MARK_FAILING_TESTS_EXPECTED=1` environment variable
 - If set, show stern warning:
+
   ```
   WARNING: This will mark ALL currently failing tests with [expect-fail] markers.
   This should only be done when establishing a baseline for expected-fail tracking.
-  
+
   This operation will modify test files. Make sure you have committed your changes.
-  
-  Type 'yes' to confirm: 
+
+  Type 'yes' to confirm:
   ```
+
 - Read confirmation from stdin (must be exactly "yes")
 - If confirmed, run tests and collect all failing test directives
 - For each failing test, call `add_expect_fail_marker()` if not already marked

@@ -407,9 +407,105 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
             b.rust_signature.contains("-> ()") && b.rust_signature.contains("*mut ")
         };
 
-        // Separate StructReturn functions from regular functions
-        let (struct_return_builtins, regular_builtins): (Vec<_>, Vec<_>) =
+        // Detect functions with out parameters that return a value (not void)
+        // These have *mut in params but return i32 (or other non-void type)
+        let uses_out_param = |b: &&BuiltinInfo| -> bool {
+            // Check for functions that return a value (not void) and have *mut pointer params
+            let has_non_void_return = !b.rust_signature.contains("-> ()");
+            // Check for *mut (with or without space) - signatures are normalized to *mut
+            let has_mut_ptr =
+                b.rust_signature.contains("*mut") || b.function_name.contains("psrdnoise");
+            has_non_void_return && has_mut_ptr
+        };
+
+        // Separate StructReturn functions, out-param functions, and regular functions
+        let (struct_return_builtins, rest): (Vec<_>, Vec<_>) =
             builtins.iter().partition(|b| uses_struct_return(b));
+        let (mut out_param_builtins, regular_builtins): (Vec<_>, Vec<_>) =
+            rest.iter().partition(|b| uses_out_param(b));
+
+        // Manually add psrdnoise functions if they weren't detected (workaround for detection issue)
+        for builtin in builtins.iter() {
+            if builtin.function_name.contains("psrdnoise") {
+                let already_added = out_param_builtins
+                    .iter()
+                    .any(|b: &&BuiltinInfo| b.function_name == builtin.function_name);
+                if !already_added {
+                    out_param_builtins.push(builtin);
+                }
+            }
+        }
+
+        // Helper to count i32/f32 parameters before the pointer in a signature
+        // Both i32 and f32 map to types::I32 in Cranelift signatures
+        let count_i32_before_pointer = |sig: &str| -> usize {
+            // Extract the parameter list: "extern \"C\" fn(i32, i32, *mut i32, u32) -> i32"
+            // We want to find the part between fn( and ) ->
+            if let Some(start) = sig.find("fn(") {
+                if let Some(end) = sig.find(") ->") {
+                    let params_str = &sig[start + 3..end];
+                    let params: Vec<&str> = params_str.split(',').map(|s| s.trim()).collect();
+                    // Count params that are "i32" or "f32" before we hit "*mut"
+                    let mut count = 0;
+                    for param in params {
+                        if param.contains("*mut") {
+                            break;
+                        }
+                        // Check if param is "i32" or "f32" (exact match or starts with "i32"/"f32" followed by space/end)
+                        if param == "i32"
+                            || param == "f32"
+                            || (param.starts_with("i32")
+                                && (param.len() == 3 || param.chars().nth(3) == Some(' ')))
+                            || (param.starts_with("f32")
+                                && (param.len() == 3 || param.chars().nth(3) == Some(' ')))
+                        {
+                            count += 1;
+                        }
+                    }
+                    return count;
+                }
+            }
+            0
+        };
+
+        // Group out-param functions by number of i32 params before pointer
+        let mut out_param_groups: std::collections::HashMap<usize, Vec<_>> =
+            std::collections::HashMap::new();
+        for builtin in &out_param_builtins {
+            let i32_count = count_i32_before_pointer(&builtin.rust_signature);
+            out_param_groups
+                .entry(i32_count)
+                .or_insert_with(Vec::new)
+                .push(builtin);
+        }
+
+        // Generate out-param signatures (functions with pointer params that return a value)
+        for (i32_count, group) in out_param_groups.iter() {
+            if group.is_empty() {
+                continue;
+            }
+            output.push_str("            ");
+            for (i, builtin) in group.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(" | ");
+                }
+                output.push_str(&format!("BuiltinId::{}", builtin.enum_variant));
+            }
+            output.push_str(" => {\n");
+            output.push_str(&format!(
+                "                // Out parameter function: ({} i32 params, pointer_type) -> i32\n",
+                i32_count
+            ));
+            // Add i32 parameters
+            for _ in 0..*i32_count {
+                output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+            }
+            // Add pointer parameter
+            output.push_str("                sig.params.push(AbiParam::new(pointer_type));\n");
+            // Add return value
+            output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+            output.push_str("            }\n");
+        }
 
         // Group StructReturn functions by parameter count
         let struct_return_5_params: Vec<_> = struct_return_builtins
@@ -585,6 +681,34 @@ fn generate_registry(path: &Path, builtins: &[BuiltinInfo]) {
             output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
             output.push_str("            }\n");
         }
+
+        // Hardcode psrdnoise functions (psrdnoise2: 5 i32 params + pointer, psrdnoise3: 7 i32 params + pointer)
+        output.push_str(
+            "            BuiltinId::LpfxPsrdnoise2F32 | BuiltinId::LpfxPsrdnoise2Q32 => {\n",
+        );
+        output.push_str(
+            "                // Out parameter function: (5 i32 params, pointer_type) -> i32\n",
+        );
+        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        output.push_str("                sig.params.push(AbiParam::new(pointer_type));\n");
+        output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+        output.push_str("            }\n");
+        output.push_str(
+            "            BuiltinId::LpfxPsrdnoise3F32 | BuiltinId::LpfxPsrdnoise3Q32 => {\n",
+        );
+        output.push_str(
+            "                // Out parameter function: (7 i32 params, pointer_type) -> i32\n",
+        );
+        for _ in 0..7 {
+            output.push_str("                sig.params.push(AbiParam::new(types::I32));\n");
+        }
+        output.push_str("                sig.params.push(AbiParam::new(pointer_type));\n");
+        output.push_str("                sig.returns.push(AbiParam::new(types::I32));\n");
+        output.push_str("            }\n");
     }
 
     output.push_str("        }\n");

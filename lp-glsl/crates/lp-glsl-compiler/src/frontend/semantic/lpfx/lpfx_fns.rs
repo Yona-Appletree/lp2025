@@ -148,6 +148,70 @@ fn init_functions() -> &'static [LpfxFn] {
         },
         LpfxFn {
             glsl_sig: FunctionSignature {
+                name: String::from("lpfx_psrdnoise"),
+                return_type: Type::Float,
+                parameters: vec![
+                    Parameter {
+                        name: String::from("x"),
+                        ty: Type::Vec2,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("period"),
+                        ty: Type::Vec2,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("alpha"),
+                        ty: Type::Float,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("gradient"),
+                        ty: Type::Vec2,
+                        qualifier: ParamQualifier::Out,
+                    },
+                ],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxPsrdnoise2F32,
+                q32_impl: BuiltinId::LpfxPsrdnoise2Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
+                name: String::from("lpfx_psrdnoise"),
+                return_type: Type::Float,
+                parameters: vec![
+                    Parameter {
+                        name: String::from("x"),
+                        ty: Type::Vec3,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("period"),
+                        ty: Type::Vec3,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("alpha"),
+                        ty: Type::Float,
+                        qualifier: ParamQualifier::In,
+                    },
+                    Parameter {
+                        name: String::from("gradient"),
+                        ty: Type::Vec3,
+                        qualifier: ParamQualifier::Out,
+                    },
+                ],
+            },
+            impls: LpfxFnImpl::Decimal {
+                float_impl: BuiltinId::LpfxPsrdnoise3F32,
+                q32_impl: BuiltinId::LpfxPsrdnoise3Q32,
+            },
+        },
+        LpfxFn {
+            glsl_sig: FunctionSignature {
                 name: String::from("lpfx_rgb2hsv"),
                 return_type: Type::Vec3,
                 parameters: vec![Parameter {
