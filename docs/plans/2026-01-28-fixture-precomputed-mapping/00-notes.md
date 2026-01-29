@@ -7,7 +7,7 @@ Replace the current per-frame texture sampling approach with a pre-computed pixe
 1. Pre-computes weights for each texture pixel mapping to fixture channels
 2. Uses bit-packed encoding (32 bits per entry) for memory efficiency in embedded context
 3. Computes accurate area overlap between mapping circles and pixel squares
-4. Normalizes weights so each pixel sums to 1.0
+4. Normalizes weights per-channel (each channel's total contribution from all pixels sums to 1.0)
 5. Stores pixel values as Q32 (16.16 fixed-point) for precision before downsampling to 8-bit
 6. Recomputes mapping when texture size or mapping configuration changes
 

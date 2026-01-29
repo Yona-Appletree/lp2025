@@ -94,7 +94,7 @@ pub fn compute_mapping(
                 }
             }
             
-            // Third pass: normalize weights per pixel and build entries
+            // Third pass: normalize weights per-channel and build entries
             for y in 0..texture_height {
                 for x in 0..texture_width {
                     let pixel_idx = (y * texture_width + x) as usize;
@@ -104,7 +104,8 @@ pub fn compute_mapping(
                         // No contributions - add SKIP entry
                         mapping.entries.push(PixelMappingEntry::skip());
                     } else {
-                        // Normalize weights so they sum to 1.0
+                        // Normalize weights per-channel: divide by channel total
+                        // This ensures each channel's total contribution from all pixels = 1.0
                         let total_weight: f32 = contributions.iter().map(|(_, w)| w).sum();
                         if total_weight > 0.0 {
                             let normalized: Vec<(u32, f32)> = contributions

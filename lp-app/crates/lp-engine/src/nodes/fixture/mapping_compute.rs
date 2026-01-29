@@ -270,6 +270,11 @@ pub fn compute_mapping(
             let mut pixel_contributions: Vec<Vec<(u32, f32)>> =
                 Vec::with_capacity((texture_width * texture_height) as usize);
             pixel_contributions.resize((texture_width * texture_height) as usize, Vec::new());
+            
+            // Track total weight per channel for normalization
+            let mut channel_totals: Vec<f32> = Vec::new();
+            let max_channel = mapping_points.iter().map(|p| p.channel).max().unwrap_or(0);
+            channel_totals.resize((max_channel + 1) as usize, 0.0);
 
             for mapping_point in &mapping_points {
                 // Convert normalized coordinates to pixel coordinates
@@ -292,12 +297,15 @@ pub fn compute_mapping(
                         if weight > 0.0 {
                             let pixel_idx = (y * texture_width + x) as usize;
                             pixel_contributions[pixel_idx].push((mapping_point.channel, weight));
+                            // Accumulate total weight per channel
+                            channel_totals[mapping_point.channel as usize] += weight;
                         }
                     }
                 }
             }
 
-            // Third pass: normalize weights per pixel and build entries
+            // Third pass: normalize weights per-channel and build entries
+            // Each channel's total contribution from all pixels should sum to 1.0
             for y in 0..texture_height {
                 for x in 0..texture_width {
                     let pixel_idx = (y * texture_width + x) as usize;
@@ -307,27 +315,29 @@ pub fn compute_mapping(
                         // No contributions - add SKIP entry
                         mapping.entries.push(PixelMappingEntry::skip());
                     } else {
-                        // Normalize weights so they sum to 1.0
-                        let total_weight: f32 = contributions.iter().map(|(_, w)| w).sum();
-                        if total_weight > 0.0 {
-                            let normalized: Vec<(u32, f32)> = contributions
-                                .iter()
-                                .map(|(ch, w)| (*ch, w / total_weight))
-                                .collect();
+                        // Normalize weights per-channel: divide by channel total
+                        // This ensures each channel's total contribution from all pixels = 1.0
+                        let normalized: Vec<(u32, f32)> = contributions
+                            .iter()
+                            .map(|(ch, w)| {
+                                let channel_total = channel_totals[*ch as usize];
+                                if channel_total > 0.0 {
+                                    (*ch, *w / channel_total)
+                                } else {
+                                    (*ch, 0.0)
+                                }
+                            })
+                            .collect();
 
-                            // Add entries (last one has has_more = false)
-                            for (idx, (channel, weight)) in normalized.iter().enumerate() {
-                                let has_more = idx < normalized.len() - 1;
-                                let contribution_q32 = Q32::from_f32(*weight);
-                                mapping.entries.push(PixelMappingEntry::new(
-                                    *channel,
-                                    contribution_q32,
-                                    has_more,
-                                ));
-                            }
-                        } else {
-                            // Zero total weight - add SKIP
-                            mapping.entries.push(PixelMappingEntry::skip());
+                        // Add entries (last one has has_more = false)
+                        for (idx, (channel, weight)) in normalized.iter().enumerate() {
+                            let has_more = idx < normalized.len() - 1;
+                            let contribution_q32 = Q32::from_f32(*weight);
+                            mapping.entries.push(PixelMappingEntry::new(
+                                *channel,
+                                contribution_q32,
+                                has_more,
+                            ));
                         }
                     }
                 }
