@@ -101,15 +101,26 @@ impl Q32 {
         self.0 >> Self::SHIFT
     }
 
+    /// Get the integer part (floor) as u8 clamped to [0, 255]
+    ///
+    /// Uses efficient bitwise operations:
+    /// - Right shift to get integer part
+    /// - Sign bit trick to clamp negative to 0: `value & !(value >> 31)`
+    /// - Comparison trick to clamp > 255 to 255: `value & !((255 - value) >> 31) | 255 & ((255 - value) >> 31)`
+    #[inline]
+    pub fn to_u8_clamped(self) -> u8 {
+        self.to_i32().clamp(0, 255) as u8
+    }
+
     /// Multiply by an integer (more efficient than converting to Fixed first)
-    #[inline(always)]
+    #[inline]
     pub const fn mul_int(self, i: i32) -> Q32 {
         Q32(self.0 * i)
     }
 
     /// Linear interpolation
     /// Returns a + t * (b - a)
-    #[inline(always)]
+    #[inline]
     pub fn mix(self, other: Q32, t: Q32) -> Q32 {
         crate::glsl::q32::fns::mix_q32(self, other, t)
     }
@@ -246,18 +257,18 @@ impl ToQ32 for u8 {
     }
 }
 
-/// Extension trait for saturating conversions to Q32
-pub trait SaturatingToQ32 {
+/// Extension trait for clamped conversions to Q32
+pub trait ToQ32Clamped {
     /// Convert to Q32 with saturating arithmetic (clamps to maximum representable integer if value exceeds Q32 range)
     ///
     /// The maximum representable integer in Q32 format is `i32::MAX >> 16` (32767),
     /// since `from_i32` shifts left by 16 bits and must not overflow.
-    fn saturating_to_q32(self) -> Q32;
+    fn to_q32_clamped(self) -> Q32;
 }
 
-impl SaturatingToQ32 for u32 {
+impl ToQ32Clamped for u32 {
     #[inline(always)]
-    fn saturating_to_q32(self) -> Q32 {
+    fn to_q32_clamped(self) -> Q32 {
         const MAX_REPRESENTABLE: u32 = (i32::MAX >> Q32::SHIFT) as u32;
         if self <= MAX_REPRESENTABLE {
             Q32::from_i32(self as i32)
@@ -385,19 +396,19 @@ mod tests {
         const MAX_REPRESENTABLE: u32 = (i32::MAX >> Q32::SHIFT) as u32;
         const MAX_REPRESENTABLE_F32: f32 = MAX_REPRESENTABLE as f32;
 
-        assert_eq!(5u32.saturating_to_q32().to_f32(), 5.0);
-        assert_eq!(0u32.saturating_to_q32().to_f32(), 0.0);
+        assert_eq!(5u32.to_q32_clamped().to_f32(), 5.0);
+        assert_eq!(0u32.to_q32_clamped().to_f32(), 0.0);
         // Test that values at the maximum are preserved
         assert_eq!(
-            MAX_REPRESENTABLE.saturating_to_q32().to_f32(),
+            MAX_REPRESENTABLE.to_q32_clamped().to_f32(),
             MAX_REPRESENTABLE_F32
         );
         // Test that values exceeding the maximum are clamped
         assert_eq!(
-            (MAX_REPRESENTABLE + 1).saturating_to_q32().to_f32(),
+            (MAX_REPRESENTABLE + 1).to_q32_clamped().to_f32(),
             MAX_REPRESENTABLE_F32
         );
-        assert_eq!(u32::MAX.saturating_to_q32().to_f32(), MAX_REPRESENTABLE_F32);
+        assert_eq!(u32::MAX.to_q32_clamped().to_f32(), MAX_REPRESENTABLE_F32);
     }
 
     #[test]
@@ -410,6 +421,31 @@ mod tests {
     fn test_to_q32_u8() {
         assert_eq!(5u8.to_q32().to_f32(), 5.0);
         assert_eq!(0u8.to_q32().to_f32(), 0.0);
+    }
+
+    #[test]
+    fn test_to_u8_clamping() {
+        // Test values in range [0, 255]
+        assert_eq!(Q32::from_i32(0).to_u8_clamped(), 0);
+        assert_eq!(Q32::from_i32(100).to_u8_clamped(), 100);
+        assert_eq!(Q32::from_i32(255).to_u8_clamped(), 255);
+        assert_eq!(Q32::from_f32(128.5).to_u8_clamped(), 128);
+
+        // Test values > 255 (should clamp to 255)
+        assert_eq!(Q32::from_i32(256).to_u8_clamped(), 255);
+        assert_eq!(Q32::from_i32(300).to_u8_clamped(), 255);
+        assert_eq!(Q32::from_i32(1000).to_u8_clamped(), 255);
+        assert_eq!(Q32::from_f32(300.7).to_u8_clamped(), 255);
+
+        // Test negative values (should clamp to 0)
+        assert_eq!(Q32::from_i32(-1).to_u8_clamped(), 0);
+        assert_eq!(Q32::from_i32(-100).to_u8_clamped(), 0);
+        assert_eq!(Q32::from_f32(-5.5).to_u8_clamped(), 0);
+
+        // Test fractional values
+        assert_eq!(Q32::from_f32(0.5).to_u8_clamped(), 0);
+        assert_eq!(Q32::from_f32(0.9).to_u8_clamped(), 0);
+        assert_eq!(Q32::from_f32(254.9).to_u8_clamped(), 254);
     }
 
     #[test]
