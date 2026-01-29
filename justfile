@@ -28,37 +28,50 @@ generate-builtins:
     cargo run --bin lp-builtin-gen -p lp-builtin-gen
 
 # ============================================================================
-# Build commands
+# Build commands - Workspace-wide
 # ============================================================================
 
-# Build host target packages (default workspace)
 build-host:
     cargo build
 
-# Build host target packages in release mode
 build-host-release:
     cargo build --release
 
-# Build RISC-V target packages
-# Note: esp32-glsl-jit is too large for debug builds, so it's built in release mode
 build-rv32: install-rv32-target
     @echo "Building RISC-V packages ({{rv32_target}})..."
     cargo build --target {{rv32_target}} -p lp-builtins-app
     cd lp-glsl/apps/esp32-glsl-jit && cargo build --target {{rv32_target}} --release --features esp32c6
 
-# Build RISC-V target packages in release mode
 build-rv32-release: install-rv32-target
     @echo "Building RISC-V packages in release mode ({{rv32_target}})..."
     cargo build --target {{rv32_target}} -p lp-builtins-app --release
     cd lp-glsl/apps/esp32-glsl-jit && cargo build --target {{rv32_target}} --release --features esp32c6
 
-# Build all packages (host and RISC-V)
 [parallel]
 build: build-host build-rv32
 
-# Build all packages in release mode
 [parallel]
 build-release: build-host-release build-rv32-release
+
+# ============================================================================
+# Build commands - lp-app only
+# ============================================================================
+
+build-app:
+    cargo build --package lp-engine --package lp-engine-client --package lp-shared --package lp-server --package lp-cli --package lp-model
+
+build-app-release:
+    cargo build --release --package lp-engine --package lp-engine-client --package lp-shared --package lp-server --package lp-cli --package lp-model
+
+# ============================================================================
+# Build commands - lp-glsl only
+# ============================================================================
+
+build-glsl:
+    cargo build --package lp-builtins --package lp-filetests-gen --package lp-glsl-compiler --package lp-glsl-filetests --package lp-jit-util --package lp-riscv-shared --package lp-riscv-tools --package lp-builtin-gen --package lp-test --package q32-metrics
+
+build-glsl-release:
+    cargo build --release --package lp-builtins --package lp-filetests-gen --package lp-glsl-compiler --package lp-glsl-filetests --package lp-jit-util --package lp-riscv-shared --package lp-riscv-tools --package lp-builtin-gen --package lp-test --package q32-metrics
 
 
 # ============================================================================
@@ -74,37 +87,47 @@ fmt-check:
     cargo fmt --all -- --check
 
 # ============================================================================
-# Linting
+# Linting - Workspace-wide
 # ============================================================================
 
-# Run clippy on host target packages
-# Exclude esp32 packages to avoid esp32 dependency resolution issues
-# Note: esp32 packages require feature flags that cause issues during workspace resolution
 clippy-host:
     cargo clippy --workspace --exclude lp-builtins-app --exclude esp32-glsl-jit -- --no-deps -D warnings
 
-# Run clippy on RISC-V target packages (esp32-glsl-jit only, lp-builtins-app is mostly generated code)
-# Note: esp32-glsl-jit must be built in release mode (esp-hal requirement)
 clippy-rv32: install-rv32-target
     @echo "Running clippy on RISC-V packages ({{rv32_target}})..."
     cd lp-glsl/apps/esp32-glsl-jit && cargo clippy --target {{rv32_target}} --release --features esp32c6 -- --no-deps -D warnings
 
-# Run clippy on all packages (host and RISC-V)
 clippy: clippy-host clippy-rv32
 
-# Run clippy and auto-fix issues
 clippy-fix:
     cargo clippy --fix --allow-dirty --allow-staged
 
-# Format code and auto-fix clippy issues
 fix: fmt clippy-fix
 
 # ============================================================================
-# Testing
+# Linting - lp-app only
 # ============================================================================
 
-# Run all tests
-# Note: glsl-filetests.sh handles building builtins automatically
+clippy-app:
+    cargo clippy --package lp-engine --package lp-engine-client --package lp-shared --package lp-server --package lp-cli --package lp-model -- --no-deps -D warnings
+
+clippy-app-fix:
+    cargo clippy --fix --allow-dirty --allow-staged --package lp-engine --package lp-engine-client --package lp-shared --package lp-server --package lp-cli --package lp-model
+
+# ============================================================================
+# Linting - lp-glsl only
+# ============================================================================
+
+clippy-glsl:
+    cargo clippy --package lp-builtins --package lp-filetests-gen --package lp-glsl-compiler --package lp-glsl-filetests --package lp-jit-util --package lp-riscv-shared --package lp-riscv-tools --package lp-builtin-gen --package lp-test --package q32-metrics -- --no-deps -D warnings
+
+clippy-glsl-fix:
+    cargo clippy --fix --allow-dirty --allow-staged --package lp-builtins --package lp-filetests-gen --package lp-glsl-compiler --package lp-glsl-filetests --package lp-jit-util --package lp-riscv-shared --package lp-riscv-tools --package lp-builtin-gen --package lp-test --package q32-metrics
+
+# ============================================================================
+# Testing - Workspace-wide
+# ============================================================================
+
 [parallel]
 test: test-rust test-filetests
 
@@ -115,16 +138,54 @@ test-filetests:
     scripts/glsl-filetests.sh
 
 # ============================================================================
+# Testing - lp-app only
+# ============================================================================
+
+test-app:
+    cargo test --package lp-engine --package lp-engine-client --package lp-shared --package lp-server --package lp-cli --package lp-model
+
+# ============================================================================
+# Testing - lp-glsl only
+# ============================================================================
+
+test-glsl:
+    cargo test --package lp-builtins --package lp-filetests-gen --package lp-glsl-compiler --package lp-glsl-filetests --package lp-jit-util --package lp-riscv-shared --package lp-riscv-tools --package lp-builtin-gen --package lp-test --package q32-metrics
+
+test-glsl-filetests:
+    scripts/glsl-filetests.sh
+
+# ============================================================================
 # CI and validation
 # ============================================================================
 
-# Check code for linting, formatting, etc...
 [parallel]
 check: fmt-check clippy
 
-# Full CI check: build, format check, clippy, and test
 [parallel]
 ci: check build test
+
+# lp-app specific CI
+[parallel]
+ci-app: fmt-check clippy-app build-app test-app
+
+# lp-glsl specific CI
+[parallel]
+ci-glsl: fmt-check clippy-glsl build-glsl test-glsl test-glsl-filetests
+
+# Fix code issues then run CI (sequential, not parallel)
+fixci: fix ci
+
+# Fix code issues then run CI for lp-app (sequential, not parallel)
+fixci-app:
+    @just fmt
+    @just clippy-app-fix
+    @just ci-app
+
+# Fix code issues then run CI for lp-glsl (sequential, not parallel)
+fixci-glsl:
+    @just fmt
+    @just clippy-glsl-fix
+    @just ci-glsl
 
 # ============================================================================
 # Cleanup
