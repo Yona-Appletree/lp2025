@@ -9,6 +9,7 @@ Add `cubic()` and `quintic()` interpolation functions. These are used by gnoise 
 ### File: `glsl/q32/fns/cubic.rs` (NEW)
 
 Create cubic interpolation functions:
+
 - `cubic_q32(v: Q32) -> Q32` - Scalar cubic: `v * v * (3.0 - 2.0 * v)`
 - `cubic_vec2(v: Vec2Q32) -> Vec2Q32` - Component-wise cubic
 - `cubic_vec3(v: Vec3Q32) -> Vec3Q32` - Component-wise cubic
@@ -17,6 +18,7 @@ Create cubic interpolation functions:
 ### File: `glsl/q32/fns/quintic.rs` (NEW)
 
 Create quintic interpolation functions:
+
 - `quintic_q32(v: Q32) -> Q32` - Scalar quintic: `v * v * v * (v * (v * 6.0 - 15.0) + 10.0)`
 - `quintic_vec2(v: Vec2Q32) -> Vec2Q32` - Component-wise quintic
 - `quintic_vec3(v: Vec3Q32) -> Vec3Q32` - Component-wise quintic

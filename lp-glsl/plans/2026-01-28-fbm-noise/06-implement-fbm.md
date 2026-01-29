@@ -13,10 +13,12 @@ Create module file exporting fbm functions.
 ### File: `builtins/lpfx/generative/fbm/fbm2_q32.rs` (NEW)
 
 Implement 2D FBM:
+
 - `lpfx_fbm2(p: Vec2Q32, octaves: i32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_fbm2_q32(x: i32, y: i32, octaves: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm (matches GLSL structure):
+
 ```rust
 let mut value = Q32::ZERO;  // FBM_VALUE_INITIAL
 let mut amplitude = Q32::from_f32(0.5);  // FBM_AMPLITUDE_INITIAL
@@ -33,15 +35,18 @@ value
 ### File: `builtins/lpfx/generative/fbm/fbm2_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_fbm2_f32(x: f32, y: f32, octaves: i32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/fbm/fbm3_q32.rs` (NEW)
 
 Implement 3D FBM:
+
 - `lpfx_fbm3(p: Vec3Q32, octaves: i32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_fbm3_q32(x: i32, y: i32, z: i32, octaves: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm (matches GLSL structure):
+
 ```rust
 let mut value = Q32::ZERO;  // FBM_VALUE_INITIAL
 let mut amplitude = Q32::from_f32(0.5);  // FBM_AMPLITUDE_INITIAL
@@ -58,15 +63,18 @@ value
 ### File: `builtins/lpfx/generative/fbm/fbm3_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_fbm3_f32(x: f32, y: f32, z: f32, octaves: i32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/fbm/fbm3_tile_q32.rs` (NEW)
 
 Implement 3D tilable FBM:
+
 - `lpfx_fbm3_tile(p: Vec3Q32, tile_length: Q32, octaves: i32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_fbm3_tile_q32(x: i32, y: i32, z: i32, tile_length: i32, octaves: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm (matches GLSL structure):
+
 ```rust
 const PERSISTENCE: Q32 = Q32::from_f32(0.5);
 const LACUNARITY: Q32 = Q32::from_f32(2.0);
@@ -90,6 +98,7 @@ total / normalization
 ### File: `builtins/lpfx/generative/fbm/fbm3_tile_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_fbm3_tile_f32(x: f32, y: f32, z: f32, tile_length: f32, octaves: i32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/mod.rs` (UPDATE)

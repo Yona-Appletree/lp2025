@@ -9,8 +9,9 @@ Adapt the Fractal Brownian Motion (FBM) noise function from Lygia to work as an 
 Source: `/Users/yona/dev/photomancer/oss/lygia/generative/fbm.glsl`
 
 The GLSL implementation provides:
+
 - 2D FBM: `fbm(vec2 st)` - uses 2D noise
-- 3D FBM: `fbm(vec3 pos)` - uses 3D noise  
+- 3D FBM: `fbm(vec3 pos)` - uses 3D noise
 - 3D Tilable FBM: `fbm(vec3 p, float tileLength)` - uses tilable 3D noise
 
 ## Questions
@@ -19,12 +20,14 @@ The GLSL implementation provides:
 
 **Context:**
 The GLSL source has three variants:
+
 1. `fbm(vec2 st)` - 2D version using `FBM_NOISE2_FNC` (defaults to snoise)
 2. `fbm(vec3 pos)` - 3D version using `FBM_NOISE3_FNC` (defaults to snoise)
 3. `fbm(vec3 p, float tileLength)` - 3D tilable version using `FBM_NOISE3_TILABLE_FNC` (defaults to gnoise)
 
 **Suggested Answer:**
 Implement all three variants:
+
 - `lpfx_fbm(vec2 p, int octaves, uint seed)` - 2D FBM
 - `lpfx_fbm(vec3 p, int octaves, uint seed)` - 3D FBM
 - `lpfx_fbm(vec3 p, float tileLength, int octaves, uint seed)` - 3D tilable FBM
@@ -37,12 +40,14 @@ This matches the pattern used by other noise functions (snoise, worley) which ha
 The tilable FBM variant uses `gnoise` (gradient noise) which we don't currently have. The GLSL code uses `FBM_NOISE3_TILABLE_FNC` which defaults to `gnoise(UV, TILE)`.
 
 **Options:**
+
 1. Implement gnoise first as a separate function, then use it in fbm
 2. Use psrdnoise for the tilable variant (it already supports tiling)
 3. Skip the tilable variant for now
 
 **Answer:**
 Implement gnoise and all its dependencies. This includes:
+
 - `random()` functions (1D, 2D, 3D) - returns [0, 1] using sin-based hash
 - `srandom()` functions (1D, 2D, 3D) - returns [-1, 1] (signed random)
 - `srandom3()` with tileLength support - returns vec3 in [-1, 1] range
@@ -54,6 +59,7 @@ Implement gnoise and all its dependencies. This includes:
 
 **Context:**
 The GLSL code uses preprocessor macros for configuration:
+
 - `FBM_OCTAVES` (default 4) - number of octaves
 - `FBM_VALUE_INITIAL` (default 0.0) - initial value
 - `FBM_SCALE_SCALAR` (default 2.0) - scale multiplier (lacunarity)
@@ -61,10 +67,12 @@ The GLSL code uses preprocessor macros for configuration:
 - `FBM_AMPLITUDE_SCALAR` (default 0.5) - amplitude multiplier (persistence)
 
 The tilable variant hardcodes:
+
 - `persistence = 0.5`
 - `lacunarity = 2.0`
 
 **Answer:**
+
 - **Parameters:** `octaves` (required, as specified by user)
 - **Constants:** Use the GLSL defaults for all other values:
   - Initial value: 0.0
@@ -78,6 +86,7 @@ This keeps the API simple while matching the GLSL defaults. We can add more para
 
 **Context:**
 The user wants to keep Rust code as close as possible to GLSL code. The GLSL code has a simple loop structure:
+
 ```glsl
 for (int i = 0; i < FBM_OCTAVES; i++) {
     value += amplitude * FBM_NOISE2_FNC(st);
@@ -88,6 +97,7 @@ for (int i = 0; i < FBM_OCTAVES; i++) {
 
 **Answer:**
 Yes, create helper functions that mirror the GLSL structure:
+
 - Keep the loop structure identical
 - Use helper functions for noise calls (snoise2, snoise3, gnoise3 for tilable)
 - Use constants for the default values
@@ -97,6 +107,7 @@ Yes, create helper functions that mirror the GLSL structure:
 
 **Context:**
 The tilable variant accumulates a `normalization` value and divides the result by it:
+
 ```glsl
 normalization += amplitude;
 // ...
@@ -115,6 +126,7 @@ Other noise functions (snoise, psrdnoise, worley) have both f32 and q32 implemen
 
 **Answer:**
 Yes, implement both:
+
 - q32 versions with the actual implementation
 - f32 versions that convert to q32, call q32 version, convert back
 

@@ -7,16 +7,19 @@ Run the builtin generator to register all new functions in the builtin system.
 ## Implementation
 
 Run the builtin generator:
+
 ```bash
 cargo run --bin lp-builtin-gen --manifest-path lp-glsl/apps/lp-builtin-gen/Cargo.toml
 ```
 
 Or use the build script:
+
 ```bash
 scripts/build-builtins.sh
 ```
 
 This will:
+
 - Discover all new `__lpfx_*` functions with `#[lpfx_impl_macro::lpfx_impl]` attributes
 - Generate entries in `lpfx_fns.rs`
 - Generate entries in `BuiltinId` enum

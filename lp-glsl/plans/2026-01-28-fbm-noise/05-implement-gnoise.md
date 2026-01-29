@@ -13,10 +13,12 @@ Create module file exporting gnoise functions.
 ### File: `builtins/lpfx/generative/gnoise/gnoise1_q32.rs` (NEW)
 
 Implement 1D gradient noise:
+
 - `lpfx_gnoise1(x: Q32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_gnoise1_q32(x: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm:
+
 1. `i = floor(x)`, `f = fract(x)`
 2. `a = random(i, seed)`, `b = random(i + 1, seed)`
 3. `u = smoothstep(0.0, 1.0, f)` (or use cubic)
@@ -25,15 +27,18 @@ Algorithm:
 ### File: `builtins/lpfx/generative/gnoise/gnoise1_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_gnoise1_f32(x: f32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/gnoise/gnoise2_q32.rs` (NEW)
 
 Implement 2D gradient noise:
+
 - `lpfx_gnoise2(p: Vec2Q32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_gnoise2_q32(x: i32, y: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm:
+
 1. `i = floor(p)`, `f = fract(p)`
 2. Sample corners: `a = random(i)`, `b = random(i + (1,0))`, `c = random(i + (0,1))`, `d = random(i + (1,1))`
 3. `u = cubic(f)`
@@ -42,15 +47,18 @@ Algorithm:
 ### File: `builtins/lpfx/generative/gnoise/gnoise2_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_gnoise2_f32(x: f32, y: f32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/gnoise/gnoise3_q32.rs` (NEW)
 
 Implement 3D gradient noise:
+
 - `lpfx_gnoise3(p: Vec3Q32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_gnoise3_q32(x: i32, y: i32, z: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm:
+
 1. `i = floor(p)`, `f = fract(p)`
 2. Sample all 8 corners using `random()`
 3. `u = quintic(f)`
@@ -59,15 +67,18 @@ Algorithm:
 ### File: `builtins/lpfx/generative/gnoise/gnoise3_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_gnoise3_f32(x: f32, y: f32, z: f32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/gnoise/gnoise3_tile_q32.rs` (NEW)
 
 Implement 3D tilable gradient noise:
+
 - `lpfx_gnoise3_tile(p: Vec3Q32, tile_length: Q32, seed: u32) -> Q32` - Public Rust function
 - `__lpfx_gnoise3_tile_q32(x: i32, y: i32, z: i32, tile_length: i32, seed: u32) -> i32` - Extern C wrapper
 
 Algorithm:
+
 1. `i = floor(p)`, `f = fract(p)`
 2. Sample corners using `srandom3_tile(i + offset, tile_length * lacunarity * 0.5, seed)` with dot products
 3. `u = quintic(f)`
@@ -77,6 +88,7 @@ Algorithm:
 ### File: `builtins/lpfx/generative/gnoise/gnoise3_tile_f32.rs` (NEW)
 
 Implement f32 wrapper:
+
 - `__lpfx_gnoise3_tile_f32(x: f32, y: f32, z: f32, tile_length: f32, seed: u32) -> f32` - Converts to q32, calls q32 version, converts back
 
 ### File: `builtins/lpfx/generative/mod.rs` (UPDATE)

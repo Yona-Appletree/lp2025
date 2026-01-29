@@ -176,6 +176,7 @@ __lpfx_fbm3_tile_q32(x: i32, y: i32, z: i32, tile_length: i32, octaves: i32, see
 Keep the Rust code structure as close as possible to the GLSL source:
 
 1. **Loop Structure**: Match the GLSL loop structure exactly
+
    ```glsl
    for (int i = 0; i < FBM_OCTAVES; i++) {
        value += amplitude * FBM_NOISE2_FNC(st);
@@ -183,7 +184,9 @@ Keep the Rust code structure as close as possible to the GLSL source:
        amplitude *= FBM_AMPLITUDE_SCALAR;
    }
    ```
+
    Becomes:
+
    ```rust
    for i in 0..octaves {
        value = value + amplitude * noise_fn(st, seed);
@@ -208,6 +211,7 @@ Keep the Rust code structure as close as possible to the GLSL source:
 ### Random Function Implementation
 
 The GLSL `random()` function uses sin-based hashing:
+
 ```glsl
 float random(in float x) {
     return fract(sin(x) * 43758.5453);
@@ -215,6 +219,7 @@ float random(in float x) {
 ```
 
 For multi-dimensional versions, it uses dot products with constant vectors:
+
 ```glsl
 float random(in vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -226,6 +231,7 @@ We'll implement these using `__lp_q32_sin` and Q32 arithmetic.
 ### Gradient Noise Algorithm
 
 Gradient noise (gnoise) works by:
+
 1. Dividing space into integer grid cells
 2. Sampling random values at cell corners using `random()`
 3. Interpolating between corners using `cubic()` (2D) or `quintic()` (3D)
@@ -234,6 +240,7 @@ Gradient noise (gnoise) works by:
 ### FBM Algorithm
 
 FBM combines multiple octaves of noise:
+
 1. Start with initial value and amplitude
 2. For each octave:
    - Add `amplitude * noise(position)` to value
@@ -244,6 +251,7 @@ FBM combines multiple octaves of noise:
 ### Function Pattern
 
 All functions follow the standard LPFX pattern:
+
 - Public Rust function: `lpfx_*` with nice types (Q32, Vec2Q32, etc.)
 - Extern C wrapper: `__lpfx_*` with expanded types (i32, flattened vectors)
 - F32 wrapper: `__lpfx_*_f32` that converts to q32, calls q32 version, converts back

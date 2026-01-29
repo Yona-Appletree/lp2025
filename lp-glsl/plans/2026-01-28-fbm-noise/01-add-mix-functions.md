@@ -9,6 +9,7 @@ Add `mix()` (linear interpolation) functions to Q32 and all vector types (Vec2Q3
 ### File: `glsl/q32/fns/mix.rs` (NEW)
 
 Create standalone mix functions:
+
 - `mix_q32(a: Q32, b: Q32, t: Q32) -> Q32` - Scalar mix: `a + t * (b - a)`
 - `mix_vec2(a: Vec2Q32, b: Vec2Q32, t: Vec2Q32) -> Vec2Q32` - Component-wise mix
 - `mix_vec3(a: Vec3Q32, b: Vec3Q32, t: Vec3Q32) -> Vec3Q32` - Component-wise mix
@@ -17,21 +18,25 @@ Create standalone mix functions:
 ### File: `glsl/q32/types/q32.rs` (UPDATE)
 
 Add method:
+
 - `mix(self, other: Q32, t: Q32) -> Q32` - Delegates to `mix_q32()`
 
 ### File: `glsl/q32/types/vec2_q32.rs` (UPDATE)
 
 Add method:
+
 - `mix(self, other: Vec2Q32, t: Vec2Q32) -> Vec2Q32` - Delegates to `mix_vec2()`
 
 ### File: `glsl/q32/types/vec3_q32.rs` (UPDATE)
 
 Add method:
+
 - `mix(self, other: Vec3Q32, t: Vec3Q32) -> Vec3Q32` - Delegates to `mix_vec3()`
 
 ### File: `glsl/q32/types/vec4_q32.rs` (UPDATE)
 
 Add method:
+
 - `mix(self, other: Vec4Q32, t: Vec4Q32) -> Vec4Q32` - Delegates to `mix_vec4()`
 
 ### File: `glsl/q32/fns/mod.rs` (UPDATE)

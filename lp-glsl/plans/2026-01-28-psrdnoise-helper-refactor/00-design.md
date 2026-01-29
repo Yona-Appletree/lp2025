@@ -161,6 +161,7 @@ Vec4Q32 - # UPDATE: Add new methods and constructors
 ## Example: Before and After
 
 ### Before (psrdnoise3_q32.rs lines 177-191)
+
 ```rust
 // Compute vectors to each of the simplex corners
 let x0_x = x.x - v0_x;
@@ -178,6 +179,7 @@ let x3_z = x.z - v3_z;
 ```
 
 ### After (using vector helpers)
+
 ```rust
 // Compute vectors to each of the simplex corners
 let v0 = Vec3Q32::new(v0_x, v0_y, v0_z);
@@ -191,6 +193,7 @@ let x3 = x - v3;
 ```
 
 ### Before (psrdnoise3_q32.rs lines 120-122)
+
 ```rust
 let g_x = if f0_x <= f0_y { Q32::ONE } else { Q32::ZERO };
 let g_y = if f0_y <= f0_z { Q32::ONE } else { Q32::ZERO };
@@ -198,6 +201,7 @@ let g_z = if f0_x <= f0_z { Q32::ONE } else { Q32::ZERO };
 ```
 
 ### After (using step() and swizzles)
+
 ```rust
 let g_ = f0.step(f0.yzx()); // step(f0.xyx, f0.yzz) equivalent
 let l_ = Vec3Q32::one() - g_;

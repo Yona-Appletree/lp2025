@@ -7,7 +7,7 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::cell::RefCell;
 use lp_model::{
     AsLpPath, FrameId, LpPath, LpPathBuf, NodeConfig, NodeHandle, NodeKind,
@@ -161,8 +161,10 @@ impl ProjectRuntime {
                         NodeKind::Fixture => Box::new(lp_model::nodes::fixture::FixtureConfig {
                             output_spec: lp_model::NodeSpecifier::from(""),
                             texture_spec: lp_model::NodeSpecifier::from(""),
-                            mapping: String::new(),
-                            lamp_type: String::new(),
+                            mapping: lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                paths: vec![],
+                                sample_diameter: 2.0,
+                            },
                             color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                             transform: [[0.0; 4]; 4],
                         }),
@@ -986,8 +988,8 @@ impl ProjectRuntime {
                                     mapping_points
                                         .iter()
                                         .map(|mp| {
-                                            // Apply transform to convert from fixture space to texture space
-                                            // Fixture space is [-1, 1], texture space is [0, 1]
+                                            // Apply transform to convert from texture space to texture space
+                                            // Both input and output are in texture space [0, 1]
                                             let transformed =
                                                 apply_transform_2d(mp.center, transform);
                                             // Ensure coordinates are in [0, 1] range (clamp if needed)
@@ -1115,8 +1117,11 @@ impl ProjectRuntime {
                                     Box::new(lp_model::nodes::fixture::FixtureConfig {
                                         output_spec: lp_model::NodeSpecifier::from(""),
                                         texture_spec: lp_model::NodeSpecifier::from(""),
-                                        mapping: String::new(),
-                                        lamp_type: String::new(),
+                                        mapping:
+                                            lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                                paths: vec![],
+                                                sample_diameter: 2.0,
+                                            },
                                         color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                         transform: [[0.0; 4]; 4],
                                     })
@@ -1125,8 +1130,10 @@ impl ProjectRuntime {
                                 Box::new(lp_model::nodes::fixture::FixtureConfig {
                                     output_spec: lp_model::NodeSpecifier::from(""),
                                     texture_spec: lp_model::NodeSpecifier::from(""),
-                                    mapping: String::new(),
-                                    lamp_type: String::new(),
+                                    mapping: lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                        paths: vec![],
+                                        sample_diameter: 2.0,
+                                    },
                                     color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                     transform: [[0.0; 4]; 4],
                                 })
@@ -1135,8 +1142,10 @@ impl ProjectRuntime {
                             Box::new(lp_model::nodes::fixture::FixtureConfig {
                                 output_spec: lp_model::NodeSpecifier::from(""),
                                 texture_spec: lp_model::NodeSpecifier::from(""),
-                                mapping: String::new(),
-                                lamp_type: String::new(),
+                                mapping: lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                    paths: vec![],
+                                    sample_diameter: 2.0,
+                                },
                                 color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                 transform: [[0.0; 4]; 4],
                             })

@@ -9,6 +9,7 @@ Add GLSL-style methods to Vec4Q32 that delegate to the standalone helper functio
 Update `glsl/q32/types/vec4_q32.rs` to add:
 
 **Methods:**
+
 - `floor(self) -> Vec4Q32` - Component-wise floor
 - `fract(self) -> Vec4Q32` - Component-wise fractional part
 - `step(self, edge: Vec4Q32) -> Vec4Q32` - Component-wise step function
@@ -18,9 +19,11 @@ Update `glsl/q32/types/vec4_q32.rs` to add:
 - `mod_scalar(self, y: Q32) -> Vec4Q32` - Modulo with scalar
 
 **Constructors:**
+
 - `from_vec3_scalar(v: Vec3Q32, w: Q32) -> Vec4Q32` - Create Vec4 from Vec3 + scalar (needed for `vec4(v0.x, v1.x, v2.x, v3.x)` patterns)
 
 **Swizzles:**
+
 - Verify `xyz(self) -> Vec3Q32` exists (extract xyz as Vec3Q32)
 
 Each method should delegate to the corresponding standalone function in `glsl/q32/fns/`.

@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
 use alloc::string::String;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use lp_model::{
     FrameId, LpPathBuf, NodeConfig, NodeHandle, NodeKind,
     project::api::{ApiNodeSpecifier, NodeChange, NodeState, NodeStatus},
@@ -124,8 +124,11 @@ impl ClientProjectView {
                                     Box::new(lp_model::nodes::fixture::FixtureConfig {
                                         output_spec: lp_model::NodeSpecifier::from(""),
                                         texture_spec: lp_model::NodeSpecifier::from(""),
-                                        mapping: String::new(),
-                                        lamp_type: String::new(),
+                                        mapping:
+                                            lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                                paths: vec![],
+                                                sample_diameter: 2.0,
+                                            },
                                         color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                         transform: [[0.0; 4]; 4],
                                     })
@@ -217,8 +220,10 @@ impl ClientProjectView {
                                 Box::new(lp_model::nodes::fixture::FixtureConfig {
                                     output_spec: lp_model::NodeSpecifier::from(""),
                                     texture_spec: lp_model::NodeSpecifier::from(""),
-                                    mapping: String::new(),
-                                    lamp_type: String::new(),
+                                    mapping: lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                        paths: vec![],
+                                        sample_diameter: 2.0,
+                                    },
                                     color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                     transform: [[0.0; 4]; 4],
                                 })
@@ -257,8 +262,10 @@ impl ClientProjectView {
                                 Box::new(lp_model::nodes::fixture::FixtureConfig {
                                     output_spec: lp_model::NodeSpecifier::from(""),
                                     texture_spec: lp_model::NodeSpecifier::from(""),
-                                    mapping: String::new(),
-                                    lamp_type: String::new(),
+                                    mapping: lp_model::nodes::fixture::MappingConfig::PathPoints {
+                                        paths: vec![],
+                                        sample_diameter: 2.0,
+                                    },
                                     color_order: lp_model::nodes::fixture::ColorOrder::Rgb,
                                     transform: [[0.0; 4]; 4],
                                 })

@@ -9,6 +9,7 @@ Add filetests for all new functions to verify they work correctly. Create test f
 ### File: `lp-glsl-filetests/filetests/lpfx/lp_random.glsl` (NEW)
 
 Add tests for random functions:
+
 - Test `lpfx_random` with various inputs
 - Test deterministic behavior (same input = same output)
 - Test different seeds produce different outputs
@@ -16,6 +17,7 @@ Add tests for random functions:
 ### File: `lp-glsl-filetests/filetests/lpfx/lp_srandom.glsl` (NEW)
 
 Add tests for srandom functions:
+
 - Test `lpfx_srandom` with various inputs
 - Test output range is approximately [-1, 1]
 - Test `lpfx_srandom3_tile` with tiling
@@ -23,6 +25,7 @@ Add tests for srandom functions:
 ### File: `lp-glsl-filetests/filetests/lpfx/lp_gnoise.glsl` (NEW)
 
 Add tests for gnoise functions:
+
 - Test `lpfx_gnoise` with various inputs
 - Test output range is approximately [-1, 1] (or [0, 1] for tilable)
 - Test `lpfx_gnoise3_tile` with tiling
@@ -30,6 +33,7 @@ Add tests for gnoise functions:
 ### File: `lp-glsl-filetests/filetests/lpfx/lp_fbm.glsl` (NEW)
 
 Add tests for fbm functions:
+
 - Test `lpfx_fbm` with various octaves (1, 2, 4, 8)
 - Test output range
 - Test that more octaves produce more detail

@@ -5,6 +5,7 @@
 Refactor psrdnoise implementations (psrdnoise2_q32.rs and psrdnoise3_q32.rs) to use vector helper types (Vec2Q32, Vec3Q32, Vec4Q32) instead of manually expanded component operations. Add missing GLSL-style functions to make the Rust code match the original GLSL as closely as possible.
 
 This will make the code:
+
 - More readable and maintainable
 - Closer to the original GLSL structure
 - Easier to port future GLSL code
