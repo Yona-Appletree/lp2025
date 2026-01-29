@@ -3303,6 +3303,7 @@ version = "40.0.0"
 dependencies = [
  "hashbrown 0.15.5",
  "log",
+ "lp-builtins",
  "lp-engine-client",
  "lp-glsl-compiler",
  "lp-model",

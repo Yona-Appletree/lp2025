@@ -1,8 +1,9 @@
 use crate::error::Error;
-use crate::nodes::fixture::sampling_kernel::SamplingKernel;
+use crate::nodes::fixture::mapping_compute::{PrecomputedMapping, compute_mapping};
 use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, OutputHandle, RenderContext, TextureHandle};
 use alloc::{boxed::Box, string::String, vec::Vec};
+use lp_model::FrameId;
 use lp_model::nodes::fixture::mapping::{MappingConfig, PathSpec, RingOrder};
 use lp_model::nodes::fixture::{ColorOrder, FixtureConfig};
 use lp_shared::fs::fs_event::FsChange;
@@ -20,12 +21,13 @@ pub struct FixtureRuntime {
     config: Option<FixtureConfig>,
     texture_handle: Option<TextureHandle>,
     output_handle: Option<OutputHandle>,
-    kernel: SamplingKernel,
     color_order: ColorOrder,
     mapping: Vec<MappingPoint>,
     transform: [[f32; 4]; 4],
     texture_width: Option<u32>,
     texture_height: Option<u32>,
+    /// Pre-computed pixel-to-channel mapping
+    precomputed_mapping: Option<PrecomputedMapping>,
     /// Last sampled lamp colors (RGB per lamp, ordered by channel index)
     lamp_colors: Vec<u8>,
 }
@@ -36,7 +38,6 @@ impl FixtureRuntime {
             config: None,
             texture_handle: None,
             output_handle: None,
-            kernel: SamplingKernel::new(0.1), // Default small radius
             color_order: ColorOrder::Rgb,
             mapping: Vec::new(),
             transform: [
@@ -47,6 +48,7 @@ impl FixtureRuntime {
             ], // Identity matrix
             texture_width: None,
             texture_height: None,
+            precomputed_mapping: None,
             lamp_colors: Vec::new(),
         }
     }
@@ -86,11 +88,13 @@ impl FixtureRuntime {
         &self.lamp_colors
     }
 
-    /// Regenerate mapping when texture resolution changes
+    /// Regenerate mapping when texture resolution changes or config versions change
     fn regenerate_mapping_if_needed(
         &mut self,
         texture_width: u32,
         texture_height: u32,
+        our_config_ver: FrameId,
+        texture_config_ver: FrameId,
     ) -> Result<(), Error> {
         let needs_regeneration = self
             .texture_width
@@ -99,6 +103,14 @@ impl FixtureRuntime {
             || self
                 .texture_height
                 .map(|h| h != texture_height)
+                .unwrap_or(true)
+            || self
+                .precomputed_mapping
+                .as_ref()
+                .map(|m| {
+                    let max_config_ver = our_config_ver.max(texture_config_ver);
+                    max_config_ver > m.mapping_data_ver
+                })
                 .unwrap_or(true);
 
         if needs_regeneration {
@@ -107,18 +119,23 @@ impl FixtureRuntime {
                 reason: String::from("Config not set"),
             })?;
 
-            // Regenerate mapping points
-            self.mapping = generate_mapping_points(&config.mapping, texture_width, texture_height);
+            // Compute new pre-computed mapping
+            let max_config_ver = our_config_ver.max(texture_config_ver);
+            let mapping = compute_mapping(
+                &config.mapping,
+                texture_width,
+                texture_height,
+                max_config_ver,
+            );
+
+            self.precomputed_mapping = Some(mapping);
 
             // Update texture dimensions
             self.texture_width = Some(texture_width);
             self.texture_height = Some(texture_height);
 
-            // Update sampling kernel based on first mapping's radius
-            if let Some(first_mapping) = self.mapping.first() {
-                let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
-                self.kernel = SamplingKernel::new(normalized_radius);
-            }
+            // Keep existing mapping points for now (used by state extraction)
+            self.mapping = generate_mapping_points(&config.mapping, texture_width, texture_height);
         }
 
         Ok(())
@@ -273,7 +290,6 @@ impl NodeRuntime for FixtureRuntime {
         // Mapping will be generated in render() when texture is available
         // Texture dimensions are not available in init() (texture is lazy-loaded)
         self.mapping = Vec::new();
-        self.kernel = SamplingKernel::new(0.1);
 
         Ok(())
     }
@@ -291,68 +307,96 @@ impl NodeRuntime for FixtureRuntime {
         let texture_height = texture.height();
 
         // Regenerate mapping if texture resolution changed
-        self.regenerate_mapping_if_needed(texture_width, texture_height)?;
+        // TODO: Get proper config versions from context
+        let our_config_ver = FrameId::new(0);
+        let texture_config_ver = FrameId::new(0);
+        self.regenerate_mapping_if_needed(
+            texture_width,
+            texture_height,
+            our_config_ver,
+            texture_config_ver,
+        )?;
 
-        // Sample all mapping points and collect results
-        let mut sampled_values: Vec<(u32, [u8; 4])> = Vec::new();
+        // Get pre-computed mapping
+        let mapping = self
+            .precomputed_mapping
+            .as_ref()
+            .ok_or_else(|| Error::Other {
+                message: String::from("Precomputed mapping not available"),
+            })?;
 
-        for mapping in &self.mapping {
-            // Mapping points are already in texture space [0, 1]
-            // Apply transform matrix (4x4 affine transform) to convert from texture space to texture space
-            let center_u = mapping.center[0];
-            let center_v = mapping.center[1];
+        // Initialize channel accumulators (16.16 fixed-point, one per channel)
+        // Find max channel from mapping entries
+        let max_channel = mapping
+            .entries
+            .iter()
+            .filter_map(|e| {
+                if !e.is_skip() {
+                    Some(e.channel())
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0);
 
-            // Apply transform matrix (4x4 affine transform)
-            // Transform from texture space [0, 1] to texture space [0, 1]
-            // Full matrix multiplication will be implemented later
-            // For now, use identity transform (coordinates already in texture space)
-            let center_u = center_u; // TODO: Apply full transform matrix
-            let center_v = center_v; // TODO: Apply full transform matrix
+        let mut ch_values_r: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
+        let mut ch_values_g: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
+        let mut ch_values_b: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
+        ch_values_r.resize((max_channel + 1) as usize, 0);
+        ch_values_g.resize((max_channel + 1) as usize, 0);
+        ch_values_b.resize((max_channel + 1) as usize, 0);
 
-            let radius = mapping.radius;
+        // Iterate through entries and accumulate
+        let mut pixel_index = 0u32;
+        let mut entry_iter = mapping.entries.iter();
 
-            // Sample texture at kernel positions
-            let mut r_sum = 0.0f32;
-            let mut g_sum = 0.0f32;
-            let mut b_sum = 0.0f32;
-            let mut a_sum = 0.0f32;
-            let mut total_weight = 0.0f32;
+        while let Some(entry) = entry_iter.next() {
+            if entry.is_skip() {
+                // SKIP entry - advance to next pixel
+                pixel_index += 1;
+                continue;
+            }
 
-            for sample in &self.kernel.samples {
-                // Calculate sample position (scale kernel by mapping radius)
-                let sample_u = center_u + sample.offset_u * radius;
-                let sample_v = center_v + sample.offset_v * radius;
+            // Get pixel coordinates
+            let x = pixel_index % texture_width;
+            let y = pixel_index / texture_width;
 
-                // Clamp to [0, 1]
-                let sample_u = sample_u.max(0.0).min(1.0);
-                let sample_v = sample_v.max(0.0).min(1.0);
+            // Get pixel value from texture
+            if let Some(pixel) = texture.get_pixel(x, y) {
+                // Decode contribution: stored value represents (65535 - contribution_fractional)
+                // We need to convert back to Q32 scale: contribution = (65535 - stored) * 65536 / 65535
+                let stored = (entry.to_raw() >> 16) & 0xFFFF;
+                let contribution_fractional = if stored == 0 {
+                    65535u32 // 100% contribution
+                } else {
+                    65535u32 - stored
+                };
 
-                // Sample texture using bilinear interpolation (smooth sampling)
-                if let Some(pixel) = texture.sample(sample_u, sample_v) {
-                    let weight = sample.weight;
-                    r_sum += pixel[0] as f32 * weight;
-                    g_sum += pixel[1] as f32 * weight;
-                    b_sum += pixel[2] as f32 * weight;
-                    a_sum += pixel[3] as f32 * weight;
-                    total_weight += weight;
+                // Convert pixel to 16.16 fixed-point (shift left by 16)
+                let pixel_r = (pixel[0] as i32) << 16;
+                let pixel_g = (pixel[1] as i32) << 16;
+                let pixel_b = (pixel[2] as i32) << 16;
+
+                // Accumulate: ch_value += contribution * pixel_value
+                // contribution_fractional is 0-65535, representing 0-1.0
+                // Multiply: (contribution_fractional * pixel_value) / 65535
+                let channel = entry.channel() as usize;
+                if channel < ch_values_r.len() {
+                    let contribution = contribution_fractional as i64;
+                    let accumulated_r = (contribution * pixel_r as i64) / 65535;
+                    let accumulated_g = (contribution * pixel_g as i64) / 65535;
+                    let accumulated_b = (contribution * pixel_b as i64) / 65535;
+                    ch_values_r[channel] += accumulated_r as i32;
+                    ch_values_g[channel] += accumulated_g as i32;
+                    ch_values_b[channel] += accumulated_b as i32;
                 }
             }
 
-            // Normalize by total weight
-            if total_weight > 0.0 {
-                r_sum /= total_weight;
-                g_sum /= total_weight;
-                b_sum /= total_weight;
-                a_sum /= total_weight;
+            // Advance pixel_index if this is the last entry for this pixel
+            if !entry.has_more() {
+                pixel_index += 1;
             }
-
-            // Convert to u8
-            let r = r_sum as u8;
-            let g = g_sum as u8;
-            let b = b_sum as u8;
-            let a = a_sum as u8;
-
-            sampled_values.push((mapping.channel, [r, g, b, a]));
         }
 
         // Get output handle
@@ -361,22 +405,20 @@ impl NodeRuntime for FixtureRuntime {
         })?;
 
         // Store lamp colors for state extraction
-        // Find max channel to determine array size, then store RGB values indexed by channel
-        let max_channel = sampled_values
-            .iter()
-            .map(|(channel, _)| *channel)
-            .max()
-            .unwrap_or(0);
-
-        // Create dense array: each channel uses 3 bytes (RGB), so (max_channel + 1) * 3 total bytes
+        // Create dense array: each channel uses 3 bytes (RGB)
         self.lamp_colors.clear();
         self.lamp_colors.resize((max_channel as usize + 1) * 3, 0);
 
-        for (channel, [r, g, b, _a]) in &sampled_values {
-            let idx = (*channel as usize) * 3;
-            self.lamp_colors[idx] = *r;
-            self.lamp_colors[idx + 1] = *g;
-            self.lamp_colors[idx + 2] = *b;
+        for channel in 0..=max_channel as usize {
+            // Convert from 16.16 fixed-point to u8 (right-shift 16 bits and clamp)
+            let r = (ch_values_r[channel] >> 16).clamp(0, 255) as u8;
+            let g = (ch_values_g[channel] >> 16).clamp(0, 255) as u8;
+            let b = (ch_values_b[channel] >> 16).clamp(0, 255) as u8;
+
+            let idx = channel * 3;
+            self.lamp_colors[idx] = r;
+            self.lamp_colors[idx + 1] = g;
+            self.lamp_colors[idx + 2] = b;
         }
 
         // Write sampled values to output buffer
@@ -384,7 +426,11 @@ impl NodeRuntime for FixtureRuntime {
         // TODO: Add universe and channel_offset fields to FixtureConfig when needed
         let universe = 0u32;
         let channel_offset = 0u32;
-        for (channel, [r, g, b, _a]) in sampled_values {
+        for channel in 0..=max_channel {
+            let r = (ch_values_r[channel as usize] >> 16).clamp(0, 255) as u8;
+            let g = (ch_values_g[channel as usize] >> 16).clamp(0, 255) as u8;
+            let b = (ch_values_b[channel as usize] >> 16).clamp(0, 255) as u8;
+
             let start_ch = channel_offset + channel * 3; // 3 bytes per RGB
             let buffer = ctx.get_output(output_handle, universe, start_ch, 3)?;
             self.color_order.write_rgb(buffer, 0, r, g, b);
@@ -442,18 +488,9 @@ impl NodeRuntime for FixtureRuntime {
         // If texture dimensions not available, mapping will be regenerated in render()
         if let (Some(width), Some(height)) = (self.texture_width, self.texture_height) {
             self.mapping = generate_mapping_points(&fixture_config.mapping, width, height);
-
-            // Update sampling kernel
-            if let Some(first_mapping) = self.mapping.first() {
-                let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
-                self.kernel = SamplingKernel::new(normalized_radius);
-            } else {
-                self.kernel = SamplingKernel::new(0.1);
-            }
         } else {
             // Texture dimensions not available, clear mapping - will be regenerated in render()
             self.mapping = Vec::new();
-            self.kernel = SamplingKernel::new(0.1);
         }
 
         Ok(())
