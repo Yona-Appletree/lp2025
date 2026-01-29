@@ -35,17 +35,17 @@ impl PixelMappingEntry {
         let continue_flag = if has_more { 1 } else { 0 };
         let channel_bits = (channel & 0x7FFF) << 1;
 
-        // Contribution: Store (65535 - value) where value represents 0.0-1.0 in range 0-65535
-        // Q32(65536) = 1.0, so we scale: value = (contribution.to_fixed() * 65535) / 65536
-        // stored = 0 means 100% contribution, stored = 65535 means 0% contribution
-        let contribution_raw = contribution.to_fixed();
-        // Clamp to [0, 65536] and scale to [0, 65535]
-        let value = if contribution_raw >= 65536 {
-            65535
+        // Because 0 = full contribution, when the contribution is zero, we use the sentinel
+        // value to prevent any contribution.
+        if contribution.0 == 0 {
+            return Self(continue_flag | (CHANNEL_SKIP << 1) | 0);
+        }
+
+        let stored_contribution = if contribution.0 > 0xFFFF {
+            0x0000_u32
         } else {
-            ((contribution_raw as i64 * 65535) / 65536) as u32
+            contribution.0 as u32
         };
-        let stored_contribution = 65535u32.saturating_sub(value);
         let contribution_bits = (stored_contribution & 0xFFFF) << 16;
 
         Self(continue_flag | channel_bits | contribution_bits)
@@ -61,10 +61,14 @@ impl PixelMappingEntry {
         (self.0 >> 1) & 0x7FFF
     }
 
+    pub fn contribution_raw(&self) -> u32 {
+        (self.0 >> 16) & 0xFFFF
+    }
+
     /// Extract contribution as Q32 (0.0 = 0%, 1.0 = 100%)
     /// Decodes: stored = 0 means 100% (Q32::ONE), stored = 65535 means 0% (Q32::ZERO)
     pub fn contribution(&self) -> Q32 {
-        let stored = (self.0 >> 16) & 0xFFFF;
+        let stored = self.contribution_raw();
         if stored == 0 {
             // Stored 0 = 100% contribution = Q32::ONE (65536)
             Q32::ONE
@@ -270,7 +274,7 @@ pub fn compute_mapping(
             let mut pixel_contributions: Vec<Vec<(u32, f32)>> =
                 Vec::with_capacity((texture_width * texture_height) as usize);
             pixel_contributions.resize((texture_width * texture_height) as usize, Vec::new());
-            
+
             // Track total weight per channel for normalization
             let mut channel_totals: Vec<f32> = Vec::new();
             let max_channel = mapping_points.iter().map(|p| p.channel).max().unwrap_or(0);
@@ -333,6 +337,7 @@ pub fn compute_mapping(
                         for (idx, (channel, weight)) in normalized.iter().enumerate() {
                             let has_more = idx < normalized.len() - 1;
                             let contribution_q32 = Q32::from_f32(*weight);
+
                             mapping.entries.push(PixelMappingEntry::new(
                                 *channel,
                                 contribution_q32,
@@ -450,8 +455,7 @@ mod tests {
     #[test]
     fn test_zero_contribution() {
         let entry = PixelMappingEntry::new(0, Q32::from_f32(0.0), false);
-        assert_eq!(entry.channel(), 0);
-        assert!(entry.contribution().to_f32() < 0.01);
+        assert_eq!(entry.channel(), CHANNEL_SKIP);
     }
 
     #[test]

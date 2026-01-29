@@ -11,6 +11,7 @@ Add comprehensive test coverage for RingArray path generation to ensure correctn
 **File**: `lp-engine/src/nodes/fixture/runtime.rs` (in `mod tests`)
 
 Test a single ring at center (ring_index = 0) with 8 lamps:
+
 - Verify 8 points generated
 - Verify all points at center position (radius = 0)
 - Verify channels 0-7 assigned sequentially
@@ -19,6 +20,7 @@ Test a single ring at center (ring_index = 0) with 8 lamps:
 ### 2. Multiple Rings
 
 Test multiple rings with different lamp counts:
+
 - Ring 0: 1 lamp (center)
 - Ring 1: 8 lamps
 - Ring 2: 16 lamps
@@ -29,6 +31,7 @@ Test multiple rings with different lamp counts:
 ### 3. InnerFirst Ordering
 
 Test `RingOrder::InnerFirst`:
+
 - Multiple rings with different lamp counts
 - Verify channels assigned inner→outer
 - Verify ring 0 channels come before ring 1 channels, etc.
@@ -36,6 +39,7 @@ Test `RingOrder::InnerFirst`:
 ### 4. OuterFirst Ordering
 
 Test `RingOrder::OuterFirst`:
+
 - Multiple rings with different lamp counts
 - Verify channels assigned outer→inner
 - Verify ring N channels come before ring N-1 channels, etc.
@@ -43,6 +47,7 @@ Test `RingOrder::OuterFirst`:
 ### 5. Offset Angle
 
 Test offset angle rotation:
+
 - Single ring with offset_angle = π/4
 - Verify first lamp at angle π/4 (not 0)
 - Verify angles spaced correctly with offset
@@ -50,6 +55,7 @@ Test offset angle rotation:
 ### 6. Coordinate Correctness
 
 Test coordinate generation:
+
 - Verify all coordinates in [0, 1] range
 - Verify center position matches RingArray center
 - Verify ring radii calculated correctly
@@ -58,6 +64,7 @@ Test coordinate generation:
 ### 7. Sample Diameter Conversion
 
 Test sample diameter to normalized radius conversion:
+
 - Test with different texture dimensions (square, wide, tall)
 - Verify normalized radius calculated correctly
 - Test edge cases: sample_diameter = 0, 1, large values
@@ -65,6 +72,7 @@ Test sample diameter to normalized radius conversion:
 ### 8. Channel Assignment
 
 Test channel assignment:
+
 - Multiple paths with different LED counts
 - Verify channels sequential with no gaps
 - Verify channel_offset works correctly
@@ -73,6 +81,7 @@ Test channel assignment:
 ### 9. Edge Cases
 
 Test edge cases:
+
 - Empty ring_lamp_counts (should handle gracefully)
 - Invalid ring indices (start_ring >= end_ring)
 - Zero lamp count for a ring
@@ -82,6 +91,7 @@ Test edge cases:
 ### 10. Integration Test
 
 Test full path through `generate_mapping_points()`:
+
 - Multiple paths with RingArray
 - Verify all paths processed
 - Verify channel offsets correct
@@ -96,7 +106,7 @@ Add test module at bottom of `runtime.rs`:
 mod tests {
     use super::*;
     use lp_model::nodes::fixture::mapping::{MappingConfig, PathConfig, PathSpec, RingArray, RingOrder};
-    
+
     // Test helper: create RingArray config
     fn create_ring_array(
         center: (f32, f32),
@@ -119,7 +129,7 @@ mod tests {
             }),
         }
     }
-    
+
     // Individual test cases...
 }
 ```

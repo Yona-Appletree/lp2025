@@ -32,9 +32,9 @@ pub fn lpfx_fbm3_tile(p: Vec3Q32, tile_length: Q32, octaves: i32, seed: u32) -> 
         let scaled_tile = tile_length * LACUNARITY * Q32::HALF;
         let noise_value = lpfx_gnoise3_tile(pos, scaled_tile, seed);
         // noise_value is already in [0, 1] range from gnoise3_tile
-        total = total + noise_value * amplitude;
-        normalization = normalization + amplitude;
-        amplitude = amplitude * PERSISTENCE;
+        total += noise_value * amplitude;
+        normalization += amplitude;
+        amplitude *= PERSISTENCE;
         pos = pos * LACUNARITY;
     }
 

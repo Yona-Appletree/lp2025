@@ -5,6 +5,7 @@
 ### Q1: RingArray LED Position Generation
 
 **Context**: The `RingArray` path spec defines concentric rings with:
+
 - Center position in texture space [0, 1]
 - Diameter in texture space [0, 1]
 - Ring indices (start_ring_inclusive, end_ring_exclusive)
@@ -12,7 +13,8 @@
 - Offset angle in radians
 - Order (InnerFirst or OuterFirst)
 
-**Answer**: 
+**Answer**:
+
 - For each ring from start_ring_inclusive to end_ring_exclusive:
   - Calculate ring radius: evenly space rings within the diameter (e.g., `radius = (diameter / 2) * (ring_index / max_ring_index)`)
   - Get lamp count for this ring from `ring_lamp_counts[ring_index]`
@@ -31,7 +33,8 @@
 
 **Question**: How should we convert `sample_diameter` to the `radius` used in `MappingPoint`?
 
-**Answer**: 
+**Answer**:
+
 - `sample_diameter` is in texture pixels (not normalized)
 - For pixel-perfect mappings (like 2D arrays showing sprites), this is important
 - We need to recompute mapping when texture resolution changes
@@ -45,6 +48,7 @@
 **Context**: `PathPoints` contains `paths: Vec<PathConfig>`, where each `PathConfig` has a `path_spec`. Multiple paths can be specified.
 
 **Answer**:
+
 - Process paths sequentially
 - For each path, generate LED positions and assign channels sequentially
 - If path 1 has 10 LEDs (channels 0-9), path 2 starts at channel 10
@@ -54,7 +58,8 @@
 
 **Context**: `RingArray` center and diameter are in texture space [0, 1]. `MappingPoint.center` is currently in fixture space [-1, -1] to [1, 1]. The transform matrix converts from fixture space to texture space.
 
-**Answer**: 
+**Answer**:
+
 - **Decision: Standardize on texture space [0, 1] across the app**
 - Update `MappingPoint.center` to use texture space [0, 1] instead of fixture space [-1, 1]
 - Store RingArray positions directly in texture space [0, 1] - no conversion needed
@@ -67,6 +72,7 @@
 **Context**: The runtime currently checks for `config.mapping == "linear"` (string comparison), but `config.mapping` is now `MappingConfig` enum. The builder and example JSON still use string format.
 
 **Answer**:
+
 - No backward compatibility needed
 - Remove string-based mapping support completely
 - Update builder to use `MappingConfig`
@@ -78,6 +84,7 @@
 **Context**: We need a function to convert `PathSpec::RingArray` to `Vec<MappingPoint>`. Since `sample_diameter` is in pixels, we need texture dimensions to convert to normalized radius.
 
 **Answer**:
+
 - Generation must happen in runtime crate where we have access to texture dimensions
 - Keep `MappingPoint` in runtime crate (it's runtime-specific)
 - Create a function in runtime crate like `generate_mapping_points(config: &MappingConfig, texture_width: u32, texture_height: u32) -> Vec<MappingPoint>`

@@ -16,9 +16,17 @@ fn test_scene_render() {
     let mut builder = ProjectBuilder::new(fs.clone());
 
     // Add nodes
+
+    // - Texture
     let texture_path = builder.texture_basic();
+
+    // - Shader
     builder.shader_basic(&texture_path);
+
+    // - Output
     let output_path = builder.output_basic();
+
+    // - Fixture
     builder.fixture_basic(&output_path, &texture_path);
 
     // Build project
@@ -27,13 +35,13 @@ fn test_scene_render() {
     // Create output provider
     let output_provider = Rc::new(RefCell::new(MemoryOutputProvider::new()));
 
-    // Start runtime with shared filesystem (Rc<RefCell<>> so changes are visible)
+    // Start runtime with a shared filesystem (Rc<RefCell<>> so changes are visible)
     let mut runtime = ProjectRuntime::new(fs.clone(), output_provider.clone()).unwrap();
     runtime.load_nodes().unwrap();
     runtime.init_nodes().unwrap();
     runtime.ensure_all_nodes_initialized().unwrap();
 
-    // Create client view
+    // Create a client view
     let mut client_view = ClientProjectView::new();
 
     // Get output handle

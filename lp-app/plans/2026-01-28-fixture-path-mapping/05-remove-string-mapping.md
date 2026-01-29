@@ -15,14 +15,14 @@ Remove string-based mapping handling:
 ```rust
 fn init(&mut self, ctx: &dyn NodeInitContext) -> Result<(), Error> {
     // ... existing code ...
-    
+
     // Remove this code:
     // if config.mapping == "linear" || config.mapping.is_empty() {
     //     self.mapping = vec![MappingPoint { ... }];
     // } else {
     //     self.mapping = Vec::new();
     // }
-    
+
     // Replace with direct MappingConfig handling (already done in Phase 4)
 }
 ```
@@ -40,14 +40,14 @@ fn update_config(
     ctx: &dyn NodeInitContext,
 ) -> Result<(), Error> {
     // ... existing code ...
-    
+
     // Remove this code:
     // if fixture_config.mapping == "linear" || fixture_config.mapping.is_empty() {
     //     self.mapping = vec![MappingPoint { ... }];
     // } else {
     //     self.mapping = Vec::new();
     // }
-    
+
     // Mapping generation already handled in Phase 4
 }
 ```
@@ -57,6 +57,7 @@ fn update_config(
 **File**: `lp-engine/src/nodes/fixture/runtime.rs`
 
 Ensure all mapping generation uses `MappingConfig` enum:
+
 - `generate_mapping_points()` should handle all `MappingConfig` variants
 - No fallback to string-based mapping
 - Error handling for unsupported config variants (if any)

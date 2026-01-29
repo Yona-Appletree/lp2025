@@ -22,7 +22,7 @@ fn generate_mapping_points(
         MappingConfig::PathPoints { paths, sample_diameter } => {
             let mut all_points = Vec::new();
             let mut channel_offset = 0u32;
-            
+
             for path_config in paths {
                 let points = match &path_config.path_spec {
                     PathSpec::RingArray(ring_array) => {
@@ -35,11 +35,11 @@ fn generate_mapping_points(
                         )
                     }
                 };
-                
+
                 channel_offset += points.len() as u32;
                 all_points.extend(points);
             }
-            
+
             all_points
         }
     }
@@ -66,27 +66,27 @@ fn generate_ring_array_points(
     let end_ring = ring_array.end_ring_exclusive;
     let ring_lamp_counts = &ring_array.ring_lamp_counts;
     let offset_angle = ring_array.offset_angle;
-    
+
     // Calculate max ring index for spacing
     let max_ring_index = if end_ring > start_ring {
         (end_ring - start_ring - 1) as f32
     } else {
         0.0
     };
-    
+
     // Convert sample_diameter (pixels) to normalized radius
     let max_dimension = texture_width.max(texture_height) as f32;
     let normalized_radius = (sample_diameter / 2.0) / max_dimension;
-    
+
     // Determine ring processing order
     let ring_indices: Vec<u32> = match ring_array.order {
         RingOrder::InnerFirst => (start_ring..end_ring).collect(),
         RingOrder::OuterFirst => (start_ring..end_ring).rev().collect(),
     };
-    
+
     let mut points = Vec::new();
     let mut current_channel = channel_offset;
-    
+
     for ring_index in ring_indices {
         // Calculate ring radius (even spacing)
         let ring_radius = if max_ring_index > 0.0 {
@@ -94,35 +94,35 @@ fn generate_ring_array_points(
         } else {
             0.0
         };
-        
+
         // Get lamp count for this ring
         let lamp_count = ring_lamp_counts
             .get(ring_index as usize)
             .copied()
             .unwrap_or(0);
-        
+
         // Generate points for each lamp in the ring
         for lamp_index in 0..lamp_count {
             let angle = (2.0 * core::f32::consts::PI * lamp_index as f32 / lamp_count as f32)
                 + offset_angle;
-            
+
             let x = center_x + ring_radius * angle.cos();
             let y = center_y + ring_radius * angle.sin();
-            
+
             // Clamp to [0, 1] range
             let x = x.max(0.0).min(1.0);
             let y = y.max(0.0).min(1.0);
-            
+
             points.push(MappingPoint {
                 channel: current_channel,
                 center: [x, y],
                 radius: normalized_radius,
             });
-            
+
             current_channel += 1;
         }
     }
-    
+
     points
 }
 ```

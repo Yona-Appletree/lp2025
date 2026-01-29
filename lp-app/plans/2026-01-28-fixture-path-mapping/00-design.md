@@ -35,6 +35,7 @@ examples/basic/src/fixture.fixture/
 ### Type Changes
 
 #### MappingPoint (runtime.rs)
+
 ```rust
 // UPDATE: Change coordinate space from [-1, 1] to [0, 1]
 pub struct MappingPoint {
@@ -45,6 +46,7 @@ pub struct MappingPoint {
 ```
 
 #### FixtureRuntime (runtime.rs)
+
 ```rust
 pub struct FixtureRuntime {
     config: Option<FixtureConfig>,
@@ -63,6 +65,7 @@ pub struct FixtureRuntime {
 ### New Functions
 
 #### Path Generation (runtime.rs)
+
 ```rust
 // NEW: Generate mapping points from PathPoints config
 fn generate_mapping_points(
@@ -87,6 +90,7 @@ fn regenerate_mapping_if_needed(&mut self, texture_width: u32, texture_height: u
 ### Coordinate Space Standardization
 
 All fixture coordinates will use texture space [0, 1]:
+
 - `MappingPoint.center`: [0, 1] (was [-1, 1])
 - Transform matrix: transforms from [0, 1] to [0, 1] (was [-1, 1] to [0, 1])
 - RingArray positions: already [0, 1], used directly
@@ -95,6 +99,7 @@ All fixture coordinates will use texture space [0, 1]:
 ### RingArray Generation Algorithm
 
 For each ring from `start_ring_inclusive` to `end_ring_exclusive`:
+
 1. Calculate ring radius: `radius = (diameter / 2) * (ring_index / max_ring_index)` (even spacing)
 2. Get lamp count: `ring_lamp_counts[ring_index]`
 3. For each lamp in ring:
@@ -133,6 +138,7 @@ For each ring from `start_ring_inclusive` to `end_ring_exclusive`:
 ### RingArray Generation Tests
 
 Test cases should cover:
+
 - Single ring (center ring, ring_index = 0)
 - Multiple rings with different lamp counts
 - InnerFirst ordering (channels assigned inner→outer)

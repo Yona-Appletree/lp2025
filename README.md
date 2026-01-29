@@ -9,16 +9,19 @@ Effects are written as GLSL shaders a custom native compiler is used to allow ru
 To run the demo project:
 
 1. **Initialize the development environment:**
+
    ```bash
    scripts/dev-init.sh
    ```
 
 2. **Run the demo:**
+
    ```bash
    just demo
    ```
 
    This will start the lp-cli development server with the `basic` example project. To run a different example:
+
    ```bash
    just demo -- <example-name>
    ```

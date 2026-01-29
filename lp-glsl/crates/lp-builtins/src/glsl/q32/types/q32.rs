@@ -2,7 +2,7 @@
 ///
 /// Core type and conversion utilities for fixed-point fixed.
 use core::cmp::Ord;
-use core::ops::{Add, Div, Mul, Neg, Sub};
+use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 /// Fixed-point constants
 const SHIFT: i32 = 16;
@@ -177,6 +177,96 @@ impl Neg for Q32 {
     }
 }
 
+impl AddAssign for Q32 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+    }
+}
+
+impl SubAssign for Q32 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+    }
+}
+
+impl MulAssign for Q32 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+impl DivAssign for Q32 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: Self) {
+        *self = *self / rhs;
+    }
+}
+
+/// Trait for converting various types to Q32
+pub trait ToQ32 {
+    /// Convert to Q32 fixed-point value
+    fn to_q32(self) -> Q32;
+}
+
+impl ToQ32 for i32 {
+    #[inline(always)]
+    fn to_q32(self) -> Q32 {
+        Q32::from_i32(self)
+    }
+}
+
+impl ToQ32 for i16 {
+    #[inline(always)]
+    fn to_q32(self) -> Q32 {
+        Q32::from_i32(self as i32)
+    }
+}
+
+impl ToQ32 for i8 {
+    #[inline(always)]
+    fn to_q32(self) -> Q32 {
+        Q32::from_i32(self as i32)
+    }
+}
+
+impl ToQ32 for u16 {
+    #[inline(always)]
+    fn to_q32(self) -> Q32 {
+        Q32::from_i32(self as i32)
+    }
+}
+
+impl ToQ32 for u8 {
+    #[inline(always)]
+    fn to_q32(self) -> Q32 {
+        Q32::from_i32(self as i32)
+    }
+}
+
+/// Extension trait for saturating conversions to Q32
+pub trait SaturatingToQ32 {
+    /// Convert to Q32 with saturating arithmetic (clamps to maximum representable integer if value exceeds Q32 range)
+    ///
+    /// The maximum representable integer in Q32 format is `i32::MAX >> 16` (32767),
+    /// since `from_i32` shifts left by 16 bits and must not overflow.
+    fn saturating_to_q32(self) -> Q32;
+}
+
+impl SaturatingToQ32 for u32 {
+    #[inline(always)]
+    fn saturating_to_q32(self) -> Q32 {
+        const MAX_REPRESENTABLE: u32 = (i32::MAX >> Q32::SHIFT) as u32;
+        if self <= MAX_REPRESENTABLE {
+            Q32::from_i32(self as i32)
+        } else {
+            Q32::from_i32(MAX_REPRESENTABLE as i32)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,5 +359,100 @@ mod tests {
         let b = Q32::from_i32(10);
         assert_eq!(a.min(b).to_f32(), 5.0);
         assert_eq!(a.max(b).to_f32(), 10.0);
+    }
+
+    #[test]
+    fn test_to_q32_i32() {
+        assert_eq!(5i32.to_q32().to_f32(), 5.0);
+        assert_eq!((-3i32).to_q32().to_f32(), -3.0);
+        assert_eq!(0i32.to_q32().to_f32(), 0.0);
+    }
+
+    #[test]
+    fn test_to_q32_i16() {
+        assert_eq!(5i16.to_q32().to_f32(), 5.0);
+        assert_eq!((-3i16).to_q32().to_f32(), -3.0);
+    }
+
+    #[test]
+    fn test_to_q32_i8() {
+        assert_eq!(5i8.to_q32().to_f32(), 5.0);
+        assert_eq!((-3i8).to_q32().to_f32(), -3.0);
+    }
+
+    #[test]
+    fn test_saturating_to_q32_u32() {
+        const MAX_REPRESENTABLE: u32 = (i32::MAX >> Q32::SHIFT) as u32;
+        const MAX_REPRESENTABLE_F32: f32 = MAX_REPRESENTABLE as f32;
+
+        assert_eq!(5u32.saturating_to_q32().to_f32(), 5.0);
+        assert_eq!(0u32.saturating_to_q32().to_f32(), 0.0);
+        // Test that values at the maximum are preserved
+        assert_eq!(
+            MAX_REPRESENTABLE.saturating_to_q32().to_f32(),
+            MAX_REPRESENTABLE_F32
+        );
+        // Test that values exceeding the maximum are clamped
+        assert_eq!(
+            (MAX_REPRESENTABLE + 1).saturating_to_q32().to_f32(),
+            MAX_REPRESENTABLE_F32
+        );
+        assert_eq!(u32::MAX.saturating_to_q32().to_f32(), MAX_REPRESENTABLE_F32);
+    }
+
+    #[test]
+    fn test_to_q32_u16() {
+        assert_eq!(5u16.to_q32().to_f32(), 5.0);
+        assert_eq!(0u16.to_q32().to_f32(), 0.0);
+    }
+
+    #[test]
+    fn test_to_q32_u8() {
+        assert_eq!(5u8.to_q32().to_f32(), 5.0);
+        assert_eq!(0u8.to_q32().to_f32(), 0.0);
+    }
+
+    #[test]
+    fn test_add_assign() {
+        let mut a = Q32::from_i32(5);
+        a += Q32::from_i32(3);
+        assert_eq!(a.to_f32(), 8.0);
+
+        let mut b = Q32::from_f32(1.5);
+        b += Q32::from_f32(2.5);
+        assert!((b.to_f32() - 4.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_sub_assign() {
+        let mut a = Q32::from_i32(5);
+        a -= Q32::from_i32(3);
+        assert_eq!(a.to_f32(), 2.0);
+
+        let mut b = Q32::from_f32(5.5);
+        b -= Q32::from_f32(2.5);
+        assert!((b.to_f32() - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_mul_assign() {
+        let mut a = Q32::from_i32(5);
+        a *= Q32::from_i32(3);
+        assert_eq!(a.to_f32(), 15.0);
+
+        let mut b = Q32::from_f32(2.0);
+        b *= Q32::from_f32(1.5);
+        assert!((b.to_f32() - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_div_assign() {
+        let mut a = Q32::from_i32(15);
+        a /= Q32::from_i32(3);
+        assert_eq!(a.to_f32(), 5.0);
+
+        let mut b = Q32::from_f32(6.0);
+        b /= Q32::from_f32(2.0);
+        assert!((b.to_f32() - 3.0).abs() < 0.01);
     }
 }

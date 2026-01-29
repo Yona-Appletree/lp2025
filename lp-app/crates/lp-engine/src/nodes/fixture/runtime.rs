@@ -3,6 +3,7 @@ use crate::nodes::fixture::mapping_compute::{PrecomputedMapping, compute_mapping
 use crate::nodes::{NodeConfig, NodeRuntime};
 use crate::runtime::contexts::{NodeInitContext, OutputHandle, RenderContext, TextureHandle};
 use alloc::{boxed::Box, string::String, vec::Vec};
+use lp_builtins::glsl::q32::types::q32::{Q32, ToQ32};
 use lp_model::FrameId;
 use lp_model::nodes::fixture::mapping::{MappingConfig, PathSpec, RingOrder};
 use lp_model::nodes::fixture::{ColorOrder, FixtureConfig};
@@ -340,17 +341,17 @@ impl NodeRuntime for FixtureRuntime {
             .max()
             .unwrap_or(0);
 
-        let mut ch_values_r: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
-        let mut ch_values_g: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
-        let mut ch_values_b: Vec<i32> = Vec::with_capacity((max_channel + 1) as usize);
-        ch_values_r.resize((max_channel + 1) as usize, 0);
-        ch_values_g.resize((max_channel + 1) as usize, 0);
-        ch_values_b.resize((max_channel + 1) as usize, 0);
+        let mut ch_values_r: Vec<Q32> = Vec::with_capacity((max_channel + 1) as usize);
+        let mut ch_values_g: Vec<Q32> = Vec::with_capacity((max_channel + 1) as usize);
+        let mut ch_values_b: Vec<Q32> = Vec::with_capacity((max_channel + 1) as usize);
+        ch_values_r.resize((max_channel + 1) as usize, Q32::ZERO);
+        ch_values_g.resize((max_channel + 1) as usize, Q32::ZERO);
+        ch_values_b.resize((max_channel + 1) as usize, Q32::ZERO);
 
         // Iterate through entries and accumulate
         // Entries are ordered by pixel (x, y), with consecutive entries per pixel
         let mut pixel_index = 0u32;
-        
+
         for entry in &mapping.entries {
             if entry.is_skip() {
                 // SKIP entry - advance to next pixel
@@ -364,37 +365,33 @@ impl NodeRuntime for FixtureRuntime {
 
             // Get pixel value from texture
             if let Some(pixel) = texture.get_pixel(x, y) {
-                // Decode contribution: stored value represents (65535 - contribution_fractional)
-                // We need to convert back to Q32 scale (0-65536)
-                let stored = (entry.to_raw() >> 16) & 0xFFFF;
-                let contribution_fractional = if stored == 0 {
-                    65536u32 // 100% contribution in Q32 format
-                } else {
-                    // Scale from [0, 65534] to [0, 65535] in Q32 format
-                    ((65535u32 - stored) as i64 * 65536 / 65535) as u32
-                };
-
-                // Accumulate: ch_value += contribution * pixel_value
-                // contribution_fractional is 0-65536 in Q32 format (representing 0.0-1.0)
-                // pixel values are 0-255 (u8)
-                // Result should be: contribution * pixel_value (in range 0-255)
                 let channel = entry.channel() as usize;
                 if channel < ch_values_r.len() {
-                    // Use 64-bit math to avoid overflow
-                    let contribution = contribution_fractional as i64;
-                    let pixel_r = pixel[0] as i64;
-                    let pixel_g = pixel[1] as i64;
-                    let pixel_b = pixel[2] as i64;
-                    
-                    // Calculate: (contribution * pixel) / 65536
-                    // This gives us the weighted pixel value (0-255 range)
-                    let accumulated_r = (contribution * pixel_r) / 65536;
-                    let accumulated_g = (contribution * pixel_g) / 65536;
-                    let accumulated_b = (contribution * pixel_b) / 65536;
-                    
-                    ch_values_r[channel] += accumulated_r as i32;
-                    ch_values_g[channel] += accumulated_g as i32;
-                    ch_values_b[channel] += accumulated_b as i32;
+                    let contribution_raw = entry.contribution_raw() as i32;
+
+                    let pixel_r = pixel[0].to_q32();
+                    let pixel_g = pixel[1].to_q32();
+                    let pixel_b = pixel[2].to_q32();
+
+                    if contribution_raw == 0 {
+                        ch_values_r[channel] += pixel_r;
+                        ch_values_g[channel] += pixel_g;
+                        ch_values_b[channel] += pixel_b;
+                    } else {
+                        let contributing = Q32(contribution_raw);
+
+                        // Note: this is safe, because contribution_raw is in range [1, 65535]
+                        //       and thusly cannot overflow when multiplying by an 8-bit value
+                        //       0xFF * 0xFFFF = 0xFEFF01
+
+                        let accumulated_r = contributing * pixel_r;
+                        let accumulated_g = contributing * pixel_g;
+                        let accumulated_b = contributing * pixel_b;
+
+                        ch_values_r[channel] += accumulated_r;
+                        ch_values_g[channel] += accumulated_g;
+                        ch_values_b[channel] += accumulated_b;
+                    }
                 }
             }
 
@@ -417,9 +414,9 @@ impl NodeRuntime for FixtureRuntime {
         for channel in 0..=max_channel as usize {
             // Values are already in 0-255 range (accumulated as regular integers)
             // Just clamp to ensure they're in valid range
-            let r = ch_values_r[channel].clamp(0, 255) as u8;
-            let g = ch_values_g[channel].clamp(0, 255) as u8;
-            let b = ch_values_b[channel].clamp(0, 255) as u8;
+            let r = ch_values_r[channel].to_i32().clamp(0, 255) as u8;
+            let g = ch_values_g[channel].to_i32().clamp(0, 255) as u8;
+            let b = ch_values_b[channel].to_i32().clamp(0, 255) as u8;
 
             let idx = channel * 3;
             self.lamp_colors[idx] = r;
@@ -433,9 +430,9 @@ impl NodeRuntime for FixtureRuntime {
         let universe = 0u32;
         let channel_offset = 0u32;
         for channel in 0..=max_channel {
-            let r = ch_values_r[channel as usize].clamp(0, 255) as u8;
-            let g = ch_values_g[channel as usize].clamp(0, 255) as u8;
-            let b = ch_values_b[channel as usize].clamp(0, 255) as u8;
+            let r = ch_values_r[channel as usize].to_i32().clamp(0, 255) as u8;
+            let g = ch_values_g[channel as usize].to_i32().clamp(0, 255) as u8;
+            let b = ch_values_b[channel as usize].to_i32().clamp(0, 255) as u8;
 
             let start_ch = channel_offset + channel * 3; // 3 bytes per RGB
             let buffer = ctx.get_output(output_handle, universe, start_ch, 3)?;
@@ -524,240 +521,7 @@ mod tests {
         let runtime = FixtureRuntime::new();
         let _boxed: alloc::boxed::Box<dyn NodeRuntime> = alloc::boxed::Box::new(runtime);
     }
-    
-    #[test]
-    fn test_contribution_accumulation_math() {
-        // Test the accumulation math directly
-        // Simulate: pixel value = 200, contribution = 0.5 (50%)
-        // Expected result: 200 * 0.5 = 100
-        
-        let pixel_value = 200u8;
-        let contribution_fractional = 32768u32; // 0.5 in Q32 format (32768 / 65536 = 0.5)
-        
-        let contribution = contribution_fractional as i64;
-        let pixel = pixel_value as i64;
-        let accumulated = (contribution * pixel) / 65536;
-        
-        assert_eq!(accumulated, 100, "50% of 200 should be 100, got {}", accumulated);
-    }
-    
-    #[test]
-    fn test_contribution_accumulation_full() {
-        // Test full contribution (100%)
-        let pixel_value = 255u8;
-        let contribution_fractional = 65536u32; // 1.0 in Q32 format
-        
-        let contribution = contribution_fractional as i64;
-        let pixel = pixel_value as i64;
-        let accumulated = (contribution * pixel) / 65536;
-        
-        assert_eq!(accumulated, 255, "100% of 255 should be 255, got {}", accumulated);
-    }
-    
-    #[test]
-    fn test_contribution_accumulation_zero() {
-        // Test zero contribution (0%)
-        let pixel_value = 255u8;
-        let contribution_fractional = 0u32; // 0.0 in Q32 format
-        
-        let contribution = contribution_fractional as i64;
-        let pixel = pixel_value as i64;
-        let accumulated = (contribution * pixel) / 65536;
-        
-        assert_eq!(accumulated, 0, "0% of 255 should be 0, got {}", accumulated);
-    }
-    
-    #[test]
-    fn test_contribution_decoding() {
-        // Test decoding stored contribution values
-        use crate::nodes::fixture::mapping_compute::PixelMappingEntry;
-        use lp_builtins::glsl::q32::types::q32::Q32;
-        
-        // Create entry with 0.5 contribution
-        let entry = PixelMappingEntry::new(0, Q32::from_f32(0.5), false);
-        let stored = (entry.to_raw() >> 16) & 0xFFFF;
-        
-        // Decode contribution using the same logic as render()
-        let contribution_fractional = if stored == 0 {
-            65536u32
-        } else {
-            ((65535u32 - stored) as i64 * 65536 / 65535) as u32
-        };
-        
-        // Should be approximately 32768 (0.5 * 65536)
-        // Allow some tolerance due to rounding
-        let expected = 32768;
-        let diff = (contribution_fractional as i32 - expected).abs();
-        assert!(diff < 100, 
-            "Decoded contribution should be ~32768 (0.5), got {} (diff: {})", 
-            contribution_fractional, diff);
-        
-        // Test that it produces correct accumulation
-        let pixel_value = 200u8;
-        let contribution = contribution_fractional as i64;
-        let pixel = pixel_value as i64;
-        let accumulated = (contribution * pixel) / 65536;
-        
-        // Should be approximately 100 (0.5 * 200)
-        assert!((accumulated - 100).abs() < 2, 
-            "Accumulated value should be ~100, got {}", accumulated);
-    }
-    
-    #[test]
-    fn test_multiple_contributions_accumulation() {
-        // Test that multiple contributions accumulate correctly
-        // Simulate: pixel contributes 0.3 to channel 0, then 0.7 to channel 0
-        // Expected: channel 0 should have 0.3 + 0.7 = 1.0 of the pixel value
-        
-        let pixel_value = 200u8;
-        let contribution1 = (0.3 * 65536.0) as u32; // 0.3 in Q32
-        let contribution2 = (0.7 * 65536.0) as u32; // 0.7 in Q32
-        
-        let mut ch_value = 0i32;
-        
-        // First contribution
-        let acc1 = (contribution1 as i64 * pixel_value as i64) / 65536;
-        ch_value += acc1 as i32;
-        
-        // Second contribution
-        let acc2 = (contribution2 as i64 * pixel_value as i64) / 65536;
-        ch_value += acc2 as i32;
-        
-        // Total should be approximately 200 (1.0 * 200), allowing for rounding error
-        assert!((ch_value - 200).abs() <= 2, 
-            "Multiple contributions should sum to ~200, got {} (rounding error)", ch_value);
-    }
-    
-    #[test]
-    fn test_simulated_rendering_loop() {
-        // Simulate the actual rendering loop to catch any issues
-        use crate::nodes::fixture::mapping_compute::{PixelMappingEntry, PrecomputedMapping};
-        use lp_builtins::glsl::q32::types::q32::Q32;
-        use lp_model::FrameId;
-        
-        // Create a simple mapping: one pixel contributes fully to channel 0
-        let mut mapping = PrecomputedMapping::new(1, 1, FrameId::new(1));
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(1.0), false));
-        
-        // Simulate pixel value = 200
-        let pixel_value = [200u8, 200u8, 200u8, 255u8];
-        
-        // Simulate the rendering loop
-        let mut ch_values_r: Vec<i32> = vec![0; 1];
-        let mut ch_values_g: Vec<i32> = vec![0; 1];
-        let mut ch_values_b: Vec<i32> = vec![0; 1];
-        
-        let mut pixel_index = 0u32;
-        let texture_width = 1u32;
-        
-        for entry in &mapping.entries {
-            if entry.is_skip() {
-                pixel_index += 1;
-                continue;
-            }
-            
-            let x = pixel_index % texture_width;
-            let y = pixel_index / texture_width;
-            
-            // Simulate getting pixel (we know it's pixel 0,0)
-            if x == 0 && y == 0 {
-                let stored = (entry.to_raw() >> 16) & 0xFFFF;
-                let contribution_fractional = if stored == 0 {
-                    65536u32
-                } else {
-                    ((65535u32 - stored) as i64 * 65536 / 65535) as u32
-                };
-                
-                let channel = entry.channel() as usize;
-                if channel < ch_values_r.len() {
-                    let contribution = contribution_fractional as i64;
-                    let pixel_r = pixel_value[0] as i64;
-                    let pixel_g = pixel_value[1] as i64;
-                    let pixel_b = pixel_value[2] as i64;
-                    
-                    let accumulated_r = (contribution * pixel_r) / 65536;
-                    let accumulated_g = (contribution * pixel_g) / 65536;
-                    let accumulated_b = (contribution * pixel_b) / 65536;
-                    
-                    ch_values_r[channel] += accumulated_r as i32;
-                    ch_values_g[channel] += accumulated_g as i32;
-                    ch_values_b[channel] += accumulated_b as i32;
-                }
-            }
-            
-            if !entry.has_more() {
-                pixel_index += 1;
-            }
-        }
-        
-        // Channel 0 should have value 200 (100% of pixel value 200)
-        assert_eq!(ch_values_r[0], 200, 
-            "Channel 0 should have value 200, got {}", ch_values_r[0]);
-        assert_eq!(ch_values_g[0], 200, 
-            "Channel 0 should have value 200, got {}", ch_values_g[0]);
-        assert_eq!(ch_values_b[0], 200, 
-            "Channel 0 should have value 200, got {}", ch_values_b[0]);
-    }
-    
-    #[test]
-    fn test_simulated_rendering_multiple_pixels() {
-        // Test with multiple pixels contributing to same channel
-        // Pixel 0: contributes 0.5 to channel 0, value = 200
-        // Pixel 1: contributes 0.5 to channel 0, value = 200
-        // Expected: channel 0 should have 100 + 100 = 200
-        
-        use crate::nodes::fixture::mapping_compute::{PixelMappingEntry, PrecomputedMapping};
-        use lp_builtins::glsl::q32::types::q32::Q32;
-        use lp_model::FrameId;
-        
-        let mut mapping = PrecomputedMapping::new(2, 1, FrameId::new(1));
-        // Pixel 0: 0.5 contribution to channel 0
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(0.5), false));
-        // Pixel 1: 0.5 contribution to channel 0
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(0.5), false));
-        
-        let mut ch_values_r: Vec<i32> = vec![0; 1];
-        let mut pixel_index = 0u32;
-        let texture_width = 2u32;
-        
-        // Simulate pixels: both have value 200
-        let pixels = [[200u8, 200u8, 200u8, 255u8], [200u8, 200u8, 200u8, 255u8]];
-        
-        for entry in &mapping.entries {
-            if entry.is_skip() {
-                pixel_index += 1;
-                continue;
-            }
-            
-            let x = pixel_index % texture_width;
-            let pixel = pixels[x as usize];
-            
-            let stored = (entry.to_raw() >> 16) & 0xFFFF;
-            let contribution_fractional = if stored == 0 {
-                65536u32
-            } else {
-                ((65535u32 - stored) as i64 * 65536 / 65535) as u32
-            };
-            
-            let channel = entry.channel() as usize;
-            if channel < ch_values_r.len() {
-                let contribution = contribution_fractional as i64;
-                let pixel_r = pixel[0] as i64;
-                let accumulated_r = (contribution * pixel_r) / 65536;
-                ch_values_r[channel] += accumulated_r as i32;
-            }
-            
-            if !entry.has_more() {
-                pixel_index += 1;
-            }
-        }
-        
-        // Channel 0 should have value 200 (0.5 * 200 + 0.5 * 200)
-        // Allow small rounding error
-        assert!((ch_values_r[0] - 200).abs() <= 2, 
-            "Channel 0 should have value ~200, got {}", ch_values_r[0]);
-    }
-    
+
     #[test]
     fn test_pixel_index_advancement() {
         // Test that pixel_index advances correctly
@@ -765,88 +529,66 @@ mod tests {
         use crate::nodes::fixture::mapping_compute::{PixelMappingEntry, PrecomputedMapping};
         use lp_builtins::glsl::q32::types::q32::Q32;
         use lp_model::FrameId;
-        
+
         let mut mapping = PrecomputedMapping::new(2, 1, FrameId::new(1));
         // Pixel 0: channel 0 (has_more = true)
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(0.5), true));
+        mapping
+            .entries
+            .push(PixelMappingEntry::new(0, Q32::from_f32(0.5), true));
         // Pixel 0: channel 1 (has_more = false) - last entry for pixel 0
-        mapping.entries.push(PixelMappingEntry::new(1, Q32::from_f32(0.5), false));
+        mapping
+            .entries
+            .push(PixelMappingEntry::new(1, Q32::from_f32(0.5), false));
         // Pixel 1: channel 0 (has_more = false) - only entry for pixel 1
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(1.0), false));
-        
+        mapping
+            .entries
+            .push(PixelMappingEntry::new(0, Q32::from_f32(1.0), false));
+
         let mut pixel_index = 0u32;
         let texture_width = 2u32;
         let mut processed_pixels = Vec::new();
-        
+
         for entry in &mapping.entries {
             if entry.is_skip() {
                 pixel_index += 1;
                 continue;
             }
-            
+
             let x = pixel_index % texture_width;
             processed_pixels.push((x, entry.channel()));
-            
+
             if !entry.has_more() {
                 pixel_index += 1;
             }
         }
-        
+
         // Should process: pixel 0 (channel 0), pixel 0 (channel 1), pixel 1 (channel 0)
         assert_eq!(processed_pixels.len(), 3);
-        assert_eq!(processed_pixels[0], (0, 0), "First entry should be pixel 0, channel 0");
-        assert_eq!(processed_pixels[1], (0, 1), "Second entry should be pixel 0, channel 1");
-        assert_eq!(processed_pixels[2], (1, 0), "Third entry should be pixel 1, channel 0");
+        assert_eq!(
+            processed_pixels[0],
+            (0, 0),
+            "First entry should be pixel 0, channel 0"
+        );
+        assert_eq!(
+            processed_pixels[1],
+            (0, 1),
+            "Second entry should be pixel 0, channel 1"
+        );
+        assert_eq!(
+            processed_pixels[2],
+            (1, 0),
+            "Third entry should be pixel 1, channel 0"
+        );
     }
-    
-    #[test]
-    fn test_normalization_verification() {
-        // Verify that contributions decode correctly
-        // NOTE: With per-channel normalization, a pixel's contributions to different channels
-        // do NOT necessarily sum to 1.0. Each channel's total contribution from all pixels
-        // sums to 1.0 instead.
-        use crate::nodes::fixture::mapping_compute::{PixelMappingEntry, PrecomputedMapping};
-        use lp_builtins::glsl::q32::types::q32::Q32;
-        use lp_model::FrameId;
-        
-        // Create a mapping where pixel 0 contributes to channels 0 and 1
-        let mut mapping = PrecomputedMapping::new(1, 1, FrameId::new(1));
-        // Pixel 0: channel 0 with 0.3 contribution (has_more = true)
-        mapping.entries.push(PixelMappingEntry::new(0, Q32::from_f32(0.3), true));
-        // Pixel 0: channel 1 with 0.7 contribution (has_more = false)
-        mapping.entries.push(PixelMappingEntry::new(1, Q32::from_f32(0.7), false));
-        
-        // Verify the contributions decode correctly
-        let mut contributions = Vec::new();
-        for entry in &mapping.entries {
-            if !entry.is_skip() {
-                let stored = (entry.to_raw() >> 16) & 0xFFFF;
-                let contribution_fractional = if stored == 0 {
-                    65536u32
-                } else {
-                    ((65535u32 - stored) as i64 * 65536 / 65535) as u32
-                };
-                let contribution_float = contribution_fractional as f64 / 65536.0;
-                contributions.push(contribution_float);
-            }
-        }
-        
-        // Verify contributions decode to expected values (within rounding tolerance)
-        assert_eq!(contributions.len(), 2, "Should have 2 contributions");
-        assert!((contributions[0] - 0.3).abs() < 0.01, 
-            "First contribution should be ~0.3, got {}", contributions[0]);
-        assert!((contributions[1] - 0.7).abs() < 0.01, 
-            "Second contribution should be ~0.7, got {}", contributions[1]);
-    }
-    
+
     #[test]
     fn test_channel_contribution_sum() {
         // Test that all pixel contributions to a channel sum correctly
         // Create a simple mapping: one circle (one channel) that covers some pixels
-        use crate::nodes::fixture::mapping_compute::{compute_mapping, PixelMappingEntry};
-        use lp_model::nodes::fixture::mapping::{MappingConfig, PathSpec, RingOrder};
+        use crate::nodes::fixture::mapping_compute::compute_mapping;
         use lp_model::FrameId;
-        
+        use lp_model::nodes::fixture::mapping::{MappingConfig, PathSpec, RingOrder};
+
         // Create a simple config: one ring with 1 lamp at center
         let config = MappingConfig::PathPoints {
             paths: vec![PathSpec::RingArray {
@@ -860,44 +602,41 @@ mod tests {
             }],
             sample_diameter: 4.0, // Sample diameter in pixels
         };
-        
+
         // Build mapping for a small texture
         let texture_width = 32u32;
         let texture_height = 32u32;
         let mapping = compute_mapping(&config, texture_width, texture_height, FrameId::new(1));
-        
+
         // Sum up all contributions to channel 0 from all pixels
+        // Decode contributions the same way the runtime does
         let mut total_contribution_ch0 = 0.0f64;
-        let mut pixel_index = 0u32;
-        
+
         for entry in &mapping.entries {
             if entry.is_skip() {
-                pixel_index += 1;
                 continue;
             }
-            
+
             if entry.channel() == 0 {
-                // Decode contribution
-                let stored = (entry.to_raw() >> 16) & 0xFFFF;
-                let contribution_fractional = if stored == 0 {
-                    65536u32
+                // Decode the same way runtime.rs does (line 370-381)
+                let contribution_raw = entry.contribution_raw() as i32;
+                let contribution_float = if contribution_raw == 0 {
+                    1.0 // Full contribution
                 } else {
-                    ((65535u32 - stored) as i64 * 65536 / 65535) as u32
+                    // Use raw value directly as Q32 fraction
+                    contribution_raw as f64 / 65536.0
                 };
-                let contribution_float = contribution_fractional as f64 / 65536.0;
                 total_contribution_ch0 += contribution_float;
             }
-            
-            if !entry.has_more() {
-                pixel_index += 1;
-            }
         }
-        
+
         // After fixing normalization to be per-channel instead of per-pixel,
         // the total contribution to each channel should sum to approximately 1.0
-        assert!((total_contribution_ch0 - 1.0).abs() < 0.1,
-            "Total contribution to channel 0 should be ~1.0 (normalized per-channel), got {}", 
-            total_contribution_ch0);
+        assert!(
+            (total_contribution_ch0 - 1.0).abs() < 0.1,
+            "Total contribution to channel 0 should be ~1.0 (normalized per-channel), got {}",
+            total_contribution_ch0
+        );
     }
 
     // Test helper: create RingArray path spec

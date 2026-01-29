@@ -372,7 +372,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
         }
 
         // Update time for next frame
-        time = time + TIME_STEP;
+        time += TIME_STEP;
 
         let frame_end = Instant::now();
         let frame_time = frame_end.duration_since(frame_start);

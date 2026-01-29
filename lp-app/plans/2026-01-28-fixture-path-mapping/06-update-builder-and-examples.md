@@ -30,7 +30,7 @@ impl FixtureBuilder {
         self.mapping = mapping;
         self
     }
-    
+
     // ... other methods ...
 }
 ```
@@ -40,7 +40,7 @@ Update `add()` method to use `MappingConfig`:
 ```rust
 pub fn add(self, builder: &mut ProjectBuilder) -> LpPathBuf {
     // ... existing code ...
-    
+
     let config = FixtureConfig {
         output_spec: NodeSpecifier::from(self.output_path.as_str()),
         texture_spec: NodeSpecifier::from(self.texture_path.as_str()),
@@ -48,7 +48,7 @@ pub fn add(self, builder: &mut ProjectBuilder) -> LpPathBuf {
         color_order: self.color_order,
         transform: self.transform,
     };
-    
+
     // ... rest of method ...
 }
 ```
@@ -100,6 +100,7 @@ Update to use new `MappingConfig` format with a 9-ring circular display:
 ```
 
 **Configuration Details**:
+
 - 9 rings total (ring indices 0-8)
 - InnerFirst ordering (channels assigned inside-out)
 - Lamp counts: 1 (center), 8, 12, 16, 24, 32, 40, 48, 60

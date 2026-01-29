@@ -59,6 +59,7 @@ mod tests {
         let v = Vec2Q32::from_f32(0.5, 0.25);
         let result = cubic_vec2(v);
         assert!((result.x.to_f32() - 0.5).abs() < 0.01);
-        assert!((result.y.to_f32() - 0.4375).abs() < 0.01);
+        // cubic(0.25) = 0.25 * 0.25 * (3 - 2*0.25) = 0.0625 * 2.5 = 0.15625
+        assert!((result.y.to_f32() - 0.15625).abs() < 0.01);
     }
 }

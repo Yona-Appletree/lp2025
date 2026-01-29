@@ -32,6 +32,7 @@ Update all fixture code to use texture space [0, 1] instead of fixture space [-1
 ### 4. Update All Comments
 
 Search for and update all comments referencing:
+
 - "fixture space [-1, 1]" → "texture space [0, 1]"
 - "Fixture space" → "Texture space" where appropriate
 - Any coordinate space documentation

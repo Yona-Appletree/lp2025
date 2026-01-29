@@ -30,9 +30,9 @@ pub fn lpfx_fbm2(p: Vec2Q32, octaves: i32, seed: u32) -> Q32 {
 
     // Loop of octaves
     for _ in 0..octaves {
-        value = value + amplitude * lpfx_snoise2(st, seed);
+        value += amplitude * lpfx_snoise2(st, seed);
         st = st * SCALE_SCALAR;
-        amplitude = amplitude * AMPLITUDE_SCALAR;
+        amplitude *= AMPLITUDE_SCALAR;
     }
     value
 }

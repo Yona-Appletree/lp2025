@@ -40,31 +40,31 @@ fn regenerate_mapping_if_needed(
             .texture_height
             .map(|h| h != texture_height)
             .unwrap_or(true);
-    
+
     if needs_regeneration {
         let config = self.config.as_ref().ok_or_else(|| Error::InvalidConfig {
             node_path: String::from("fixture"),
             reason: String::from("Config not set"),
         })?;
-        
+
         // Regenerate mapping points
         self.mapping = generate_mapping_points(
             &config.mapping,
             texture_width,
             texture_height,
         );
-        
+
         // Update texture dimensions
         self.texture_width = Some(texture_width);
         self.texture_height = Some(texture_height);
-        
+
         // Update sampling kernel based on first mapping's radius
         if let Some(first_mapping) = self.mapping.first() {
             let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
             self.kernel = SamplingKernel::new(normalized_radius);
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -78,27 +78,27 @@ Update `init()` to get texture dimensions and generate mapping:
 ```rust
 fn init(&mut self, ctx: &dyn NodeInitContext) -> Result<(), Error> {
     // ... existing handle resolution ...
-    
+
     // Get texture to determine dimensions
     let texture = ctx.get_texture(texture_handle)?;
     let texture_width = texture.width();
     let texture_height = texture.height();
-    
+
     // Store config values
     self.color_order = config.color_order;
     self.transform = config.transform;
-    
+
     // Generate mapping points
     self.mapping = generate_mapping_points(
         &config.mapping,
         texture_width,
         texture_height,
     );
-    
+
     // Store texture dimensions
     self.texture_width = Some(texture_width);
     self.texture_height = Some(texture_height);
-    
+
     // Create sampling kernel
     if let Some(first_mapping) = self.mapping.first() {
         let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
@@ -106,7 +106,7 @@ fn init(&mut self, ctx: &dyn NodeInitContext) -> Result<(), Error> {
     } else {
         self.kernel = SamplingKernel::new(0.1);
     }
-    
+
     Ok(())
 }
 ```
@@ -123,16 +123,16 @@ fn render(&mut self, ctx: &mut dyn RenderContext) -> Result<(), Error> {
     let texture_handle = self.texture_handle.ok_or_else(|| Error::Other {
         message: String::from("Texture handle not resolved"),
     })?;
-    
+
     // Get texture (triggers lazy rendering if needed)
     let texture = ctx.get_texture(texture_handle)?;
-    
+
     let texture_width = texture.width();
     let texture_height = texture.height();
-    
+
     // Regenerate mapping if texture resolution changed
     self.regenerate_mapping_if_needed(texture_width, texture_height)?;
-    
+
     // ... rest of render code ...
 }
 ```
@@ -150,7 +150,7 @@ fn update_config(
     ctx: &dyn NodeInitContext,
 ) -> Result<(), Error> {
     // ... existing config update code ...
-    
+
     // Regenerate mapping if we have texture dimensions
     if let (Some(width), Some(height)) = (self.texture_width, self.texture_height) {
         self.mapping = generate_mapping_points(
@@ -158,14 +158,14 @@ fn update_config(
             width,
             height,
         );
-        
+
         // Update sampling kernel
         if let Some(first_mapping) = self.mapping.first() {
             let normalized_radius = first_mapping.radius.min(1.0).max(0.0);
             self.kernel = SamplingKernel::new(normalized_radius);
         }
     }
-    
+
     Ok(())
 }
 ```

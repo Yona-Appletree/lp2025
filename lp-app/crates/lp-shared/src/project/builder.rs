@@ -109,7 +109,7 @@ impl ProjectBuilder {
         ShaderBuilder {
             texture_path: texture_path.clone(),
             glsl_source: String::from(
-                "vec4 main(vec2 fragCoord, vec2 outputSize, float time) {\n    return vec4(mod(time, 1.0), 0.0, 0.0, 1.0);\n}",
+                "vec4 main(vec2 fragCoord, vec2 outputSize, float time) { return vec4(mod(time, 1.0), 0.0, 0.0, 1.0); }",
             ),
             render_order: 0,
         }
