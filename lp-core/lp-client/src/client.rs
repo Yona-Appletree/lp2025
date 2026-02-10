@@ -122,7 +122,8 @@ impl LpClient {
                             .join(", ")
                     };
                     eprintln!(
-                        "[server] FPS: {fps} | Frames: {frame_count} | Uptime: {uptime_secs:.1}s | Projects: {projects_str}"
+                        "[server] FPS avg={:.0} sdev={:.1} min={:.0} max={:.0} | Frames: {frame_count} | Uptime: {uptime_secs:.1}s ({uptime_ms}ms) | Projects: {projects_str}",
+                        fps.avg, fps.sdev, fps.min, fps.max
                     );
                 }
                 // Continue waiting for actual response
@@ -431,6 +432,7 @@ pub fn serializable_response_to_project_response(
     match response {
         SerializableProjectResponse::GetChanges {
             current_frame,
+            since_frame,
             node_handles,
             node_changes,
             node_details,
@@ -485,6 +487,7 @@ pub fn serializable_response_to_project_response(
 
             Ok(ProjectResponse::GetChanges {
                 current_frame,
+                since_frame,
                 node_handles,
                 node_changes,
                 node_details: node_details_map,
@@ -501,7 +504,7 @@ mod tests {
     use lp_model::{
         LpPathBuf,
         project::handle::ProjectHandle,
-        server::{LoadedProject, ServerMsgBody},
+        server::{LoadedProject, SampleStats, ServerMsgBody},
     };
     use tokio::task;
 
@@ -525,7 +528,12 @@ mod tests {
             let heartbeat = ServerMessage {
                 id: 0,
                 msg: ServerMsgBody::Heartbeat {
-                    fps: 60,
+                    fps: SampleStats {
+                        avg: 60.0,
+                        sdev: 0.0,
+                        min: 60.0,
+                        max: 60.0,
+                    },
                     frame_count: 100,
                     loaded_projects: vec![],
                     uptime_ms: 2000,
@@ -566,10 +574,16 @@ mod tests {
 
             // Send multiple heartbeats
             for i in 0..3 {
+                let fps_val = (60 + i) as f32;
                 let heartbeat = ServerMessage {
                     id: 0,
                     msg: ServerMsgBody::Heartbeat {
-                        fps: 60 + i,
+                        fps: SampleStats {
+                            avg: fps_val,
+                            sdev: 0.0,
+                            min: fps_val,
+                            max: fps_val,
+                        },
                         frame_count: 100 + i as u64,
                         loaded_projects: vec![],
                         uptime_ms: 2000 + i as u64 * 1000,
@@ -614,7 +628,12 @@ mod tests {
             let heartbeat = ServerMessage {
                 id: 0,
                 msg: ServerMsgBody::Heartbeat {
-                    fps: 95,
+                    fps: SampleStats {
+                        avg: 95.0,
+                        sdev: 0.0,
+                        min: 95.0,
+                        max: 95.0,
+                    },
                     frame_count: 154,
                     loaded_projects: vec![LoadedProject {
                         handle: ProjectHandle::new(1),

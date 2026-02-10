@@ -88,6 +88,7 @@ impl ClientProjectView {
         match response {
             lp_model::project::api::ProjectResponse::GetChanges {
                 current_frame,
+                since_frame: _,
                 node_handles,
                 node_changes,
                 node_details,
@@ -235,7 +236,14 @@ impl ClientProjectView {
                         };
 
                         entry.config = config;
-                        entry.state = Some(detail.state.clone());
+                        // Merge partial update into existing state
+                        if let Some(existing_state) = &mut entry.state {
+                            // Merge fields from partial update into existing state
+                            existing_state.merge_from(&detail.state, *current_frame);
+                        } else {
+                            // No existing state, use the new state as-is
+                            entry.state = Some(detail.state.clone());
+                        }
                         // Status is no longer in node_details, it comes via StatusChanged events
                     } else {
                         // Create new entry from detail (node exists but wasn't in Created changes)
@@ -322,7 +330,7 @@ impl ClientProjectView {
         }
 
         match &entry.state {
-            Some(NodeState::Texture(tex_state)) => Ok(tex_state.texture_data.clone()),
+            Some(NodeState::Texture(tex_state)) => Ok(tex_state.texture_data.value().clone()),
             Some(_) => Err(format!(
                 "Node {} has wrong state type (expected Texture)",
                 entry.path.as_str()
@@ -355,7 +363,7 @@ impl ClientProjectView {
         }
 
         match &entry.state {
-            Some(NodeState::Output(output_state)) => Ok(output_state.channel_data.clone()),
+            Some(NodeState::Output(output_state)) => Ok(output_state.channel_data.value().clone()),
             Some(_) => Err(format!(
                 "Node {} has wrong state type (expected Output)",
                 entry.path.as_str()
