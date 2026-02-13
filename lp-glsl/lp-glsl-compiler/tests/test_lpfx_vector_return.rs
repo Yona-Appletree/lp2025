@@ -6,7 +6,7 @@
 
 #[cfg(feature = "emulator")]
 use lp_glsl_compiler::glsl_emu_riscv32;
-use lp_glsl_compiler::{DecimalFormat, GlslOptions, GlslValue, RunMode, glsl_jit};
+use lp_glsl_compiler::{DecimalFormat, GlslOptions, GlslValue, Q32Options, RunMode, glsl_jit};
 
 /// Test lpfx_hsv2rgb with vec3 return (result pointer parameter) in JIT mode
 #[test]
@@ -23,6 +23,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     let options = GlslOptions {
         run_mode: RunMode::HostJit,
         decimal_format: DecimalFormat::Q32,
+        q32_opts: Q32Options::default(),
     };
 
     // Compile and execute
@@ -109,6 +110,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
             log_level: None,
         },
         decimal_format: DecimalFormat::Q32,
+        q32_opts: Q32Options::default(),
     };
 
     // Compile and execute
@@ -187,6 +189,7 @@ vec4 main(vec2 fragCoord, vec2 outputSize, float time) {
     let options = GlslOptions {
         run_mode: RunMode::HostJit,
         decimal_format: DecimalFormat::Q32,
+        q32_opts: Q32Options::default(),
     };
 
     // Compile and execute

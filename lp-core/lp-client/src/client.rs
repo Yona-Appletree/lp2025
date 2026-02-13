@@ -14,6 +14,8 @@ use lp_model::{
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+use tokio::time::timeout;
 
 use crate::transport::ClientTransport;
 
@@ -78,65 +80,153 @@ impl LpClient {
             .await
             .map_err(|e| Error::msg(format!("Transport error: {e}")))?;
 
-        // Wait for response with matching ID
-        // Handle heartbeats and other interstitial messages
-        loop {
-            let response = transport
-                .receive()
-                .await
-                .map_err(|e| Error::msg(format!("Transport error: {e}")))?;
+        // Wait for response with matching ID (with timeout to avoid deadlock if server
+        // never receives our request, e.g. host->device serial direction broken)
+        const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
-            // Check if this is the response we're waiting for
-            if response.id == id {
-                // Check if server returned an error response
-                if let ServerMsgBody::Error { error } = &response.msg {
-                    return Err(Error::msg(error.clone()));
+        let wait_response = async {
+            loop {
+                let response = transport
+                    .receive()
+                    .await
+                    .map_err(|e| Error::msg(format!("Transport error: {e}")))?;
+
+                if response.id == id {
+                    if let ServerMsgBody::Error { error } = &response.msg {
+                        return Err(Error::msg(error.clone()));
+                    }
+                    return Ok(response);
                 }
-                return Ok(response);
-            }
 
-            // Handle heartbeats (id: 0)
-            if response.id == 0 {
-                if let ServerMsgBody::Heartbeat {
-                    fps,
-                    frame_count,
-                    loaded_projects,
-                    uptime_ms,
-                } = &response.msg
-                {
-                    // Display heartbeat information
-                    let uptime_secs = *uptime_ms as f64 / 1000.0;
-                    let projects_str = if loaded_projects.is_empty() {
-                        "none".to_string()
-                    } else {
-                        loaded_projects
-                            .iter()
-                            .map(|p| {
-                                // Extract project name from path
-                                p.path
-                                    .file_name()
-                                    .map(|n| n.to_string())
-                                    .unwrap_or_else(|| p.path.as_str().to_string())
-                            })
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    };
-                    eprintln!(
-                        "[server] FPS: {fps} | Frames: {frame_count} | Uptime: {uptime_secs:.1}s | Projects: {projects_str}"
-                    );
+                if response.id == 0 {
+                    if let ServerMsgBody::Heartbeat {
+                        fps,
+                        frame_count,
+                        loaded_projects,
+                        uptime_ms,
+                        memory,
+                    } = &response.msg
+                    {
+                        Self::display_heartbeat(
+                            fps,
+                            *frame_count,
+                            loaded_projects,
+                            *uptime_ms,
+                            memory,
+                        );
+                    }
+                    continue;
                 }
-                // Continue waiting for actual response
-                continue;
-            }
 
-            // Non-correlated message (shouldn't happen, but handle gracefully)
-            log::warn!(
-                "Received non-correlated message (id: {}, expected: {})",
-                response.id,
-                id
-            );
-            // Continue waiting for actual response
+                log::warn!(
+                    "Received non-correlated message (id: {}, expected: {})",
+                    response.id,
+                    id
+                );
+            }
+        };
+
+        match timeout(REQUEST_TIMEOUT, wait_response).await {
+            Ok(Ok(response)) => Ok(response),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(Error::msg(
+                "Request timed out - server may not be receiving messages (check host->device serial)",
+            )),
         }
+    }
+
+    /// Display heartbeat with colors and memory bar chart
+    fn display_heartbeat(
+        fps: &lp_model::server::SampleStats,
+        frame_count: u64,
+        loaded_projects: &[lp_model::server::LoadedProject],
+        uptime_ms: u64,
+        memory: &Option<lp_model::server::MemoryStats>,
+    ) {
+        const BOLD: &str = "\x1b[1m";
+        const DIM: &str = "\x1b[90m";
+        const CYAN: &str = "\x1b[36m";
+        const GREEN: &str = "\x1b[32m";
+        const YELLOW: &str = "\x1b[33m";
+        const RED: &str = "\x1b[31m";
+        const RESET: &str = "\x1b[0m";
+
+        let uptime_secs = uptime_ms as f64 / 1000.0;
+        let projects_str = if loaded_projects.is_empty() {
+            format!("{DIM}none{RESET}")
+        } else {
+            loaded_projects
+                .iter()
+                .map(|p| {
+                    p.path
+                        .file_name()
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| p.path.as_str().to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+
+        let fps_color = if fps.avg >= 50.0 {
+            GREEN
+        } else if fps.avg >= 20.0 {
+            YELLOW
+        } else {
+            RED
+        };
+
+        let mut line = format!(
+            "{BOLD}{CYAN}[server]{RESET} {fps_color}FPS {:.0}{RESET} avg (σ{:.1} {:.0}-{:.0}) {DIM}|{RESET} \
+             {DIM}Uptime {uptime_secs:.1}s{RESET}",
+            fps.avg, fps.sdev, fps.min, fps.max
+        );
+
+        if let Some(mem) = memory {
+            let total = mem.total_bytes as f32;
+            let used_pct = if total > 0.0 {
+                (mem.used_bytes as f32 / total) * 100.0
+            } else {
+                0.0
+            };
+            let free_pct = 100.0 - used_pct;
+
+            const BAR_WIDTH: usize = 16;
+            let filled = if total > 0.0 {
+                ((mem.used_bytes as f32 / total) * BAR_WIDTH as f32).round() as usize
+            } else {
+                0
+            };
+            let filled = filled.min(BAR_WIDTH);
+
+            let (bar_fill_color, bar_empty_color) = if free_pct >= 40.0 {
+                (GREEN, DIM)
+            } else if free_pct >= 15.0 {
+                (YELLOW, DIM)
+            } else {
+                (RED, DIM)
+            };
+
+            let bar: String = (0..BAR_WIDTH)
+                .map(|i| {
+                    if i < filled {
+                        format!("{bar_fill_color}█{RESET}")
+                    } else {
+                        format!("{bar_empty_color}░{RESET}")
+                    }
+                })
+                .collect();
+
+            let free_kb = mem.free_bytes / 1024;
+            let total_kb = mem.total_bytes / 1024;
+
+            line.push_str(&format!(
+                " {DIM}|{RESET} [{bar}] {bar_fill_color}{used_pct:.0}%{RESET} ({free_kb}k free / {total_kb}k total)",
+                bar = bar,
+                used_pct = used_pct
+            ));
+        }
+
+        eprintln!("{line}");
     }
 
     /// Read a file from the server filesystem
@@ -431,6 +521,7 @@ pub fn serializable_response_to_project_response(
     match response {
         SerializableProjectResponse::GetChanges {
             current_frame,
+            since_frame,
             node_handles,
             node_changes,
             node_details,
@@ -485,6 +576,7 @@ pub fn serializable_response_to_project_response(
 
             Ok(ProjectResponse::GetChanges {
                 current_frame,
+                since_frame,
                 node_handles,
                 node_changes,
                 node_details: node_details_map,
@@ -501,7 +593,7 @@ mod tests {
     use lp_model::{
         LpPathBuf,
         project::handle::ProjectHandle,
-        server::{LoadedProject, ServerMsgBody},
+        server::{LoadedProject, SampleStats, ServerMsgBody},
     };
     use tokio::task;
 
@@ -525,10 +617,16 @@ mod tests {
             let heartbeat = ServerMessage {
                 id: 0,
                 msg: ServerMsgBody::Heartbeat {
-                    fps: 60,
+                    fps: SampleStats {
+                        avg: 60.0,
+                        sdev: 0.0,
+                        min: 60.0,
+                        max: 60.0,
+                    },
                     frame_count: 100,
                     loaded_projects: vec![],
                     uptime_ms: 2000,
+                    memory: None,
                 },
             };
             server_transport.send(heartbeat).unwrap();
@@ -566,13 +664,20 @@ mod tests {
 
             // Send multiple heartbeats
             for i in 0..3 {
+                let fps_val = (60 + i) as f32;
                 let heartbeat = ServerMessage {
                     id: 0,
                     msg: ServerMsgBody::Heartbeat {
-                        fps: 60 + i,
+                        fps: SampleStats {
+                            avg: fps_val,
+                            sdev: 0.0,
+                            min: fps_val,
+                            max: fps_val,
+                        },
                         frame_count: 100 + i as u64,
                         loaded_projects: vec![],
                         uptime_ms: 2000 + i as u64 * 1000,
+                        memory: None,
                     },
                 };
                 server_transport.send(heartbeat).unwrap();
@@ -614,13 +719,19 @@ mod tests {
             let heartbeat = ServerMessage {
                 id: 0,
                 msg: ServerMsgBody::Heartbeat {
-                    fps: 95,
+                    fps: SampleStats {
+                        avg: 95.0,
+                        sdev: 0.0,
+                        min: 95.0,
+                        max: 95.0,
+                    },
                     frame_count: 154,
                     loaded_projects: vec![LoadedProject {
                         handle: ProjectHandle::new(1),
                         path: LpPathBuf::from("/projects/test-project"),
                     }],
                     uptime_ms: 4680,
+                    memory: None,
                 },
             };
             server_transport.send(heartbeat).unwrap();

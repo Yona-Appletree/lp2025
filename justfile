@@ -206,7 +206,7 @@ ci-app: fmt-check clippy-app build-app test-app
 ci-glsl: fmt-check clippy-glsl build-glsl test-glsl test-glsl-filetests
 
 # Fix code issues then run CI (sequential, not parallel)
-fci: 
+fci:
     @just fix
     @just ci
 
@@ -257,6 +257,46 @@ demo example="basic":
     cd lp-cli && cargo run -- dev ../examples/{{ example }}
 
 # Run firmware on ESP32-C6 device
+
 # Requires: ESP32-C6 device connected via USB
-demo-esp32: install-rv32-target
-    cd lp-fw/fw-esp32 && cargo run --target {{ rv32_target }} --release --features esp32c6
+demo-esp32c6-host: install-rv32-target
+    cd lp-fw/fw-esp32 && cargo build --target {{ rv32_target }} --release --features esp32c6
+    cd lp-fw/fw-esp32 && cargo espflash flash --target {{ rv32_target }} --release --features esp32c6
+    cargo run --package lp-cli -- dev examples/basic --push serial:auto
+
+# Run firmware on ESP32-C6 device using the demo mode
+demo-esp32c6-standalone: install-rv32-target
+    cd lp-fw/fw-esp32 && cargo run --target {{ rv32_target }} --release --features esp32c6,demo_project
+
+# Run firmware on ESP32-C6 device using the test_rmt feature
+fwtest-rmt-esp32c6: install-rv32-target
+    cd lp-fw/fw-esp32 && cargo run --features test_rmt,esp32c6 --target {{ rv32_target }} --release
+
+# Run firmware on ESP32-C6 device using the test_dither feature
+fwtest-dithering-esp32c6: install-rv32-target
+    cd lp-fw/fw-esp32 && cargo run --features test_dither,esp32c6 --target {{ rv32_target }} --release
+
+cargo-update:
+    cargo update -p regalloc2 \
+                 -p cranelift-codegen \
+                 -p cranelift-frontend \
+                 -p cranelift-module \
+                 -p cranelift-jit \
+                 -p cranelift-native \
+                 -p cranelift-object \
+                 -p cranelift-reader \
+                 -p cranelift-control \
+                 -p cranelift-interpreter
+
+# Decode ESP32-C6 backtrace addresses
+# Usage: just decode-backtrace 0x420381c2 0x42038172 0x420381e0 ...
+# Build first: just build-fw-esp32
+# Uses `addr2line` (cargo install addr2line) or riscv32-esp-elf-addr2line if available
+decode-backtrace *addrs:
+    # ELF is at workspace target dir when building from lp-fw/fw-esp32
+    @test -f target/{{ rv32_target }}/release/fw-esp32
+    if command -v riscv32-esp-elf-addr2line >/dev/null 2>&1; then \
+        riscv32-esp-elf-addr2line -pfiaC -e target/{{ rv32_target }}/release/fw-esp32 {{ addrs }}; \
+    else \
+        addr2line -e target/{{ rv32_target }}/release/fw-esp32 -f -a {{ addrs }}; \
+    fi
